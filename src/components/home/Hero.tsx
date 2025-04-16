@@ -1,7 +1,7 @@
 
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Clock, Shield, ThermometerSnowflake } from 'lucide-react';
+import { AlertCircle, Clock, Shield, ThermometerSnowflake, MapPin, Navigation } from 'lucide-react';
 
 export const Hero = () => {
   return (
@@ -24,7 +24,7 @@ export const Hero = () => {
             <Button asChild size="lg" className="bg-white text-medical-blue hover:bg-gray-100">
               <Link to="/request-pickup">Request Pickup</Link>
             </Button>
-            <Button asChild size="lg" variant="default" className="bg-medical-teal hover:bg-medical-blue">
+            <Button asChild size="lg" variant="default" className="bg-medical-teal hover:bg-medical-blue border-2 border-white">
               <Link to="/tracking">Track Delivery</Link>
             </Button>
           </div>
@@ -54,6 +54,18 @@ export const Hero = () => {
               </div>
               <span className="text-sm font-medium">24/7 Service</span>
             </div>
+          </div>
+
+          {/* New tracking capabilities section */}
+          <div className="mt-12 bg-white/10 p-6 rounded-lg">
+            <div className="flex items-center gap-4 mb-4">
+              <MapPin className="text-white w-8 h-8" />
+              <Navigation className="text-white w-8 h-8" />
+              <h3 className="text-xl font-semibold">Real-Time Tracking</h3>
+            </div>
+            <p className="text-gray-200">
+              Track your medical deliveries with precision. Our advanced tracking system provides real-time location updates, estimated delivery times, and instant notifications to keep you informed every step of the way.
+            </p>
           </div>
         </div>
       </div>
