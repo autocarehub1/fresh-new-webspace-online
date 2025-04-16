@@ -52,6 +52,16 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+        // ExpressMed custom colors
+        medical: {
+          blue: {
+            DEFAULT: '#0A2463',
+            light: '#3E92CC',
+          },
+          teal: '#247BA0',
+          red: '#FF1654',
+          lightGray: '#F9FAFB',
+        },
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
