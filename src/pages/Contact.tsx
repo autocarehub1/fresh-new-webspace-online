@@ -1,4 +1,3 @@
-
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import Map from '@/components/map/Map';
 
 const Contact = () => {
   const [name, setName] = useState('');
@@ -182,8 +182,8 @@ const Contact = () => {
         <section className="bg-medical-lightGray py-16">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-medical-blue mb-8 text-center">Our Location</h2>
-            <div className="max-w-5xl mx-auto bg-gray-300 h-[400px] rounded-lg flex items-center justify-center">
-              <p className="text-gray-600">Interactive map would be embedded here</p>
+            <div className="max-w-5xl mx-auto">
+              <Map center={[-98.5784, 29.5077]} />
             </div>
           </div>
         </section>
