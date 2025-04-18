@@ -64,13 +64,13 @@ export const Footer = () => {
                 <Link to="/request-pickup" className="text-gray-300 hover:text-white transition-colors">Request Pickup</Link>
               </li>
               <li>
-                <Link to="/compliance" className="text-gray-300 hover:text-white transition-colors">HIPAA Compliance</Link>
+                <Link to="/admin" className="text-gray-300 hover:text-white transition-colors">Admin Portal</Link>
               </li>
               <li>
-                <Link to="/faq" className="text-gray-300 hover:text-white transition-colors">FAQ</Link>
+                <Link to="/about" className="text-gray-300 hover:text-white transition-colors">About Us</Link>
               </li>
               <li>
-                <Link to="/careers" className="text-gray-300 hover:text-white transition-colors">Careers</Link>
+                <Link to="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link>
               </li>
             </ul>
           </div>

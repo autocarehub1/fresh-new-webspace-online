@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import RequestPickup from "./pages/RequestPickup";
 import Tracking from "./pages/Tracking";
 import Services from "./pages/Services";
+import ServiceDetails from "./pages/ServiceDetails";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/request-pickup" element={<RequestPickup />} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/services" element={<Services />} />
+          <Route path="/services/:serviceType" element={<ServiceDetails />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<Admin />} />
