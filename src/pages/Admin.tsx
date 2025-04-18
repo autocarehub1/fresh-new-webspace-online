@@ -16,7 +16,15 @@ const Admin = () => {
     queryFn: async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        if (error) {
+          // Handle the Supabase configuration error specifically
+          if (error.message === 'Supabase not configured') {
+            toast.error('Supabase is not configured. Please add your Supabase credentials.');
+            navigate('/login');
+            return null;
+          }
+          throw error;
+        }
         return session;
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -29,7 +37,7 @@ const Admin = () => {
   useEffect(() => {
     if (!isLoading && !session) {
       toast.error('You must be logged in to access this page');
-      navigate('/');
+      navigate('/login');
     }
   }, [session, isLoading, navigate]);
 
