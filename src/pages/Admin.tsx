@@ -1,60 +1,67 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 import AdminDashboard from '@/components/admin/AdminDashboard';
-import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 const Admin = () => {
   const navigate = useNavigate();
-
-  // Check if user is authenticated and has admin role
-  const { data: session, isLoading, isError } = useQuery({
-    queryKey: ['session'],
-    queryFn: async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          // Handle the Supabase configuration error specifically
-          if (error.message === 'Supabase not configured') {
-            toast.error('Supabase is not configured. Please add your Supabase credentials.');
-            navigate('/login');
-            return null;
-          }
-          throw error;
-        }
-        return session;
-      } catch (error) {
-        console.error('Error fetching session:', error);
-        toast.error('Authentication error. Please contact support.');
-        return null;
-      }
-    },
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoading && !session) {
-      toast.error('You must be logged in to access this page');
-      navigate('/login');
-    }
-  }, [session, isLoading, navigate]);
+    // Check for demo authentication token
+    const checkAuth = () => {
+      const token = localStorage.getItem('demoAuthToken');
+      if (!token) {
+        toast.error('You must be logged in to access this page');
+        navigate('/login');
+      } else {
+        setIsAuthenticated(true);
+      }
+      setIsLoading(false);
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (isError) {
-    return <div className="flex items-center justify-center min-h-screen">Error connecting to authentication service</div>;
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow bg-gray-50">
-        <AdminDashboard />
+        <div className="container mx-auto px-4 py-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
+            <h2 className="text-amber-800 font-medium">Demo Mode Active</h2>
+            <p className="text-amber-700 text-sm">
+              This is a demo of the admin interface. In a real application, this would be secured with Supabase authentication.
+            </p>
+            <Button 
+              className="mt-2 text-xs"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                localStorage.removeItem('demoAuthToken');
+                toast.success('Logged out successfully');
+                navigate('/login');
+              }}
+            >
+              Demo Logout
+            </Button>
+          </div>
+          <AdminDashboard />
+        </div>
       </main>
+      <Footer />
     </div>
   );
 };

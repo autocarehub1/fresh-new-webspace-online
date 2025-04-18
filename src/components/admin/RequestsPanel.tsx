@@ -1,23 +1,47 @@
 
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+
+// Mock data for demo purposes
+const mockRequests = [
+  {
+    id: 'REQ-001',
+    status: 'pending',
+    pickup_location: '123 Medical Center, San Antonio, TX',
+    delivery_location: '456 Hospital Ave, San Antonio, TX',
+    created_at: '2025-04-16T14:22:00Z'
+  },
+  {
+    id: 'REQ-002',
+    status: 'in_progress',
+    pickup_location: '789 Clinic Road, San Antonio, TX',
+    delivery_location: '101 Emergency Dept, San Antonio, TX',
+    created_at: '2025-04-17T09:15:00Z'
+  },
+  {
+    id: 'REQ-003',
+    status: 'completed',
+    pickup_location: '222 Lab Building, San Antonio, TX',
+    delivery_location: '333 Research Center, San Antonio, TX',
+    created_at: '2025-04-17T11:45:00Z'
+  }
+];
 
 const RequestsPanel = () => {
-  const { data: requests, isLoading } = useQuery({
-    queryKey: ['requests'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-  });
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API call delay
+    const timer = setTimeout(() => {
+      setRequests(mockRequests);
+      setIsLoading(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (isLoading) {
     return <div>Loading requests...</div>;
@@ -37,12 +61,13 @@ const RequestsPanel = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests?.map((request) => (
+          {requests.map((request) => (
             <TableRow key={request.id}>
               <TableCell>{request.id}</TableCell>
               <TableCell>
                 <Badge variant={request.status === 'pending' ? 'outline' : 'default'}>
-                  {request.status}
+                  {request.status === 'in_progress' ? 'In Progress' : 
+                   request.status === 'completed' ? 'Completed' : 'Pending'}
                 </Badge>
               </TableCell>
               <TableCell>{request.pickup_location}</TableCell>
