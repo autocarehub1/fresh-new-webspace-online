@@ -8,6 +8,25 @@ export interface TrackingUpdate {
   note: string;
 }
 
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+export interface Driver {
+  id: string;
+  name: string;
+  status: 'active' | 'inactive';
+  vehicle_type: string;
+  current_location: {
+    address: string;
+    coordinates: Coordinates;
+  };
+  photo: string;
+  phone: string;
+  current_delivery: string | null;
+}
+
 export interface DeliveryRequest {
   id: string;
   status: DeliveryStatus;
@@ -42,5 +61,10 @@ export interface DeliveryRequest {
   trackingId?: string;
   estimatedCost?: number;
   distance?: number;
-  trackingUpdates?: TrackingUpdate[]; // Add this alias for consistency in the UI component
+  
+  // Real-time tracking fields
+  pickup_coordinates?: Coordinates;
+  delivery_coordinates?: Coordinates;
+  current_coordinates?: Coordinates;
+  assigned_driver?: string;
 }
