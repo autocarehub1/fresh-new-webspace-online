@@ -1,89 +1,44 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, Clock, Package, Truck, MapPin, CircleDashed, ThermometerSnowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Mock delivery data
-const mockDeliveryData = {
-  trackingId: 'EMD-8294716',
-  status: 'in-transit',
-  priority: 'urgent',
-  pickupTime: '2023-07-18T10:45:00',
-  estimatedDelivery: '2023-07-18T12:10:00',
-  pickupLocation: {
-    name: 'UT Health San Antonio',
-    address: '7703 Floyd Curl Dr, San Antonio, TX 78229'
-  },
-  deliveryLocation: {
-    name: 'Methodist Hospital Laboratory',
-    address: '7700 Floyd Curl Dr, San Antonio, TX 78229'
-  },
-  packageType: 'Medical Specimen',
-  temperature: {
-    required: '2-8°C',
-    current: '4.3°C',
-    status: 'normal'
-  },
-  trackingUpdates: [
-    { 
-      status: 'Pickup requested', 
-      timestamp: '2023-07-18T10:15:00',
-      location: 'Online System',
-      note: 'Pickup requested by Dr. Martinez'
-    },
-    { 
-      status: 'Courier assigned', 
-      timestamp: '2023-07-18T10:18:00',
-      location: 'Dispatch Center',
-      note: 'Courier John D. assigned to pickup'
-    },
-    { 
-      status: 'En route to pickup', 
-      timestamp: '2023-07-18T10:20:00',
-      location: 'San Antonio Medical District',
-      note: 'Estimated arrival in 25 minutes'
-    },
-    { 
-      status: 'Arrived at pickup', 
-      timestamp: '2023-07-18T10:40:00',
-      location: 'UT Health San Antonio',
-      note: 'Courier at reception desk'
-    },
-    { 
-      status: 'Package picked up', 
-      timestamp: '2023-07-18T10:45:00',
-      location: 'UT Health San Antonio',
-      note: 'Specimen picked up, chain of custody signed by Dr. Martinez'
-    },
-    { 
-      status: 'In transit to delivery', 
-      timestamp: '2023-07-18T10:52:00',
-      location: 'San Antonio Medical District',
-      note: 'Temperature monitored, within required range'
-    }
-  ],
-  courier: {
-    name: 'John Dominguez',
-    phone: '(210) 555-4567',
-    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
-    vehicle: 'Toyota Prius #EMD-12'
-  }
-};
-
-const getStatusStep = (status: string) => {
-  switch(status) {
-    case 'requested': return 0;
-    case 'assigned': return 1;
-    case 'picked-up': return 2;
-    case 'in-transit': return 3;
-    case 'delivered': return 4;
-    default: return 3; // Default to in-transit for demo
-  }
-};
+import { useDeliveryStore } from '@/store/deliveryStore';
 
 export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
-  const [delivery, setDelivery] = useState(mockDeliveryData);
+  const { getRequestByTrackingId } = useDeliveryStore();
+  const [delivery, setDelivery] = useState(getRequestByTrackingId(trackingId));
+  
+  useEffect(() => {
+    const request = getRequestByTrackingId(trackingId);
+    if (!request) {
+      // Handle not found case
+      return;
+    }
+    setDelivery(request);
+  }, [trackingId, getRequestByTrackingId]);
+
+  if (!delivery) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-gray-600">No delivery found with tracking ID: {trackingId}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const getStatusStep = (status: string) => {
+    switch(status) {
+      case 'pending': return 0;
+      case 'in_progress': return 2;
+      case 'completed': return 4;
+      case 'declined': return -1;
+      default: return 0;
+    }
+  };
+  
   const statusStep = getStatusStep(delivery.status);
   
   // Format dates
@@ -104,7 +59,7 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
       hour12: true
     });
   };
-  
+
   return (
     <div className="container mx-auto px-4 max-w-4xl">
       <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">

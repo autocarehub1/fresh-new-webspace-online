@@ -1,44 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Check, X } from 'lucide-react';
 import { toast } from 'sonner';
-
-// Mock data for demo purposes
-const mockRequests = [
-  {
-    id: 'REQ-001',
-    status: 'pending',
-    pickup_location: '123 Medical Center, San Antonio, TX',
-    delivery_location: '456 Hospital Ave, San Antonio, TX',
-    created_at: '2025-04-16T14:22:00Z'
-  },
-  {
-    id: 'REQ-002',
-    status: 'in_progress',
-    pickup_location: '789 Clinic Road, San Antonio, TX',
-    delivery_location: '101 Emergency Dept, San Antonio, TX',
-    created_at: '2025-04-17T09:15:00Z'
-  },
-  {
-    id: 'REQ-003',
-    status: 'completed',
-    pickup_location: '222 Lab Building, San Antonio, TX',
-    delivery_location: '333 Research Center, San Antonio, TX',
-    created_at: '2025-04-17T11:45:00Z'
-  }
-];
+import { useDeliveryStore } from '@/store/deliveryStore';
+import type { DeliveryRequest } from '@/types/delivery';
 
 const RequestsPanel = () => {
-  const [requests, setRequests] = useState(mockRequests);
+  const { requests, updateRequestStatus } = useDeliveryStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call delay
     const timer = setTimeout(() => {
-      setRequests(mockRequests);
       setIsLoading(false);
     }, 800);
 
@@ -46,18 +20,8 @@ const RequestsPanel = () => {
   }, []);
 
   const handleRequestAction = (requestId: string, action: 'approve' | 'decline') => {
-    setRequests(prevRequests =>
-      prevRequests.map(request => {
-        if (request.id === requestId) {
-          return {
-            ...request,
-            status: action === 'approve' ? 'in_progress' : 'declined'
-          };
-        }
-        return request;
-      })
-    );
-
+    const newStatus = action === 'approve' ? 'in_progress' : 'declined';
+    updateRequestStatus(requestId, newStatus);
     toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
   };
 
