@@ -10,17 +10,34 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, AlertTriangle, InfoIcon } from 'lucide-react';
+import { useDeliveryStore } from '@/store/deliveryStore';
 
 export const RequestPickupForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [requestData, setRequestData] = useState<{
+    trackingId: string;
+    id: string;
+  } | null>(null);
+  
+  // Access the delivery store to generate a consistent tracking ID
+  const { generateTrackingId } = useDeliveryStore();
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     
-    // Simulate form submission
+    // Simulate form submission and generate a proper tracking ID
     setTimeout(() => {
+      // Generate a tracking ID using the same method as the admin portal
+      const trackingId = generateTrackingId();
+      const requestId = `REQ-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      setRequestData({
+        trackingId,
+        id: requestId
+      });
+      
       setSubmitting(false);
       setSuccess(true);
     }, 1500);
@@ -41,7 +58,7 @@ export const RequestPickupForm = () => {
             <div className="p-4 bg-white rounded-lg border border-green-200 text-left w-full max-w-md">
               <div className="flex justify-between mb-2">
                 <span className="text-sm text-gray-500">Request ID:</span>
-                <span className="font-medium">EMD-8294716</span>
+                <span className="font-medium">{requestData?.id || ''}</span>
               </div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm text-gray-500">Estimated Pickup:</span>
@@ -49,7 +66,7 @@ export const RequestPickupForm = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Tracking Link:</span>
-                <a href="/tracking/EMD-8294716" className="font-medium text-medical-blue hover:underline">
+                <a href={`/tracking?id=${requestData?.trackingId}`} className="font-medium text-medical-blue hover:underline">
                   Track This Pickup
                 </a>
               </div>

@@ -77,6 +77,7 @@ interface DeliveryStore {
   updateRequestStatus: (requestId: string, status: DeliveryStatus) => void;
   addTrackingUpdate: (requestId: string, update: TrackingUpdate) => void;
   getRequestByTrackingId: (trackingId: string) => DeliveryRequest | undefined;
+  generateTrackingId: () => string; // Expose the generateTrackingId function
 }
 
 export const useDeliveryStore = create<DeliveryStore>((set, get) => ({
@@ -123,5 +124,6 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => ({
     return get().requests.find((request) => 
       request.trackingId === trackingId || request.id === trackingId
     );
-  }
+  },
+  generateTrackingId // Expose the function for consistent ID generation
 }));
