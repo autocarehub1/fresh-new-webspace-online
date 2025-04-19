@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, X } from 'lucide-react';
+import { Check, X, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDeliveryStore } from '@/store/deliveryStore';
 import type { DeliveryRequest } from '@/types/delivery';
@@ -35,10 +36,12 @@ const RequestsPanel = () => {
         <TableHeader>
           <TableRow>
             <TableHead>ID</TableHead>
+            <TableHead>Tracking ID</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Pickup Location</TableHead>
             <TableHead>Delivery Location</TableHead>
             <TableHead>Date</TableHead>
+            <TableHead>Est. Cost</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -46,6 +49,7 @@ const RequestsPanel = () => {
           {requests.map((request) => (
             <TableRow key={request.id}>
               <TableCell>{request.id}</TableCell>
+              <TableCell>{request.trackingId || '-'}</TableCell>
               <TableCell>
                 <Badge variant={
                   request.status === 'pending' ? 'outline' : 
@@ -58,6 +62,7 @@ const RequestsPanel = () => {
               <TableCell>{request.pickup_location}</TableCell>
               <TableCell>{request.delivery_location}</TableCell>
               <TableCell>{new Date(request.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>{request.estimatedCost ? `$${request.estimatedCost}` : '-'}</TableCell>
               <TableCell className="space-x-2">
                 {request.status === 'pending' && (
                   <>
@@ -80,6 +85,14 @@ const RequestsPanel = () => {
                       Decline
                     </Button>
                   </>
+                )}
+                {request.trackingId && (
+                  <Button asChild variant="outline" size="sm" className="ml-2">
+                    <a href={`/tracking?id=${request.trackingId}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Track
+                    </a>
+                  </Button>
                 )}
                 {request.status !== 'pending' && (
                   <Button variant="outline" size="sm">

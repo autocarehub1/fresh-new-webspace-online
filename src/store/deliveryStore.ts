@@ -46,10 +46,15 @@ const initialRequests: DeliveryRequest[] = [
   },
   {
     id: 'REQ-002',
+    trackingId: 'MED-D4E5F6',
     status: 'in_progress',
     pickup_location: '789 Clinic Road, San Antonio, TX',
     delivery_location: '101 Emergency Dept, San Antonio, TX',
     created_at: '2025-04-17T09:15:00Z',
+    distance: 3.8,
+    estimatedCost: 22,
+    priority: 'urgent',
+    packageType: 'pharmaceuticals',
     tracking_updates: [
       {
         status: 'Request Created',
@@ -80,15 +85,20 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => ({
     set((state) => ({
       requests: state.requests.map((request) => {
         if (request.id === requestId) {
+          // Generate tracking ID if not already present when request is approved
+          const trackingId = request.trackingId || (status === 'in_progress' ? generateTrackingId() : undefined);
+          
           const update = {
             status: status === 'in_progress' ? 'Driver Assigned' : status.charAt(0).toUpperCase() + status.slice(1),
             timestamp: new Date().toISOString(),
             location: 'Admin Dashboard',
             note: `Request ${status === 'in_progress' ? 'approved and driver assigned' : status}`
           };
+          
           return {
             ...request,
             status,
+            trackingId,
             tracking_updates: [...(request.tracking_updates || []), update]
           };
         }

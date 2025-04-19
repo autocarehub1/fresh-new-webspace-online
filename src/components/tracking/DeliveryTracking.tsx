@@ -44,7 +44,7 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
         phone: "+1 (555) 123-4567"
       },
       // Using tracking_updates directly for consistency with the type
-      trackingUpdates: request.tracking_updates
+      tracking_updates: request.tracking_updates
     };
     
     setDelivery(enhancedRequest);
@@ -224,39 +224,39 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
           </CardContent>
         </Card>
         
-        {/* Tracking Updates */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Delivery Updates</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Using tracking_updates instead of trackingUpdates for consistency */}
-              {delivery.tracking_updates?.map((update, index) => (
-                <div key={index} className="flex gap-4">
-                  <div className="relative flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-medical-blue/10 text-medical-blue flex items-center justify-center">
-                      {index === 0 ? <Package size={16} /> : 
-                       index === (delivery.tracking_updates?.length || 0) - 1 ? <Truck size={16} /> : 
-                       <MapPin size={16} />}
-                    </div>
-                    {index < (delivery.tracking_updates?.length || 0) - 1 && (
-                      <div className="w-0.5 bg-gray-200 h-full absolute top-8"></div>
-                    )}
+      {/* Tracking Updates */}
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-lg">Delivery Updates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Using tracking_updates instead of trackingUpdates for consistency */}
+            {delivery.tracking_updates?.map((update, index) => (
+              <div key={index} className="flex gap-4">
+                <div className="relative flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full bg-medical-blue/10 text-medical-blue flex items-center justify-center">
+                    {index === 0 ? <Package size={16} /> : 
+                     index === (delivery.tracking_updates?.length || 0) - 1 ? <Truck size={16} /> : 
+                     <MapPin size={16} />}
                   </div>
-                  <div className="pb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
-                      <p className="font-medium">{update.status}</p>
-                      <p className="text-sm text-gray-500">{formatDateTime(update.timestamp)}</p>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-1">{update.location}</p>
-                    <p className="text-sm">{update.note}</p>
-                  </div>
+                  {index < (delivery.tracking_updates?.length || 0) - 1 && (
+                    <div className="w-0.5 bg-gray-200 h-full absolute top-8"></div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="pb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-1">
+                    <p className="font-medium">{update.status}</p>
+                    <p className="text-sm text-gray-500">{formatDateTime(update.timestamp)}</p>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">{update.location}</p>
+                  <p className="text-sm">{update.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       </div>
       
       {/* Map placeholder - would integrate with real map in production */}

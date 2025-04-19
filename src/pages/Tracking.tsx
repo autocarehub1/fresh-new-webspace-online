@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TrackingSearch from '@/components/tracking/TrackingSearch';
@@ -8,8 +8,32 @@ import DeliveryTracking from '@/components/tracking/DeliveryTracking';
 const Tracking = () => {
   const [trackingId, setTrackingId] = useState<string | null>(null);
   
+  useEffect(() => {
+    // Check for tracking ID in URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const idParam = urlParams.get('id');
+    
+    if (idParam) {
+      setTrackingId(idParam);
+    }
+  }, []);
+  
   const handleSearch = (id: string) => {
+    // Update URL with tracking ID for shareable links
+    const url = new URL(window.location.href);
+    url.searchParams.set('id', id);
+    window.history.pushState({}, '', url);
+    
     setTrackingId(id);
+  };
+  
+  const handleReset = () => {
+    // Clear tracking ID from URL
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    window.history.pushState({}, '', url);
+    
+    setTrackingId(null);
   };
   
   return (
@@ -25,7 +49,19 @@ const Tracking = () => {
             
             {!trackingId && <TrackingSearch onSearch={handleSearch} />}
             
-            {trackingId && <DeliveryTracking trackingId={trackingId} />}
+            {trackingId && (
+              <>
+                <DeliveryTracking trackingId={trackingId} />
+                <div className="mt-8 text-center">
+                  <button 
+                    onClick={handleReset}
+                    className="text-medical-blue hover:text-medical-blue/70 font-medium"
+                  >
+                    ← Track Another Delivery
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>
