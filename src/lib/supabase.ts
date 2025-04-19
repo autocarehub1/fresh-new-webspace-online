@@ -1,29 +1,15 @@
 
-// This is a mock Supabase client for demonstration purposes
-// In a real app, you would use the actual Supabase client
+import { createClient } from '@supabase/supabase-js';
 
-const mockSupabaseClient = {
-  auth: {
-    getSession: async () => ({ data: { session: null }, error: null }),
-    signInWithPassword: async (credentials: { email: string; password: string }) => {
-      if (credentials.email === 'admin@example.com' && credentials.password === 'password123') {
-        return { data: { user: { id: '1', email: credentials.email } }, error: null };
-      }
-      return { data: null, error: { message: 'Invalid login credentials' } };
-    },
-    signOut: async () => ({ error: null })
-  },
-  from: (table: string) => ({
-    select: () => ({
-      order: () => ({
-        then: (callback: any) => callback(mockData[table] || [])
-      })
-    })
-  })
-};
+// Get environment variables for Supabase connection
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Mock data store
-const mockData: Record<string, any[]> = {
+// Create Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Mock data is kept for development/demo purposes if needed
+export const mockData: Record<string, any[]> = {
   requests: [
     {
       id: 'REQ-001',
@@ -43,5 +29,3 @@ const mockData: Record<string, any[]> = {
     }
   ]
 };
-
-export const supabase = mockSupabaseClient;
