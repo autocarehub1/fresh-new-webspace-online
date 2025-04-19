@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Check, Clock, Package, Truck, MapPin, CircleDashed, ThermometerSnowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,9 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
   const getStatusStep = (status: string) => {
     switch(status) {
       case 'pending': return 0;
-      case 'in_progress': return 2;
+      case 'in_progress': return 1;
+      case 'picked_up': return 2;
+      case 'in_transit': return 3;
       case 'completed': return 4;
       case 'declined': return -1;
       default: return 0;

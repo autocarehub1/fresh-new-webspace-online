@@ -40,5 +40,7 @@ export interface DeliveryRequest {
     phone: string;
   };
   trackingId?: string;
-  trackingUpdates?: TrackingUpdate[];
+  estimatedCost?: number;
+  distance?: number;
 }
+

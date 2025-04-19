@@ -2,14 +2,39 @@
 import { create } from 'zustand';
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 
+const generateTrackingId = () => {
+  return `MED-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+};
+
+const estimateDeliveryCost = (distance: number, priority: string, packageType: string): number => {
+  // Base rate
+  let baseCost = 15;
+  
+  // Distance cost (assuming $2 per mile)
+  const distanceCost = distance * 2;
+  
+  // Priority multiplier
+  const priorityMultiplier = priority === 'urgent' ? 1.5 : 1;
+  
+  // Package type additional costs
+  const packageMultiplier = packageType === 'temperature-controlled' ? 1.3 : 1;
+  
+  return Math.round((baseCost + distanceCost) * priorityMultiplier * packageMultiplier);
+};
+
 // Initial mock data
 const initialRequests: DeliveryRequest[] = [
   {
     id: 'REQ-001',
+    trackingId: 'MED-A1B2C3',
     status: 'pending',
     pickup_location: '123 Medical Center, San Antonio, TX',
     delivery_location: '456 Hospital Ave, San Antonio, TX',
     created_at: '2025-04-16T14:22:00Z',
+    distance: 5.2,
+    estimatedCost: 25,
+    priority: 'normal',
+    packageType: 'medical-supplies',
     tracking_updates: [
       {
         status: 'Request Created',
@@ -85,6 +110,8 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => ({
     }));
   },
   getRequestByTrackingId: (trackingId) => {
-    return get().requests.find((request) => request.id === trackingId);
+    return get().requests.find((request) => 
+      request.trackingId === trackingId || request.id === trackingId
+    );
   }
 }));
