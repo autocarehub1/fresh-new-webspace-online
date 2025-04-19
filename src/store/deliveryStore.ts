@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { DeliveryRequest } from '@/types/delivery';
+import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 
 // Initial mock data
 const initialRequests: DeliveryRequest[] = [
