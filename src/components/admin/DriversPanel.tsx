@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +38,6 @@ const DriversPanel = () => {
   const [selectedRequestId, setSelectedRequestId] = useState('');
 
   useEffect(() => {
-    // Simulate API call delay
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 800);
@@ -47,7 +45,6 @@ const DriversPanel = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Effect to simulate the movement of an active delivery
   useEffect(() => {
     if (!isSimulating) return;
 
@@ -80,7 +77,6 @@ const DriversPanel = () => {
 
   const handleDeleteDriver = (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
-    // In a real app, this would call an API to delete the driver
     toast.success(`Driver ${driver?.name} has been removed`);
   };
 
@@ -292,7 +288,6 @@ const DriversPanel = () => {
         </div>
       </div>
       
-      {/* Driver Location Dialog */}
       <Dialog>
         <DialogTrigger asChild>
           <span className="hidden">Open Map</span>

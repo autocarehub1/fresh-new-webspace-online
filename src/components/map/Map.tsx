@@ -5,11 +5,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '@/components/ui/input';
 
 interface MapProps {
-  center: [number, number];
+  center?: [number, number];
   zoom?: number;
 }
 
-const Map = ({ center, zoom = 15 }: MapProps) => {
+const Map = ({ center = [-74.5, 40], zoom = 15 }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
