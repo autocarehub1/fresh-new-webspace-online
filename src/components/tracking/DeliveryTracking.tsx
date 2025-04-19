@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Check, Clock, Package, Truck, MapPin, CircleDashed, ThermometerSnowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,7 +44,8 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
         vehicle: "Delivery Van #427",
         phone: "+1 (555) 123-4567"
       },
-      trackingUpdates: request.trackingUpdates || request.tracking_updates
+      // Here's the fix - using tracking_updates instead of trackingUpdates
+      trackingUpdates: request.tracking_updates
     };
     
     setDelivery(enhancedRequest);
@@ -230,7 +232,8 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {(delivery.trackingUpdates || []).map((update, index) => (
+              {/* Here's the fix - using trackingUpdates which gets its value from tracking_updates */}
+              {delivery.trackingUpdates?.map((update, index) => (
                 <div key={index} className="flex gap-4">
                   <div className="relative flex flex-col items-center">
                     <div className="w-8 h-8 rounded-full bg-medical-blue/10 text-medical-blue flex items-center justify-center">
