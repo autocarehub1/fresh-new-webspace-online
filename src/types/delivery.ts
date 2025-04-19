@@ -42,5 +42,5 @@ export interface DeliveryRequest {
   trackingId?: string;
   estimatedCost?: number;
   distance?: number;
+  trackingUpdates?: TrackingUpdate[]; // Add this alias for consistency in the UI component
 }
-
