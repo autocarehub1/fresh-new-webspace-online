@@ -20,10 +20,11 @@ type DbDriver = {
 };
 
 // Type for insertion to ensure required fields
-type DbDriverInsert = Omit<Partial<DbDriver>, 'name' | 'vehicle_type' | 'current_location'> & {
+type DbDriverInsert = Omit<Partial<DbDriver>, 'name' | 'vehicle_type' | 'current_location' | 'id'> & {
   name: string;
   vehicle_type: string;
   current_location: Json;
+  id: string;
 };
 
 // Converts DB model to frontend model
@@ -98,9 +99,13 @@ export const useDriverData = () => {
       
       const dbDriver = mapDriverToDb(newDriver);
       
+      // Generate a unique ID for the new driver
+      const uniqueId = crypto.randomUUID();
+      
       // Ensure required fields for DB insert
       const insertData: DbDriverInsert = {
         ...dbDriver as Partial<DbDriver>,
+        id: uniqueId,
         name: newDriver.name,
         vehicle_type: newDriver.vehicle_type,
         current_location: dbDriver.current_location as Json

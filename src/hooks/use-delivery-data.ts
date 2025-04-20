@@ -27,9 +27,10 @@ type DbDeliveryRequest = {
 };
 
 // Type for insertion to ensure required fields
-type DbDeliveryRequestInsert = Omit<Partial<DbDeliveryRequest>, 'pickup_location' | 'delivery_location'> & {
+type DbDeliveryRequestInsert = Omit<Partial<DbDeliveryRequest>, 'pickup_location' | 'delivery_location' | 'id'> & {
   pickup_location: string;
   delivery_location: string;
+  id: string;
 };
 
 // Converts DB model to frontend model
@@ -118,9 +119,13 @@ export const useDeliveryData = () => {
       
       const dbDelivery = mapDeliveryRequestToDb(newDelivery);
       
+      // Generate a unique ID for the new delivery request
+      const uniqueId = crypto.randomUUID();
+      
       // Ensure required fields for DB insert
       const insertData: DbDeliveryRequestInsert = {
         ...dbDelivery as Partial<DbDeliveryRequest>,
+        id: uniqueId,
         pickup_location: newDelivery.pickup_location,
         delivery_location: newDelivery.delivery_location
       };
