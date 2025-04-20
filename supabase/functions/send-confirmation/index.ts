@@ -17,7 +17,7 @@ interface DeliveryRequest {
   delivery_location: string;
   priority: string;
   package_type: string;
-  email: string; // Add email field to the interface
+  email: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="https://your-domain.com/tracking?id=${request.trackingId}" 
+                  <a href="/tracking?id=${request.trackingId}" 
                      style="display: inline-block; background-color: #3E92CC; color: #ffffff; padding: 12px 24px; 
                             text-decoration: none; border-radius: 6px; font-weight: 600;">
                     Track Your Delivery
@@ -136,4 +136,3 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 serve(handler);
-
