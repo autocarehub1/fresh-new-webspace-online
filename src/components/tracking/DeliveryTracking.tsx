@@ -1,6 +1,6 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useDeliveryStore } from '@/store/deliveryStore';
 import { DeliveryRequest } from '@/types/delivery';
 import Map from '@/components/map/Map';
@@ -18,7 +18,6 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
       return;
     }
     
-    // Enhance the request with UI-specific properties if they don't exist
     const enhancedRequest = {
       ...request,
       trackingId: request.trackingId || request.id,
@@ -86,14 +85,12 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
         </Button>
       </div>
       
-      {/* Package Info Card */}
       <Card className="mb-8">
         <CardContent className="pt-6">
           <PackageInfo delivery={delivery} />
         </CardContent>
       </Card>
       
-      {/* Courier Info and Tracking Timeline */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
         <Card className="md:col-span-1">
           <CardHeader>
@@ -114,7 +111,6 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
         </Card>
       </div>
       
-      {/* Map Card */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Real-Time Location</CardTitle>
