@@ -1,20 +1,15 @@
 
 import { create } from 'zustand';
-import { useDriverStore } from './driverStore';
-import { useRequestStore } from './requestStore';
+import { useDriverStore } from './drivers/driverStore';
+import { useRequestStore } from './requests/requestStore';
 import { DeliveryRequest, Driver, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId, estimateDeliveryCost } from '@/utils/deliveryUtils';
 
 interface DeliveryStore {
-  // Combine stores functionality
   drivers: Driver[];
   requests: DeliveryRequest[];
-  
-  // Re-export utility functions
   generateTrackingId: () => string;
   estimateDeliveryCost: (distance: number, priority: string, packageType: string) => number;
-  
-  // Aggregated methods
   updateDriverStatus: (driverId: string, status: 'active' | 'inactive') => void;
   updateRequestStatus: (requestId: string, status: DeliveryStatus) => void;
   addTrackingUpdate: (requestId: string, update: TrackingUpdate) => void;
@@ -28,15 +23,11 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => {
   const requestStore = useRequestStore.getState();
 
   return {
-    // Combine initial states
     drivers: driverStore.drivers,
     requests: requestStore.requests,
-    
-    // Re-export utility functions
     generateTrackingId,
     estimateDeliveryCost,
     
-    // Proxy methods to underlying stores
     updateDriverStatus: (driverId, status) => {
       useDriverStore.getState().updateDriverStatus(driverId, status);
       set({ drivers: useDriverStore.getState().drivers });
@@ -74,5 +65,4 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => {
   };
 });
 
-// Re-export utility functions and other stores for convenience
 export { useDriverStore, useRequestStore, generateTrackingId, estimateDeliveryCost };
