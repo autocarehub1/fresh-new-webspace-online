@@ -17,6 +17,7 @@ interface DeliveryRequest {
   delivery_location: string;
   priority: string;
   package_type: string;
+  email: string; // Add email field to the interface
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,9 +30,20 @@ const handler = async (req: Request): Promise<Response> => {
     const request: DeliveryRequest = await req.json();
     console.log("Sending confirmation email for request:", request);
 
+    if (!request.email) {
+      console.error("No recipient email provided");
+      return new Response(
+        JSON.stringify({ error: "No recipient email provided" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const emailResponse = await resend.emails.send({
       from: "Medical Courier Service <onboarding@resend.dev>",
-      to: ["recipient@example.com"], // This will be replaced with the actual recipient email
+      to: [request.email], // Use the provided email
       subject: `Delivery Request Confirmation - ${request.trackingId}`,
       html: `
         <h1>Your Delivery Request Has Been Received</h1>

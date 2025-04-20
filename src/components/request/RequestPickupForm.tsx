@@ -27,7 +27,8 @@ export const RequestPickupForm = () => {
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [priority, setPriority] = useState('same-day');
   const [packageType, setPackageType] = useState('');
-  
+  const [email, setEmail] = useState('');
+
   const { generateTrackingId } = useDeliveryStore();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,6 +36,11 @@ export const RequestPickupForm = () => {
     
     if (!pickupLocation || !deliveryLocation) {
       toast.error('Please fill in pickup and delivery locations');
+      return;
+    }
+
+    if (!email) {
+      toast.error('Please provide your email address for delivery confirmation');
       return;
     }
     
@@ -78,6 +84,7 @@ export const RequestPickupForm = () => {
           delivery_location: deliveryLocation,
           priority: priorityValue,
           package_type: packageType || 'Medical Supplies',
+          email: email,
         },
       });
 
@@ -187,6 +194,19 @@ export const RequestPickupForm = () => {
                       <Label htmlFor="scheduled" className="font-medium">Scheduled</Label>
                     </div>
                   </RadioGroup>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Your Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="Enter your email for delivery notifications" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">We'll send delivery updates to this email address</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
