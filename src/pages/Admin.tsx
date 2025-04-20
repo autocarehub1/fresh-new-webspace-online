@@ -6,33 +6,34 @@ import Footer from '@/components/layout/Footer';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth';
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const { user, isLoading, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+  
   useEffect(() => {
-    // Check for demo authentication token
-    const checkAuth = () => {
-      const token = localStorage.getItem('demoAuthToken');
-      if (!token) {
+    // Check if the user is authenticated and is an admin
+    if (!isLoading) {
+      if (!user) {
         toast.error('You must be logged in to access this page');
         navigate('/login');
-      } else {
-        setIsAuthenticated(true);
       }
-      setIsLoading(false);
-    };
-    
-    checkAuth();
-  }, [navigate]);
+    }
+  }, [user, isLoading, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success('Logged out successfully');
+    navigate('/login');
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 
@@ -41,22 +42,19 @@ const Admin = () => {
       <Navbar />
       <main className="flex-grow bg-gray-50">
         <div className="container mx-auto px-4 py-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-6">
-            <h2 className="text-amber-800 font-medium">Demo Mode Active</h2>
-            <p className="text-amber-700 text-sm">
-              This is a demo of the admin interface. In a real application, this would be secured with Supabase authentication.
-            </p>
+          <div className="bg-white border rounded-md p-4 mb-6 flex justify-between items-center">
+            <div>
+              <h2 className="font-medium">Welcome, {user.email}</h2>
+              <p className="text-sm text-gray-600">
+                You are logged in with Supabase Authentication
+              </p>
+            </div>
             <Button 
-              className="mt-2 text-xs"
               variant="outline"
               size="sm"
-              onClick={() => {
-                localStorage.removeItem('demoAuthToken');
-                toast.success('Logged out successfully');
-                navigate('/login');
-              }}
+              onClick={handleSignOut}
             >
-              Demo Logout
+              Sign Out
             </Button>
           </div>
           <AdminDashboard />

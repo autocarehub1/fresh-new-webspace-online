@@ -7,31 +7,63 @@ import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import { useAuth } from '@/lib/auth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp, user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+
+  // Redirect if already logged in
+  if (user) {
+    navigate('/admin');
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Demo credentials check - in a real app, this would use Supabase authentication
-    setTimeout(() => {
-      if (email === 'admin@example.com' && password === 'password123') {
-        // Store a demo token in localStorage to simulate authentication
-        localStorage.setItem('demoAuthToken', 'demo-auth-token');
-        toast.success('Logged in successfully (Demo Mode)');
-        navigate('/admin');
+    try {
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast.error(error.message || 'Failed to sign in');
       } else {
-        toast.error('Invalid credentials. For demo, use email: admin@example.com and password: password123');
+        toast.success('Logged in successfully');
+        navigate('/admin');
       }
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+      console.error(err);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { error } = await signUp(email, password);
+      if (error) {
+        toast.error(error.message || 'Failed to sign up');
+      } else {
+        toast.success('Registration successful! Check your email to confirm your account.');
+        setActiveTab('login');
+      }
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,53 +72,85 @@ const Login = () => {
       <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
-            <CardDescription>Enter your credentials to access the admin dashboard</CardDescription>
+            <CardTitle className="text-2xl">Account Access</CardTitle>
+            <CardDescription>Sign in or create a new account</CardDescription>
           </CardHeader>
           <CardContent>
-            <Alert className="mb-4 bg-amber-50 border-amber-200">
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="login">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input 
+                      id="login-email"
+                      type="email" 
+                      placeholder="your@email.com" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input 
+                      id="login-password"
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Logging in...' : 'Login'}
+                  </Button>
+                </form>
+              </TabsContent>
+              
+              <TabsContent value="register">
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="register-email">Email</Label>
+                    <Input 
+                      id="register-email"
+                      type="email" 
+                      placeholder="your@email.com" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-password">Password</Label>
+                    <Input 
+                      id="register-password"
+                      type="password" 
+                      placeholder="••••••••" 
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Creating account...' : 'Create Account'}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+            
+            <Alert className="mt-6 bg-amber-50 border-amber-200">
               <AlertDescription className="text-amber-800">
-                <strong>Demo Mode:</strong> Use these credentials to log in:
-                <ul className="list-disc pl-5 mt-2 text-sm">
-                  <li>Email: admin@example.com</li>
-                  <li>Password: password123</li>
-                </ul>
-                <p className="mt-2 text-sm">
-                  For real authentication, connect your Lovable project to Supabase.
+                <p className="text-sm">
+                  You've successfully connected to Supabase. For development purposes, you may want to disable email confirmation in the Supabase dashboard under Authentication settings.
                 </p>
               </AlertDescription>
             </Alert>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email"
-                  type="email" 
-                  placeholder="admin@example.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password"
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
-              </Button>
-            </form>
           </CardContent>
-          <CardFooter className="flex justify-center text-sm text-gray-500">
-            <p>This is a demo. For real authentication, connect Supabase.</p>
-          </CardFooter>
         </Card>
       </main>
       <Footer />
