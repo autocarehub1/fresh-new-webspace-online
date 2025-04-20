@@ -20,11 +20,17 @@ type DbDriver = {
 };
 
 // Type for insertion to ensure required fields
-type DbDriverInsert = Omit<Partial<DbDriver>, 'name' | 'vehicle_type' | 'current_location' | 'id'> & {
+type DbDriverInsert = {
+  id: string;
   name: string;
   vehicle_type: string;
   current_location: Json;
-  id: string;
+  status?: string;
+  photo?: string | null;
+  phone?: string | null;
+  current_delivery?: string | null;
+  created_at?: string;
+  user_id?: string | null;
 };
 
 // Converts DB model to frontend model
@@ -104,7 +110,6 @@ export const useDriverData = () => {
       
       // Ensure required fields for DB insert
       const insertData: DbDriverInsert = {
-        ...dbDriver as Partial<DbDriver>,
         id: uniqueId,
         name: newDriver.name,
         vehicle_type: newDriver.vehicle_type,
