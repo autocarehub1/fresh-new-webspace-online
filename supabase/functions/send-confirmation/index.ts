@@ -41,9 +41,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get the base URL from the request
-    const url = new URL(req.url);
-    const baseUrl = `${url.protocol}//${url.hostname}`;
+    // Use a hardcoded base URL for the application instead of trying to extract it from the request
+    // This avoids the header issues when clicking the link
+    const baseUrl = "https://your-app-url.com"; // Replace this with your actual deployed application URL
 
     const emailResponse = await resend.emails.send({
       from: "Medical Courier Service <onboarding@resend.dev>",
@@ -98,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="${baseUrl}/tracking?id=${request.trackingId}" 
+                  <a href="/tracking?id=${request.trackingId}" 
                      style="display: inline-block; background-color: #3E92CC; color: #ffffff; padding: 12px 24px; 
                             text-decoration: none; border-radius: 6px; font-weight: 600;">
                     Track Your Delivery
