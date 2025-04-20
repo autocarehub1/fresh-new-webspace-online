@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw } from 'lucide-react';
@@ -23,10 +24,11 @@ const DriversPanel = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
-
+  const [isLocalLoading, setIsLocalLoading] = useState(true); // Renamed from setIsLoading to fix error
+  
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      setIsLocalLoading(false);
     }, 800);
     return () => clearTimeout(timer);
   }, []);
@@ -100,7 +102,7 @@ const DriversPanel = () => {
     );
   };
 
-  if (isLoading) {
+  if (isLoading || isLocalLoading) { // Updated to check both loading states
     return <div>Loading drivers...</div>;
   }
 
