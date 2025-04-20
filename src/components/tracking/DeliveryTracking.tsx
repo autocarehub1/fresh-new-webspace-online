@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 import { DeliveryRequest } from '@/types/delivery';
 import Map from '@/components/map/Map';
 import TrackingTimeline from './TrackingTimeline';
@@ -9,6 +9,40 @@ import PackageInfo from './PackageInfo';
 import CourierInfo from './CourierInfo';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+
+const generatePDF = (delivery: DeliveryRequest) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  doc.setFontSize(20);
+  doc.text('Medical Courier Service', pageWidth/2, 20, { align: 'center' });
+  
+  doc.setFontSize(12);
+  doc.text(`Tracking ID: ${delivery.trackingId || delivery.id}`, 20, 40);
+  doc.text(`Status: ${delivery.status}`, 20, 50);
+  doc.text(`Priority: ${delivery.priority}`, 20, 60);
+  
+  doc.text('Package Details:', 20, 80);
+  doc.text(`Type: ${delivery.packageType}`, 30, 90);
+  if (delivery.temperature) {
+    doc.text(`Temperature: ${delivery.temperature.current} (Required: ${delivery.temperature.required})`, 30, 100);
+  }
+  
+  doc.text('Pickup Location:', 20, 120);
+  doc.text(delivery.pickup_location, 30, 130);
+  
+  doc.text('Delivery Location:', 20, 150);
+  doc.text(delivery.delivery_location, 30, 160);
+  
+  doc.text('Delivery Information:', 20, 180);
+  doc.text(`Created: ${new Date(delivery.created_at).toLocaleString()}`, 30, 190);
+  if (delivery.estimatedDelivery) {
+    doc.text(`Estimated Delivery: ${new Date(delivery.estimatedDelivery).toLocaleString()}`, 30, 200);
+  }
+  
+  doc.save(`medical-delivery-${delivery.trackingId || delivery.id}.pdf`);
+};
 
 export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
   const [delivery, setDelivery] = useState<DeliveryRequest | null>(null);
@@ -21,7 +55,6 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
         setLoading(true);
         console.log('Fetching delivery data for tracking ID:', trackingId);
         
-        // Query the Supabase database for the delivery request
         const { data, error } = await supabase
           .from('delivery_requests')
           .select('*, tracking_updates(*)')
@@ -41,7 +74,6 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
           return;
         }
         
-        // Transform the data to match the expected format
         const enhancedRequest: DeliveryRequest = {
           id: data.id,
           trackingId: data.tracking_id || data.id,
@@ -139,8 +171,21 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
               })}`}
           </p>
         </div>
-        <Button asChild variant="outline" className="mt-4 md:mt-0">
-          <a href="#">Download Receipt</a>
+        <Button 
+          variant="outline" 
+          className="mt-4 md:mt-0"
+          onClick={() => {
+            try {
+              generatePDF(delivery);
+              toast.success('Receipt downloaded successfully');
+            } catch (err) {
+              console.error('Error generating PDF:', err);
+              toast.error('Failed to generate receipt');
+            }
+          }}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download Receipt
         </Button>
       </div>
       
