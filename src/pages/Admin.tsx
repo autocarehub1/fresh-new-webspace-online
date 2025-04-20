@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -7,19 +7,36 @@ import AdminDashboard from '@/components/admin/AdminDashboard';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 const Admin = () => {
   const navigate = useNavigate();
   const { user, isLoading, signOut } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
   
   useEffect(() => {
-    // Check if the user is authenticated and is an admin
-    if (!isLoading) {
+    const checkAdminAccess = async () => {
       if (!user) {
         toast.error('You must be logged in to access this page');
         navigate('/login');
+        return;
       }
+
+      // Check if user is admin
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error || data?.role !== 'admin') {
+        toast.error('You do not have permission to access this page');
+        navigate('/');
+        return;
+      }
+    };
+
+    if (!isLoading) {
+      checkAdminAccess();
     }
   }, [user, isLoading, navigate]);
 
@@ -46,7 +63,7 @@ const Admin = () => {
             <div>
               <h2 className="font-medium">Welcome, {user.email}</h2>
               <p className="text-sm text-gray-600">
-                You are logged in with Supabase Authentication
+                Admin Dashboard
               </p>
             </div>
             <Button 

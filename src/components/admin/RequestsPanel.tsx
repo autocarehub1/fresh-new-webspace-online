@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -19,38 +18,55 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDeliveryData } from '@/hooks/use-delivery-data';
 
 const RequestsPanel = () => {
-  const { requests, drivers, updateRequestStatus, addTrackingUpdate } = useDeliveryStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    deliveries: requests, 
+    isLoading,
+    updateDeliveryRequest 
+  } = useDeliveryData();
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
+
+  const handleRequestAction = async (requestId: string, action: 'approve' | 'decline') => {
+    const newStatus = action === 'approve' ? 'in_progress' : 'declined';
+    try {
+      await updateDeliveryRequest.mutateAsync({ 
+        id: requestId, 
+        status: newStatus 
+      });
+      toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
+    } catch (error) {
+      toast.error('Failed to update request status');
+    }
+  };
+  
+  const handleMarkDelivered = async (requestId: string) => {
+    try {
+      await updateDeliveryRequest.mutateAsync({ 
+        id: requestId, 
+        status: 'completed' 
+      });
+      toast.success(`Request ${requestId} marked as delivered`);
+    } catch (error) {
+      toast.error('Failed to update request status');
+    }
+  };
+  
+  const { drivers, addTrackingUpdate } = useDeliveryStore();
+  const [isLocalLoading, setLocalIsLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      setLocalIsLoading(false);
     }, 800);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const handleRequestAction = (requestId: string, action: 'approve' | 'decline') => {
-    const newStatus = action === 'approve' ? 'in_progress' : 'declined';
-    updateRequestStatus(requestId, newStatus);
-    toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
-  };
-  
-  const handleMarkDelivered = (requestId: string) => {
-    updateRequestStatus(requestId, 'completed');
-    
-    // Add a final tracking update
-    addTrackingUpdate(requestId, {
-      status: 'Delivered',
-      timestamp: new Date().toISOString(),
-      location: 'Destination',
-      note: 'Package has been delivered successfully'
-    });
-    
-    toast.success(`Request ${requestId} marked as delivered`);
+  const handleAddTrackingUpdate = (requestId: string, update: any) => {
+    addTrackingUpdate(requestId, update);
+    toast.success(`Tracking update added to request ${requestId}`);
   };
   
   const getDriverName = (driverId: string | undefined) => {
@@ -59,13 +75,13 @@ const RequestsPanel = () => {
     return driver ? driver.name : 'Unknown';
   };
 
-  if (isLoading) {
+  if (isLoading || isLocalLoading) {
     return <div>Loading requests...</div>;
   }
 
-  const pendingRequests = requests.filter(req => req.status === 'pending').length;
-  const inProgressRequests = requests.filter(req => req.status === 'in_progress').length;
-  const completedRequests = requests.filter(req => req.status === 'completed').length;
+  const pendingRequests = requests?.filter(req => req.status === 'pending').length;
+  const inProgressRequests = requests?.filter(req => req.status === 'in_progress').length;
+  const completedRequests = requests?.filter(req => req.status === 'completed').length;
   
   return (
     <div className="space-y-6">
@@ -75,7 +91,7 @@ const RequestsPanel = () => {
             <CardTitle className="text-lg">Total Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{requests.length}</div>
+            <div className="text-3xl font-bold">{requests?.length}</div>
           </CardContent>
         </Card>
         
@@ -125,7 +141,7 @@ const RequestsPanel = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {requests.map((request) => (
+            {requests?.map((request) => (
               <TableRow key={request.id}>
                 <TableCell>{request.id}</TableCell>
                 <TableCell>{request.trackingId || '-'}</TableCell>

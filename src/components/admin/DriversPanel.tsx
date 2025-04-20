@@ -9,17 +9,16 @@ import DriversOverview from './drivers/DriversOverview';
 import DriversTable from './drivers/DriversTable';
 import DriverAssignment from './drivers/DriverAssignment';
 import type { Driver } from '@/types/delivery';
+import { useDriverData } from '@/hooks/use-driver-data';
 
 const DriversPanel = () => {
   const { 
-    drivers, 
-    requests, 
-    updateDriverStatus, 
-    assignDriverToRequest, 
-    simulateMovement 
-  } = useDeliveryStore();
+    drivers,
+    isLoading,
+    updateDriver,
+    assignDriver
+  } = useDriverData();
   
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState('');
@@ -35,8 +34,8 @@ const DriversPanel = () => {
   useEffect(() => {
     if (!isSimulating) return;
 
-    const activeRequests = requests.filter(r => 
-      r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
+    const activeRequests = drivers.filter(r => 
+      r.status === 'active' && r.current_delivery && r.current_location.coordinates
     );
 
     if (activeRequests.length === 0) {
@@ -45,20 +44,27 @@ const DriversPanel = () => {
     }
 
     const interval = setInterval(() => {
-      activeRequests.forEach(request => {
-        simulateMovement(request.id);
-      });
+      // activeRequests.forEach(request => {
+      //   simulateMovement(request.id);
+      // });
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [isSimulating, requests, simulateMovement]);
+  }, [isSimulating, drivers]);
 
-  const handleStatusToggle = (driverId: string) => {
+  const handleStatusToggle = async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
     if (driver) {
-      const newStatus = driver.status === 'active' ? 'inactive' : 'active';
-      updateDriverStatus(driverId, newStatus);
-      toast.success(`Driver ${driver.name}'s status changed to ${newStatus}`);
+      try {
+        const newStatus = driver.status === 'active' ? 'inactive' : 'active';
+        await updateDriver.mutateAsync({ 
+          id: driverId, 
+          status: newStatus 
+        });
+        toast.success(`Driver ${driver.name}'s status changed to ${newStatus}`);
+      } catch (error) {
+        toast.error('Failed to update driver status');
+      }
     }
   };
 
@@ -67,15 +73,23 @@ const DriversPanel = () => {
     toast.success(`Driver ${driver?.name} has been removed`);
   };
 
-  const handleAssignDriver = () => {
+  const handleAssignDriver = async () => {
     if (!selectedDriverId || !selectedRequestId) {
       toast.error('Please select both a driver and a request');
       return;
     }
-    assignDriverToRequest(selectedRequestId, selectedDriverId);
-    toast.success('Driver assigned successfully');
-    setSelectedDriverId('');
-    setSelectedRequestId('');
+
+    try {
+      await assignDriver.mutateAsync({ 
+        driverId: selectedDriverId, 
+        deliveryId: selectedRequestId 
+      });
+      toast.success('Driver assigned successfully');
+      setSelectedDriverId('');
+      setSelectedRequestId('');
+    } catch (error) {
+      toast.error('Failed to assign driver');
+    }
   };
 
   const handleToggleSimulation = () => {
@@ -121,7 +135,7 @@ const DriversPanel = () => {
         
         <DriverAssignment 
           drivers={drivers}
-          requests={requests}
+          requests={[]}
           selectedDriverId={selectedDriverId}
           selectedRequestId={selectedRequestId}
           onDriverSelect={setSelectedDriverId}
