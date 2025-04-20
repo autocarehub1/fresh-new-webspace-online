@@ -41,9 +41,20 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use a hardcoded base URL for the application instead of trying to extract it from the request
-    // This avoids the header issues when clicking the link
-    const baseUrl = "https://your-app-url.com"; // Replace this with your actual deployed application URL
+    // Extract base URL from the request header or use fallback URL
+    let baseUrl = "https://joziqntfciyflfsgvsqz.supabase.co";
+    try {
+      const referer = req.headers.get('referer');
+      if (referer) {
+        const url = new URL(referer);
+        baseUrl = `${url.protocol}//${url.host}`;
+      }
+    } catch (error) {
+      console.warn("Could not extract base URL from request:", error);
+    }
+
+    console.log("Using base URL for email links:", baseUrl);
+    const trackingUrl = `${baseUrl}/tracking?id=${request.trackingId}`;
 
     const emailResponse = await resend.emails.send({
       from: "Medical Courier Service <onboarding@resend.dev>",
@@ -98,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="/tracking?id=${request.trackingId}" 
+                  <a href="${trackingUrl}" 
                      style="display: inline-block; background-color: #3E92CC; color: #ffffff; padding: 12px 24px; 
                             text-decoration: none; border-radius: 6px; font-weight: 600;">
                     Track Your Delivery
