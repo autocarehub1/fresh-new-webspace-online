@@ -19,48 +19,64 @@ const services = [
     icon: AlertTriangle,
     title: "Urgent Delivery",
     description: "Critical time-sensitive deliveries with immediate dispatch and priority routing for life-saving situations.",
+    pricing: "Starting at $75 per delivery",
+    priceDetails: "Base rate plus $3.50/mile",
     link: "/services/urgent"
   },
   {
     icon: Calendar,
     title: "Same-Day Delivery",
     description: "Reliable same-day service for specimens, medications and medical documents with precise timing.",
+    pricing: "Starting at $35 per delivery",
+    priceDetails: "Base rate plus $2.50/mile",
     link: "/services/same-day"
   },
   {
     icon: Clock,
     title: "Scheduled Routes",
     description: "Regular scheduled pickups and deliveries customized to your facility's needs and patterns.",
+    pricing: "Starting at $250/week",
+    priceDetails: "Custom quotes for route frequency",
     link: "/services/scheduled"
   },
   {
     icon: ThermometerSnowflake,
     title: "Temperature-Controlled",
     description: "Specialized transport for temperature-sensitive materials with continuous monitoring.",
+    pricing: "Starting at $45 per delivery",
+    priceDetails: "Base rate plus $3.00/mile",
     link: "/services/temperature-controlled"
   },
   {
     icon: Microscope,
     title: "Specimen Transport",
     description: "Secure and proper handling of laboratory specimens with chain of custody documentation.",
+    pricing: "Starting at $40 per delivery",
+    priceDetails: "Base rate plus $2.75/mile",
     link: "/services/specimen"
   },
   {
     icon: Package,
     title: "Equipment Transport",
     description: "Safe transportation of sensitive medical equipment with appropriate handling protocols.",
+    pricing: "Starting at $85 per delivery",
+    priceDetails: "Custom quote based on equipment",
     link: "/services/equipment"
   },
   {
     icon: Pill,
     title: "Pharmaceutical Delivery",
     description: "Secure transport of medications and pharmaceuticals with proper handling and documentation.",
+    pricing: "Starting at $45 per delivery",
+    priceDetails: "Base rate plus $2.75/mile",
     link: "/services/pharmaceutical"
   },
   {
     icon: FileText,
     title: "Document Courier",
     description: "Confidential transport of sensitive medical documents with tracking and security protocols.",
+    pricing: "Starting at $25 per delivery",
+    priceDetails: "Base rate plus $2.00/mile",
     link: "/services/document"
   }
 ];
@@ -86,7 +102,11 @@ export const Services = () => {
                 <CardTitle className="text-xl">{service.title}</CardTitle>
               </CardHeader>
               <CardContent className="pb-6">
-                <p className="text-gray-600 text-sm">{service.description}</p>
+                <p className="text-gray-600 text-sm mb-4">{service.description}</p>
+                <div className="space-y-1">
+                  <p className="text-medical-blue font-semibold">{service.pricing}</p>
+                  <p className="text-xs text-gray-500">{service.priceDetails}</p>
+                </div>
               </CardContent>
               <CardFooter>
                 <Button asChild variant="ghost" className="text-medical-blue hover:text-medical-teal hover:bg-medical-blue/5">

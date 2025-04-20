@@ -7,6 +7,15 @@ const serviceData = {
   'urgent': {
     title: 'Urgent Medical Delivery',
     description: 'Our urgent medical delivery service ensures critical medical supplies reach their destination within 1-2 hours of your request.',
+    pricing: {
+      baseRate: '$75 per delivery',
+      mileageRate: '$3.50 per mile',
+      additionalFees: [
+        'After-hours surcharge: $25',
+        'Holiday surcharge: $50',
+        'Hazardous materials handling: $35'
+      ]
+    },
     features: [
       'Priority routing and dispatch',
       'Real-time GPS tracking',
@@ -19,6 +28,15 @@ const serviceData = {
   'same-day': {
     title: 'Same-Day Medical Delivery',
     description: 'Reliable same-day delivery for non-urgent but time-sensitive medical supplies and specimens.',
+    pricing: {
+      baseRate: '$35 per delivery',
+      mileageRate: '$2.50 per mile',
+      additionalFees: [
+        'Multi-stop discount available',
+        'Weekend service: $15 surcharge',
+        'Waiting time: $15 per 15 minutes'
+      ]
+    },
     features: [
       'Multiple pickups consolidated into single delivery',
       'Scheduled delivery windows',
@@ -31,6 +49,15 @@ const serviceData = {
   'scheduled': {
     title: 'Scheduled Route Medical Delivery',
     description: 'Pre-planned, recurring delivery routes for regular medical supply and specimen transport needs.',
+    pricing: {
+      baseRate: '$250 per week',
+      mileageRate: 'Included in base rate',
+      additionalFees: [
+        'Extra stops: $10 each',
+        'Route modification: $25',
+        'Volume discounts available'
+      ]
+    },
     features: [
       'Weekly, daily, or custom recurring schedules',
       'Consistent driver assignments',
@@ -43,6 +70,15 @@ const serviceData = {
   'temperature-controlled': {
     title: 'Temperature-Controlled Medical Delivery',
     description: 'Specialized delivery service maintaining precise temperature requirements for sensitive medical items.',
+    pricing: {
+      baseRate: '$45 per delivery',
+      mileageRate: '$3.00 per mile',
+      additionalFees: [
+        'Temperature monitoring: $15',
+        'Specialized packaging: $25-45',
+        'Temperature documentation: $10'
+      ]
+    },
     features: [
       'Validated temperature-controlled vehicles',
       'Temperature monitoring throughout transit',
@@ -55,6 +91,15 @@ const serviceData = {
   'specimen': {
     title: 'Specimen Transport',
     description: 'Dedicated specimen transport with strict adherence to handling protocols and chain of custody requirements.',
+    pricing: {
+      baseRate: '$40 per delivery',
+      mileageRate: '$2.75 per mile',
+      additionalFees: [
+        'Biohazard handling: $20',
+        'Rush processing: $30',
+        'Chain of custody documentation: $15'
+      ]
+    },
     features: [
       'Specialized training for biohazard handling',
       'Proper specimen packaging verification',
@@ -94,6 +139,27 @@ const ServiceDetails = () => {
           
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <p className="text-lg mb-6">{service.description}</p>
+            
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-medical-blue mb-4">Pricing Information</h2>
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h3 className="font-semibold mb-2">Base Rates</h3>
+                    <p className="text-lg text-medical-blue font-bold mb-1">{service.pricing.baseRate}</p>
+                    <p className="text-sm text-gray-600">{service.pricing.mileageRate}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-2">Additional Fees</h3>
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      {service.pricing.additionalFees.map((fee, index) => (
+                        <li key={index}>{fee}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
             
             <h2 className="text-xl font-semibold text-medical-blue mb-4">Service Features</h2>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
