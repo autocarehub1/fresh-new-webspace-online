@@ -84,6 +84,11 @@ export const useDriverData = () => {
   // Create a new driver
   const createDriver = useMutation({
     mutationFn: async (newDriver: Partial<Driver>) => {
+      // For new drivers, ensure we have required fields
+      if (!newDriver.name || !newDriver.vehicle_type || !newDriver.current_location) {
+        throw new Error("Name, vehicle type, and current location are required");
+      }
+      
       const dbDriver = mapDriverToDb(newDriver);
       
       const { data, error } = await supabase

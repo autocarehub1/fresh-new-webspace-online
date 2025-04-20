@@ -36,7 +36,7 @@ const mapDbToDeliveryRequest = (dbItem: DbDeliveryRequest): DeliveryRequest => {
     delivery_location: dbItem.delivery_location,
     created_at: dbItem.created_at,
     assigned_driver: dbItem.assigned_driver || undefined,
-    tracking_id: dbItem.tracking_id || undefined,
+    trackingId: dbItem.tracking_id || undefined,
     estimatedDelivery: dbItem.estimated_delivery,
     packageType: dbItem.package_type,
     priority: (dbItem.priority as "normal" | "urgent") || "normal",
@@ -60,7 +60,7 @@ const mapDeliveryRequestToDb = (item: Partial<DeliveryRequest>): Partial<DbDeliv
     delivery_location: item.delivery_location,
     status: item.status,
     assigned_driver: item.assigned_driver || null,
-    tracking_id: item.tracking_id || null,
+    tracking_id: item.trackingId || null,
     estimated_delivery: item.estimatedDelivery || null,
     package_type: item.packageType || null,
     priority: item.priority || null,
@@ -69,15 +69,15 @@ const mapDeliveryRequestToDb = (item: Partial<DeliveryRequest>): Partial<DbDeliv
   };
 
   if (item.current_coordinates) {
-    dbItem.current_coordinates = item.current_coordinates as Json;
+    dbItem.current_coordinates = item.current_coordinates as unknown as Json;
   }
   
   if (item.delivery_coordinates) {
-    dbItem.delivery_coordinates = item.delivery_coordinates as Json;
+    dbItem.delivery_coordinates = item.delivery_coordinates as unknown as Json;
   }
   
   if (item.pickup_coordinates) {
-    dbItem.pickup_coordinates = item.pickup_coordinates as Json;
+    dbItem.pickup_coordinates = item.pickup_coordinates as unknown as Json;
   }
   
   if (item.temperature) {
@@ -106,6 +106,11 @@ export const useDeliveryData = () => {
   // Create a new delivery request
   const createDelivery = useMutation({
     mutationFn: async (newDelivery: Partial<DeliveryRequest>) => {
+      // For new delivery requests, ensure we have required fields
+      if (!newDelivery.pickup_location || !newDelivery.delivery_location) {
+        throw new Error("Pickup and delivery locations are required");
+      }
+      
       const dbDelivery = mapDeliveryRequestToDb(newDelivery);
       
       const { data, error } = await supabase
