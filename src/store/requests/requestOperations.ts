@@ -1,8 +1,10 @@
+
 import { create } from 'zustand';
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId } from '@/utils/deliveryUtils';
 
 interface RequestOperationsStore {
+  requests: DeliveryRequest[];
   updateRequestStatus: (requestId: string, status: DeliveryStatus) => void;
   addTrackingUpdate: (requestId: string, update: TrackingUpdate) => void;
   getRequestByTrackingId: (trackingId: string) => DeliveryRequest | undefined;
@@ -10,6 +12,7 @@ interface RequestOperationsStore {
 
 // Create a store with only the operations
 export const useRequestOperations = create<RequestOperationsStore>()((set, get) => ({
+  requests: [],
   updateRequestStatus: (requestId, status) => {
     set((state) => ({
       requests: state.requests?.map((request) => {

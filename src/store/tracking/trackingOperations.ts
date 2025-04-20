@@ -1,13 +1,16 @@
+
 import { create } from 'zustand';
 import { useDriverStore } from '../drivers/driverStore';
-import { Coordinates } from '@/types/delivery';
+import { Coordinates, DeliveryRequest } from '@/types/delivery';
 
 interface TrackingOperationsStore {
+  requests: DeliveryRequest[];
   updateDeliveryLocation: (requestId: string, coordinates: Coordinates) => void;
   simulateMovement: (requestId: string) => void;
 }
 
 export const useTrackingOperations = create<TrackingOperationsStore>((set, get) => ({
+  requests: [],
   updateDeliveryLocation: (requestId, coordinates) => {
     set((state) => ({
       requests: state.requests?.map((request) => {
@@ -62,7 +65,10 @@ export const useTrackingOperations = create<TrackingOperationsStore>((set, get) 
       }));
       
       if (request.assigned_driver) {
-        useDriverStore.getState().updateDriverDelivery(request.assigned_driver, null);
+        const driverStore = useDriverStore.getState();
+        if (driverStore.updateDriverDelivery) {
+          driverStore.updateDriverDelivery(request.assigned_driver, null);
+        }
       }
       return;
     }
@@ -75,10 +81,13 @@ export const useTrackingOperations = create<TrackingOperationsStore>((set, get) 
     if (request.assigned_driver) {
       const driver = useDriverStore.getState().drivers.find(d => d.id === request.assigned_driver);
       if (driver) {
-        useDriverStore.getState().updateDriverLocation(driver.id, {
-          address: driver.current_location.address,
-          coordinates: { lat: moveLat, lng: moveLng }
-        });
+        const driverStore = useDriverStore.getState();
+        if (driverStore.updateDriverLocation) {
+          driverStore.updateDriverLocation(driver.id, {
+            address: driver.current_location.address,
+            coordinates: { lat: moveLat, lng: moveLng }
+          });
+        }
       }
     }
   }
