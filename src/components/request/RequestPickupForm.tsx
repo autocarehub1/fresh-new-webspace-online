@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,13 +23,11 @@ export const RequestPickupForm = () => {
     id: string;
   } | null>(null);
   
-  // Form state
   const [pickupLocation, setPickupLocation] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState('');
   const [priority, setPriority] = useState('same-day');
   const [packageType, setPackageType] = useState('');
   
-  // Access the delivery store to generate a consistent tracking ID
   const { generateTrackingId } = useDeliveryStore();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,14 +41,12 @@ export const RequestPickupForm = () => {
     setSubmitting(true);
     
     try {
-      // Generate tracking ID using the store utility
       const trackingId = generateTrackingId();
       const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
-      // Map priority from UI to DB value
       const priorityValue = priority === 'urgent' ? 'urgent' : 'normal';
       
-      console.log('Submitting request with data:', {
+      const requestData = {
         id: requestId,
         tracking_id: trackingId,
         pickup_location: pickupLocation,
@@ -59,20 +54,13 @@ export const RequestPickupForm = () => {
         priority: priorityValue,
         package_type: packageType || 'Medical Supplies',
         status: 'pending',
-      });
+      };
       
-      // Create the request in Supabase
+      console.log('Submitting request with data:', requestData);
+      
       const { data, error } = await supabase
         .from('delivery_requests')
-        .insert({
-          id: requestId,
-          tracking_id: trackingId,
-          pickup_location: pickupLocation,
-          delivery_location: deliveryLocation,
-          priority: priorityValue,
-          package_type: packageType || 'Medical Supplies',
-          status: 'pending',
-        })
+        .insert(requestData)
         .select();
         
       if (error) {
@@ -82,7 +70,24 @@ export const RequestPickupForm = () => {
       
       console.log('Request submitted successfully:', data);
       
-      // Save request data for display to user
+      const emailResponse = await supabase.functions.invoke('send-confirmation', {
+        body: {
+          id: requestId,
+          trackingId,
+          pickup_location: pickupLocation,
+          delivery_location: deliveryLocation,
+          priority: priorityValue,
+          package_type: packageType || 'Medical Supplies',
+        },
+      });
+
+      if (emailResponse.error) {
+        console.error('Error sending confirmation email:', emailResponse.error);
+        toast.error('Request submitted but failed to send confirmation email');
+      } else {
+        console.log('Confirmation email sent successfully');
+      }
+      
       setRequestData({
         trackingId,
         id: requestId
