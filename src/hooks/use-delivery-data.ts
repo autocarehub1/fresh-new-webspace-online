@@ -1,5 +1,4 @@
 
-import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DeliveryRequest, DeliveryStatus } from '@/types/delivery';
@@ -25,6 +24,12 @@ type DbDeliveryRequest = {
   status: string;
   temperature: Json | null;
   tracking_id: string | null;
+};
+
+// Type for insertion to ensure required fields
+type DbDeliveryRequestInsert = Omit<Partial<DbDeliveryRequest>, 'pickup_location' | 'delivery_location'> & {
+  pickup_location: string;
+  delivery_location: string;
 };
 
 // Converts DB model to frontend model
@@ -113,9 +118,16 @@ export const useDeliveryData = () => {
       
       const dbDelivery = mapDeliveryRequestToDb(newDelivery);
       
+      // Ensure required fields for DB insert
+      const insertData: DbDeliveryRequestInsert = {
+        ...dbDelivery as Partial<DbDeliveryRequest>,
+        pickup_location: newDelivery.pickup_location,
+        delivery_location: newDelivery.delivery_location
+      };
+      
       const { data, error } = await supabase
         .from('delivery_requests')
-        .insert(dbDelivery)
+        .insert(insertData)
         .select()
         .single();
         

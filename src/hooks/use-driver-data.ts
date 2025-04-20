@@ -19,6 +19,13 @@ type DbDriver = {
   user_id: string | null;
 };
 
+// Type for insertion to ensure required fields
+type DbDriverInsert = Omit<Partial<DbDriver>, 'name' | 'vehicle_type' | 'current_location'> & {
+  name: string;
+  vehicle_type: string;
+  current_location: Json;
+};
+
 // Converts DB model to frontend model
 const mapDbToDriver = (dbItem: DbDriver): Driver => {
   const currentLocation = dbItem.current_location as any;
@@ -91,9 +98,17 @@ export const useDriverData = () => {
       
       const dbDriver = mapDriverToDb(newDriver);
       
+      // Ensure required fields for DB insert
+      const insertData: DbDriverInsert = {
+        ...dbDriver as Partial<DbDriver>,
+        name: newDriver.name,
+        vehicle_type: newDriver.vehicle_type,
+        current_location: dbDriver.current_location as Json
+      };
+      
       const { data, error } = await supabase
         .from('drivers')
-        .insert(dbDriver)
+        .insert(insertData)
         .select()
         .single();
         
