@@ -3,14 +3,29 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const TrackingSearch = ({ onSearch }: { onSearch: (trackingId: string) => void }) => {
   const [trackingId, setTrackingId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (trackingId.trim()) {
-      onSearch(trackingId.trim());
+    const trimmedId = trackingId.trim();
+    
+    if (!trimmedId) {
+      toast.error('Please enter a tracking number');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      onSearch(trimmedId);
+    } catch (error) {
+      console.error('Error in tracking search:', error);
+      toast.error('An error occurred while searching. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -27,7 +42,9 @@ export const TrackingSearch = ({ onSearch }: { onSearch: (trackingId: string) =>
             onChange={(e) => setTrackingId(e.target.value)}
           />
         </div>
-        <Button type="submit">Track</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Searching...' : 'Track'}
+        </Button>
       </form>
     </div>
   );

@@ -11,8 +11,12 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CheckCircle, AlertTriangle, InfoIcon } from 'lucide-react';
 import { useDeliveryStore } from '@/store/deliveryStore';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 export const RequestPickupForm = () => {
+  const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [requestData, setRequestData] = useState<{
@@ -20,27 +24,69 @@ export const RequestPickupForm = () => {
     id: string;
   } | null>(null);
   
+  // Form state
+  const [pickupLocation, setPickupLocation] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState('');
+  const [priority, setPriority] = useState('same-day');
+  const [packageType, setPackageType] = useState('');
+  
   // Access the delivery store to generate a consistent tracking ID
   const { generateTrackingId } = useDeliveryStore();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!pickupLocation || !deliveryLocation) {
+      toast.error('Please fill in pickup and delivery locations');
+      return;
+    }
+    
     setSubmitting(true);
     
-    // Simulate form submission and generate a proper tracking ID
-    setTimeout(() => {
-      // Generate a tracking ID using the same method as the admin portal
+    try {
+      // Generate tracking ID using the store utility
       const trackingId = generateTrackingId();
-      const requestId = `REQ-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
+      // Map priority from UI to DB value
+      const priorityValue = priority === 'urgent' ? 'urgent' : 'normal';
+      
+      // Create the request in Supabase
+      const { error } = await supabase
+        .from('delivery_requests')
+        .insert({
+          id: requestId,
+          tracking_id: trackingId,
+          pickup_location: pickupLocation,
+          delivery_location: deliveryLocation,
+          priority: priorityValue,
+          package_type: packageType || 'Medical Supplies',
+          status: 'pending',
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Save request data for display to user
       setRequestData({
         trackingId,
         id: requestId
       });
       
-      setSubmitting(false);
       setSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error submitting request:', error);
+      toast.error('Failed to submit request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTrackDelivery = () => {
+    if (requestData?.trackingId) {
+      navigate(`/tracking?id=${requestData.trackingId}`);
+    }
   };
   
   if (success) {
@@ -61,17 +107,16 @@ export const RequestPickupForm = () => {
                 <span className="font-medium">{requestData?.id || ''}</span>
               </div>
               <div className="flex justify-between mb-2">
+                <span className="text-sm text-gray-500">Tracking Number:</span>
+                <span className="font-medium">{requestData?.trackingId || ''}</span>
+              </div>
+              <div className="flex justify-between mb-2">
                 <span className="text-sm text-gray-500">Estimated Pickup:</span>
                 <span className="font-medium">30-45 minutes</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Tracking Link:</span>
-                <a href={`/tracking?id=${requestData?.trackingId}`} className="font-medium text-medical-blue hover:underline">
-                  Track This Pickup
-                </a>
-              </div>
             </div>
             <div className="mt-6 space-y-4">
+              <Button onClick={handleTrackDelivery} className="w-full">Track This Pickup</Button>
               <Button onClick={() => setSuccess(false)} variant="outline">Request Another Pickup</Button>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <InfoIcon size={16} />
@@ -109,7 +154,7 @@ export const RequestPickupForm = () => {
                       For life-critical emergencies requiring immediate pickup, please call our dedicated emergency line at <strong>(210) 555-0123</strong>.
                     </p>
                   </div>
-                  <RadioGroup defaultValue="same-day" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <RadioGroup defaultValue="same-day" value={priority} onValueChange={setPriority} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="urgent" id="urgent" />
                       <Label htmlFor="urgent" className="font-medium">Urgent (1-2 hours)</Label>
@@ -142,7 +187,13 @@ export const RequestPickupForm = () => {
                       
                       <div className="space-y-2">
                         <Label htmlFor="pickup-location">Pickup Location</Label>
-                        <Input id="pickup-location" placeholder="Full address" />
+                        <Input 
+                          id="pickup-location" 
+                          placeholder="Full address" 
+                          value={pickupLocation}
+                          onChange={(e) => setPickupLocation(e.target.value)}
+                          required
+                        />
                       </div>
                       
                       <div className="space-y-2">
@@ -163,7 +214,13 @@ export const RequestPickupForm = () => {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="delivery-location">Delivery Location</Label>
-                        <Input id="delivery-location" placeholder="Full address" />
+                        <Input 
+                          id="delivery-location" 
+                          placeholder="Full address" 
+                          value={deliveryLocation}
+                          onChange={(e) => setDeliveryLocation(e.target.value)}
+                          required
+                        />
                       </div>
                       
                       <div className="space-y-2">
@@ -195,7 +252,7 @@ export const RequestPickupForm = () => {
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="package-type">Package Type</Label>
-                        <Select>
+                        <Select value={packageType} onValueChange={setPackageType}>
                           <SelectTrigger id="package-type">
                             <SelectValue placeholder="Select package type" />
                           </SelectTrigger>
