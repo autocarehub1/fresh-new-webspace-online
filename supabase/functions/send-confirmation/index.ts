@@ -41,6 +41,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get the base URL from the request
+    const url = new URL(req.url);
+    const baseUrl = `${url.protocol}//${url.hostname}`;
+
     const emailResponse = await resend.emails.send({
       from: "Medical Courier Service <onboarding@resend.dev>",
       to: [request.email],
@@ -94,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </div>
                 
                 <div style="text-align: center; margin-top: 32px;">
-                  <a href="/tracking?id=${request.trackingId}" 
+                  <a href="${baseUrl}/tracking?id=${request.trackingId}" 
                      style="display: inline-block; background-color: #3E92CC; color: #ffffff; padding: 12px 24px; 
                             text-decoration: none; border-radius: 6px; font-weight: 600;">
                     Track Your Delivery
