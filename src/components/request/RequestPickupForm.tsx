@@ -51,8 +51,18 @@ export const RequestPickupForm = () => {
       // Map priority from UI to DB value
       const priorityValue = priority === 'urgent' ? 'urgent' : 'normal';
       
+      console.log('Submitting request with data:', {
+        id: requestId,
+        tracking_id: trackingId,
+        pickup_location: pickupLocation,
+        delivery_location: deliveryLocation,
+        priority: priorityValue,
+        package_type: packageType || 'Medical Supplies',
+        status: 'pending',
+      });
+      
       // Create the request in Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('delivery_requests')
         .insert({
           id: requestId,
@@ -62,11 +72,15 @@ export const RequestPickupForm = () => {
           priority: priorityValue,
           package_type: packageType || 'Medical Supplies',
           status: 'pending',
-        });
+        })
+        .select();
         
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
+      
+      console.log('Request submitted successfully:', data);
       
       // Save request data for display to user
       setRequestData({
@@ -75,9 +89,9 @@ export const RequestPickupForm = () => {
       });
       
       setSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting request:', error);
-      toast.error('Failed to submit request. Please try again.');
+      toast.error(`Failed to submit request: ${error.message}`);
     } finally {
       setSubmitting(false);
     }

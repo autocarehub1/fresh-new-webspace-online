@@ -19,6 +19,7 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
     const fetchDeliveryData = async () => {
       try {
         setLoading(true);
+        console.log('Fetching delivery data for tracking ID:', trackingId);
         
         // Query the Supabase database for the delivery request
         const { data, error } = await supabase
@@ -28,8 +29,11 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
           .single();
         
         if (error) {
+          console.error('Supabase error:', error);
           throw error;
         }
+        
+        console.log('Delivery data received:', data);
         
         if (!data) {
           setError('No delivery found with this tracking ID');
