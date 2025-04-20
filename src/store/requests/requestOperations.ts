@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId } from '@/utils/deliveryUtils';
@@ -9,7 +8,8 @@ interface RequestOperationsStore {
   getRequestByTrackingId: (trackingId: string) => DeliveryRequest | undefined;
 }
 
-export const useRequestOperations = create<RequestOperationsStore>((set, get) => ({
+// Create a store with only the operations
+export const useRequestOperations = create<RequestOperationsStore>()((set, get) => ({
   updateRequestStatus: (requestId, status) => {
     set((state) => ({
       requests: state.requests?.map((request) => {

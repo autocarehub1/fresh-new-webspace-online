@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { useDriverStore } from '../drivers/driverStore';
 import { Coordinates } from '@/types/delivery';
