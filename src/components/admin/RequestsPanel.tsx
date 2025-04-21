@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -63,34 +64,52 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   }, viewTrackingMap ? 1000 : null);
 
   const sendStatusNotification = async (request: DeliveryRequest, status: string, status_note?: string) => {
-    const email = (request as any).email || "demo@example.com";
-    if (!email) return;
-    const body = {
-      id: request.id,
-      trackingId: request.trackingId,
-      pickup_location: request.pickup_location,
-      delivery_location: request.delivery_location,
-      priority: request.priority,
-      package_type: request.packageType,
-      email,
-      status,
-      status_note,
-      assigned_driver: request.assigned_driver
-        ? getDriverName(request.assigned_driver)
-        : undefined,
-    };
     try {
-      const baseUrl = "https://joziqntfciyflfsgvsqz.supabase.co";
-      await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
+      const email = (request as any).email || "demo@example.com";
+      if (!email) return;
+      
+      console.log("Sending status notification email to:", email, "status:", status);
+      
+      const body = {
+        id: request.id,
+        trackingId: request.trackingId,
+        pickup_location: request.pickup_location,
+        delivery_location: request.delivery_location,
+        priority: request.priority,
+        package_type: request.packageType,
+        email,
+        status,
+        status_note,
+        assigned_driver: request.assigned_driver
+          ? getDriverName(request.assigned_driver)
+          : undefined,
+      };
+      
+      // Get the current domain from the window location for production
+      const origin = window.location.origin;
+      const baseUrl = origin.includes('localhost') 
+        ? "https://joziqntfciyflfsgvsqz.supabase.co"
+        : origin;
+      
+      const response = await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      console.log("Notification email sent", { status, email });
+      
+      const result = await response.json();
+      console.log("Email notification response:", result);
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send notification email");
+      }
+      
+      toast.success("Status notification email sent");
     } catch (err) {
       console.error("Failed to send notification:", err);
+      toast.error("Failed to send status notification email");
     }
   };
 

@@ -25,7 +25,7 @@ interface DeliveryStatusEmailRequest {
 
 const statusSubjectMapping: Record<string, string> = {
   'pending': 'Delivery Request Submitted',
-  'in_progress': 'Delivery In Progress',
+  'in_progress': 'Delivery Request Approved',
   'completed': 'Delivery Completed',
   'declined': 'Delivery Request Declined',
   'picked_up': 'Package Picked Up',
@@ -35,7 +35,7 @@ const statusSubjectMapping: Record<string, string> = {
 
 const statusNoteDefault: Record<string, string> = {
   'pending': 'Your delivery request has been submitted and is awaiting approval.',
-  'in_progress': 'Your delivery request is now in progress.',
+  'in_progress': 'Your delivery request has been approved and is now in progress.',
   'completed': 'Your delivery has been completed.',
   'declined': 'Your delivery request was declined.',
   'picked_up': 'The courier has picked up your package.',
@@ -50,6 +50,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log("Send confirmation function called");
     const request: DeliveryStatusEmailRequest = await req.json();
     console.log("Sending email for request status:", request);
 
@@ -81,13 +82,21 @@ const handler = async (req: Request): Promise<Response> => {
         const url = new URL(referer);
         baseUrl = `${url.protocol}//${url.host}`;
       }
-    } catch {
-      // fallback
+    } catch (error) {
+      console.log("Error parsing referer:", error);
+      // fallback to default URL
     }
 
     const trackingUrl = request.trackingId
       ? `${baseUrl}/tracking?id=${request.trackingId}`
       : baseUrl;
+
+    console.log("Prepared email with subject:", subject);
+    console.log("Tracking URL:", trackingUrl);
+    
+    // Add a random parameter to prevent caching issues
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    console.log("Using Resend API key:", resendApiKey ? "API key found" : "API key missing");
 
     // Send the email
     const emailResponse = await resend.emails.send({

@@ -20,9 +20,14 @@ export const useDeliveryData = () => {
       // Log the start of data fetching
       console.log('Fetching delivery requests from Supabase...');
       
+      // Fetch delivery requests and join with users table to get emails
       const { data: supabaseData, error } = await supabase
         .from('delivery_requests')
-        .select('*, tracking_updates(*)')
+        .select(`
+          *,
+          tracking_updates(*),
+          users:created_by(email)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -53,7 +58,9 @@ export const useDeliveryData = () => {
           estimatedCost: item.estimated_cost,
           estimatedDelivery: item.estimated_delivery,
           temperature: item.temperature,
-          tracking_updates: item.tracking_updates || []
+          tracking_updates: item.tracking_updates || [],
+          // Extract email from users join
+          email: item.users?.email || "demo@example.com"
         }));
       }
       // If no records, return []
