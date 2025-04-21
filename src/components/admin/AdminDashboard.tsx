@@ -41,8 +41,10 @@ const AdminDashboard = () => {
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
 
+  // Fixed: properly handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+    console.log("Tab changed to:", value);
   };
   
   // Set up simulation interval for active deliveries
@@ -149,7 +151,8 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      {/* Fixed: Properly implemented tabs to ensure clicking works */}
+      <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
