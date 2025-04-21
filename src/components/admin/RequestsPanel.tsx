@@ -28,6 +28,17 @@ const RequestsPanel = () => {
   } = useDeliveryData();
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
 
+  const { drivers, addTrackingUpdate } = useDeliveryStore();
+  const [isLocalLoading, setLocalIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLocalIsLoading(false);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleRequestAction = async (requestId: string, action: 'approve' | 'decline') => {
     const newStatus = action === 'approve' ? 'in_progress' : 'declined';
     try {
@@ -40,7 +51,7 @@ const RequestsPanel = () => {
       toast.error('Failed to update request status');
     }
   };
-  
+
   const handleMarkDelivered = async (requestId: string) => {
     try {
       await updateDeliveryRequest.mutateAsync({ 
@@ -52,23 +63,57 @@ const RequestsPanel = () => {
       toast.error('Failed to update request status');
     }
   };
-  
-  const { drivers, addTrackingUpdate } = useDeliveryStore();
-  const [isLocalLoading, setLocalIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLocalIsLoading(false);
-    }, 800);
+  const handleStatusUpdate = async (
+    request: DeliveryRequest, 
+    newStatus: 'picked_up' | 'in_transit' | 'delivered'
+  ) => {
+    let statusText = '';
+    let trackingStatus = '';
+    switch (newStatus) {
+      case 'picked_up':
+        statusText = 'Picked up by courier';
+        trackingStatus = 'Picked Up';
+        break;
+      case 'in_transit':
+        statusText = 'Package is in transit';
+        trackingStatus = 'In Transit';
+        break;
+      case 'delivered':
+        statusText = 'Package delivered to destination';
+        trackingStatus = 'Delivered';
+        break;
+      default:
+        return;
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    try {
+      const statusForMain = newStatus === 'delivered' ? 'completed' : 'in_progress';
+      await updateDeliveryRequest.mutateAsync({
+        id: request.id,
+        status: statusForMain
+      });
+      addTrackingUpdate(request.id, {
+        status: trackingStatus,
+        timestamp: new Date().toISOString(),
+        location: newStatus === 'delivered'
+          ? request.delivery_location
+          : request.current_coordinates
+            ? `${request.current_coordinates.lat}, ${request.current_coordinates.lng}`
+            : '',
+        note: statusText
+      });
+      toast.success(`Status updated: ${trackingStatus}`);
+    } catch (error) {
+      toast.error('Failed to update status');
+    }
+  };
 
   const handleAddTrackingUpdate = (requestId: string, update: any) => {
     addTrackingUpdate(requestId, update);
     toast.success(`Tracking update added to request ${requestId}`);
   };
-  
+
   const getDriverName = (driverId: string | undefined) => {
     if (!driverId) return 'None';
     const driver = drivers.find(d => d.id === driverId);
@@ -203,8 +248,38 @@ const RequestsPanel = () => {
                       </Button>
                     </>
                   )}
-                  
                   {request.status === 'in_progress' && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-700"
+                        onClick={() => handleStatusUpdate(request, 'picked_up')}
+                      >
+                        <Truck className="h-4 w-4 mr-1" />
+                        Picked Up
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-yellow-700 hover:text-yellow-800"
+                        onClick={() => handleStatusUpdate(request, 'in_transit')}
+                      >
+                        <ArrowRight className="h-4 w-4 mr-1" />
+                        In Transit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-600 hover:text-green-700"
+                        onClick={() => handleStatusUpdate(request, 'delivered')}
+                      >
+                        <PackageCheck className="h-4 w-4 mr-1" />
+                        Delivered
+                      </Button>
+                    </>
+                  )}
+                  {request.status === 'in_progress' && false && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -215,7 +290,6 @@ const RequestsPanel = () => {
                       Mark Delivered
                     </Button>
                   )}
-                  
                   {request.trackingId && (
                     <Button asChild variant="outline" size="sm">
                       <a href={`/tracking?id=${request.trackingId}`} target="_blank" rel="noopener noreferrer">
@@ -224,7 +298,6 @@ const RequestsPanel = () => {
                       </a>
                     </Button>
                   )}
-                  
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -240,7 +313,6 @@ const RequestsPanel = () => {
         </Table>
       </div>
       
-      {/* Request Details Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
