@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { useDriverStore } from './drivers/driverStore';
+import { useDriverStore } from './driverStore';
 import { useRequestStore } from './requests/requestStore';
 import { DeliveryRequest, Driver, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId, estimateDeliveryCost } from '@/utils/deliveryUtils';
@@ -40,7 +40,13 @@ export const useDeliveryStore = create<DeliveryStore>((set, get) => ({
   },
   
   assignDriverToRequest: (requestId, driverId) => {
+    // First, update the request with the assigned driver
     useRequestStore.getState().assignDriverToRequest(requestId, driverId);
+    
+    // Then, update the driver with the current delivery
+    useDriverStore.getState().updateDriverDelivery(driverId, requestId);
+    
+    // Update the local state
     set({ 
       requests: useRequestStore.getState().requests,
       drivers: useDriverStore.getState().drivers 

@@ -32,7 +32,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     updateDriverLocation
   } = useDriverData();
   
-  const { deliveries: requests, simulateMovement } = useDeliveryData();
+  const { deliveries: requests, isLoading: requestsLoading, simulateMovement } = useDeliveryData();
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
@@ -75,6 +75,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
         });
         toast.success(`Driver ${driver.name}'s status changed to ${newStatus}`);
       } catch (error) {
+        console.error('Failed to update driver status:', error);
         toast.error('Failed to update driver status');
       }
     }
@@ -96,11 +97,11 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
         driverId: selectedDriverId, 
         deliveryId: selectedRequestId 
       });
-      toast.success('Driver assigned successfully');
       setSelectedDriverId('');
       setSelectedRequestId('');
-    } catch (error) {
-      toast.error('Failed to assign driver');
+    } catch (error: any) {
+      console.error('Failed to assign driver:', error);
+      toast.error(`Failed to assign driver: ${error?.message || 'Unknown error'}`);
     }
   };
 
@@ -112,8 +113,8 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     );
   };
 
-  if (isLoading || isLocalLoading) {
-    return <div className="flex items-center justify-center py-10">Loading drivers...</div>;
+  if (isLoading || isLocalLoading || requestsLoading) {
+    return <div className="flex items-center justify-center py-10">Loading drivers data...</div>;
   }
 
   const activeDrivers = drivers.filter(d => d.status === 'active');
@@ -125,7 +126,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     <div className="space-y-6">
       <DriversOverview activeDrivers={activeDrivers} totalDrivers={drivers} />
 
-      {/* NEW: Main card with accent header for Manage Drivers */}
+      {/* Main card with accent header for Manage Drivers */}
       <div className={`${panelBg}`}>
         <div className={`${accentBanner}`}>
           <div>
@@ -158,7 +159,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
           />
           <DriverAssignment 
             drivers={drivers}
-            requests={availableRequests}
+            requests={requests || []}
             selectedDriverId={selectedDriverId}
             selectedRequestId={selectedRequestId}
             onDriverSelect={setSelectedDriverId}
@@ -173,11 +174,14 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
           <DialogHeader>
             <DialogTitle>Driver Location</DialogTitle>
             <DialogDescription>
-              Real-time location of the selected driver.
+              Real-time location of {selectedDriver?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="h-[500px] rounded-md overflow-hidden">
-            <MapWrapper driverLocation={selectedDriver?.current_location.coordinates} height="500px" />
+            <MapWrapper 
+              driverLocation={selectedDriver?.current_location.coordinates} 
+              height="500px" 
+            />
           </div>
         </DialogContent>
       </Dialog>

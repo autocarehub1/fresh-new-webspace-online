@@ -42,6 +42,19 @@ const initialDrivers: Driver[] = [
     photo: 'https://randomuser.me/api/portraits/men/75.jpg',
     phone: '+1 (555) 234-5678',
     current_delivery: null
+  },
+  {
+    id: 'DRV-004',
+    name: 'Sarah Johnson',
+    status: 'active',
+    vehicle_type: 'Standard Delivery Vehicle',
+    current_location: {
+      address: 'East San Antonio',
+      coordinates: { lat: 29.45, lng: -98.41 }
+    },
+    photo: 'https://randomuser.me/api/portraits/women/45.jpg',
+    phone: '+1 (555) 345-6789',
+    current_delivery: null
   }
 ];
 

@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { Driver, DeliveryRequest } from '@/types/delivery';
+import { toast } from 'sonner';
 
 interface DriverAssignmentProps {
   drivers: Driver[];
@@ -26,6 +27,19 @@ const DriverAssignment = ({
   onRequestSelect,
   onAssignDriver
 }: DriverAssignmentProps) => {
+  // Get available drivers and pending requests
+  const availableDrivers = drivers.filter(d => d.status === 'active' && !d.current_delivery);
+  const pendingRequests = requests.filter(r => r.status === 'pending');
+  
+  const handleAssignButtonClick = () => {
+    if (!selectedDriverId || !selectedRequestId) {
+      toast.error('Please select both a driver and a request');
+      return;
+    }
+    
+    onAssignDriver();
+  };
+
   return (
     <div className="mb-6">
       <div className={assignBg}>
@@ -40,15 +54,15 @@ const DriverAssignment = ({
               onChange={(e) => onDriverSelect(e.target.value)}
             >
               <option value="">Select a driver...</option>
-              {drivers
-                .filter(d => d.status === 'active' && !d.current_delivery)
-                .map(driver => (
-                  <option key={driver.id} value={driver.id}>
-                    {driver.name} - {driver.vehicle_type}
-                  </option>
-                ))
-              }
+              {availableDrivers.map(driver => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.name} - {driver.vehicle_type}
+                </option>
+              ))}
             </select>
+            {availableDrivers.length === 0 && (
+              <p className="text-sm text-amber-600 mt-1">No available drivers</p>
+            )}
           </div>
           
           <div>
@@ -60,21 +74,21 @@ const DriverAssignment = ({
               onChange={(e) => onRequestSelect(e.target.value)}
             >
               <option value="">Select a request...</option>
-              {requests
-                .filter(r => r.status === 'pending')
-                .map(request => (
-                  <option key={request.id} value={request.id}>
-                    {request.id} - {request.pickup_location} to {request.delivery_location}
-                  </option>
-                ))
-              }
+              {pendingRequests.map(request => (
+                <option key={request.id} value={request.id}>
+                  {request.id} - {request.pickup_location} to {request.delivery_location}
+                </option>
+              ))}
             </select>
+            {pendingRequests.length === 0 && (
+              <p className="text-sm text-amber-600 mt-1">No pending requests</p>
+            )}
           </div>
           
           <div className="flex items-end">
             <Button 
               className="w-full bg-[#9b87f5] hover:bg-[#7E69AB] text-white font-semibold rounded-lg"
-              onClick={onAssignDriver}
+              onClick={handleAssignButtonClick}
               disabled={!selectedDriverId || !selectedRequestId}
             >
               <Send className="h-4 w-4 mr-2" /> 
