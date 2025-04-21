@@ -11,13 +11,15 @@ import DriverAssignment from './drivers/DriverAssignment';
 import type { Driver } from '@/types/delivery';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
+import { useInterval } from '@/hooks/use-interval';
 
 const DriversPanel = () => {
   const { 
     drivers,
     isLoading,
     updateDriver,
-    assignDriver
+    assignDriver,
+    updateDriverLocation
   } = useDriverData();
   
   const { deliveries: requests } = useDeliveryData();
@@ -33,6 +35,52 @@ const DriversPanel = () => {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
+
+  // Set up simulation interval
+  useInterval(() => {
+    if (isSimulating && drivers) {
+      // Find active drivers with current deliveries
+      const activeDrivers = drivers.filter(d => 
+        d.status === 'active' && d.current_delivery
+      );
+      
+      // Simulate movement for each active driver
+      activeDrivers.forEach(driver => {
+        if (driver.current_delivery) {
+          const request = requests?.find(r => r.id === driver.current_delivery);
+          if (request?.delivery_coordinates && driver.current_location.coordinates) {
+            // Calculate new coordinates (simple linear interpolation)
+            const target = request.delivery_coordinates;
+            const current = driver.current_location.coordinates;
+            
+            const latDiff = target.lat - current.lat;
+            const lngDiff = target.lng - current.lng;
+            const stepSize = 0.001;
+            
+            // Check if we're close enough to destination
+            const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+            if (distance < 0.002) {
+              // We've arrived at the destination
+              return;
+            }
+            
+            // Calculate new position
+            const newLat = current.lat + (latDiff / distance) * stepSize;
+            const newLng = current.lng + (lngDiff / distance) * stepSize;
+            
+            // Update driver location
+            updateDriverLocation.mutate({ 
+              id: driver.id, 
+              location: {
+                address: driver.current_location.address,
+                coordinates: { lat: newLat, lng: newLng }
+              }
+            });
+          }
+        }
+      });
+    }
+  }, isSimulating ? 1000 : null);
 
   const handleStatusToggle = async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
@@ -138,7 +186,7 @@ const DriversPanel = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="h-[500px] rounded-md overflow-hidden">
-            <Map />
+            <Map driverLocation={selectedDriver?.current_location.coordinates} />
           </div>
         </DialogContent>
       </Dialog>

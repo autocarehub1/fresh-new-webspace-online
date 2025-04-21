@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Check, X, ExternalLink, Clock, Truck, 
-  MapPin, User, AlertTriangle, Package,
+  MapPin, User, Package,
   ArrowRight, PackageCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
