@@ -22,6 +22,11 @@ const AdminDashboard = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
+  // Log data for debugging
+  useEffect(() => {
+    console.log("AdminDashboard - Requests data:", requests?.length || 0, "items");
+  }, [requests]);
+
   // Set loaded after delay to avoid render issues
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -150,11 +155,11 @@ const AdminDashboard = () => {
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="requests" className={activeTab === "requests" ? "block" : "hidden"}>
+        <TabsContent value="requests" className="space-y-4">
           <RequestsPanel simulationActive={isSimulating} />
         </TabsContent>
         
-        <TabsContent value="drivers" className={activeTab === "drivers" ? "block" : "hidden"}>
+        <TabsContent value="drivers" className="space-y-4">
           <DriversPanel simulationActive={isSimulating} />
         </TabsContent>
       </Tabs>

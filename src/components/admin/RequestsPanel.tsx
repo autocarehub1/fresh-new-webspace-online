@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,15 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Log data for debugging
+  useEffect(() => {
+    if (requests) {
+      console.log("Requests data loaded:", requests.length, "items");
+    } else {
+      console.log("No requests data available yet");
+    }
+  }, [requests]);
 
   useInterval(() => {
     if (viewTrackingMap && selectedRequest && selectedRequest.id) {
@@ -167,7 +177,24 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   };
 
   if (isLoading || isLocalLoading) {
-    return <div>Loading requests...</div>;
+    return <div className="flex items-center justify-center p-8 h-64 bg-gray-50 rounded-lg">
+      <div className="flex flex-col items-center">
+        <div className="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+        <p>Loading requests...</p>
+      </div>
+    </div>;
+  }
+
+  if (!requests || requests.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 bg-gray-50 rounded-lg border border-dashed border-gray-300 h-64">
+        <Package className="h-16 w-16 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-700 mb-2">No delivery requests found</h3>
+        <p className="text-gray-500 text-center max-w-md">
+          There are currently no delivery requests in the system. New requests will appear here when customers submit them.
+        </p>
+      </div>
+    );
   }
 
   const pendingRequests = requests?.filter(req => req.status === 'pending').length;
@@ -234,7 +261,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
           <TableBody>
             {requests?.map((request) => (
               <TableRow key={request.id}>
-                <TableCell>{request.id}</TableCell>
+                <TableCell>{request.id.substring(0, 6)}...</TableCell>
                 <TableCell>{request.trackingId || '-'}</TableCell>
                 <TableCell>
                   <Badge variant={

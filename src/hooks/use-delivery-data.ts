@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { DeliveryRequest, TrackingUpdate } from '@/types/delivery';
@@ -16,15 +17,22 @@ export const useDeliveryData = () => {
   } = useQuery({
     queryKey: ['deliveryRequests'],
     queryFn: async () => {
+      // Log the start of data fetching
+      console.log('Fetching delivery requests from Supabase...');
+      
       const { data: supabaseData, error } = await supabase
         .from('delivery_requests')
-        .select('*, tracking_updates(*)');
+        .select('*, tracking_updates(*)')
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching from Supabase:', error);
         throw error;
       }
 
+      // Log the fetched data
+      console.log('Fetched delivery requests:', supabaseData?.length || 0);
+      
       // Always return fresh data from Supabase
       if (supabaseData && supabaseData.length > 0) {
         return supabaseData.map((item: any) => ({
