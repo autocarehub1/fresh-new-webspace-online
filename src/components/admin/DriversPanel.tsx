@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw } from 'lucide-react';
@@ -33,7 +32,6 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
   const [selectedRequestId, setSelectedRequestId] = useState('');
   const [isLocalLoading, setIsLocalLoading] = useState(true); 
   
-  // Update local simulation state when parent prop changes
   useEffect(() => {
     setIsSimulating(simulationActive);
   }, [simulationActive]);
@@ -45,15 +43,12 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Set up simulation interval
   useInterval(() => {
     if (isSimulating && drivers) {
-      // Find active drivers with current deliveries
       const activeDrivers = drivers.filter(d => 
         d.status === 'active' && d.current_delivery
       );
       
-      // Simulate movement for each active driver
       activeDrivers.forEach(driver => {
         if (driver.current_delivery) {
           simulateMovement.mutate(driver.current_delivery);

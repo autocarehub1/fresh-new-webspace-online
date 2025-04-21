@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +48,6 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Set up simulation interval for the selected request if viewTrackingMap is active
   useInterval(() => {
     if (viewTrackingMap && selectedRequest && selectedRequest.id) {
       simulateMovement.mutate(selectedRequest.id);
@@ -65,7 +63,6 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
       });
 
       if (action === 'approve') {
-        // Add tracking update for approval
         await addTrackingUpdate.mutateAsync({
           requestId,
           update: {
@@ -361,7 +358,6 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         </Table>
       </div>
       
-      {/* Request Details Dialog */}
       <Dialog open={!!selectedRequest && !viewTrackingMap} onOpenChange={(open) => !open && setSelectedRequest(null)}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
@@ -446,7 +442,6 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         </DialogContent>
       </Dialog>
 
-      {/* Live Tracking Map Dialog */}
       <Dialog open={viewTrackingMap && !!selectedRequest} onOpenChange={(open) => !open && setViewTrackingMap(false)}>
         <DialogContent className="sm:max-w-[800px] h-[600px]">
           <DialogHeader>
