@@ -12,11 +12,19 @@ interface DriversTableProps {
   onLocateDriver: (driver: Driver) => void;
 }
 
+const statusColors = {
+  active: 'bg-[#F2FCE2] text-green-800',
+  inactive: 'bg-[#FEF7CD] text-yellow-800 border border-yellow-300'
+};
+
+const cellBase = "py-2 px-4 align-middle";
+const actionCell = "space-x-2 flex flex-wrap";
+
 const DriversTable = ({ drivers, onStatusToggle, onDeleteDriver, onLocateDriver }: DriversTableProps) => {
   return (
-    <div className="rounded-md border mb-6">
+    <div className="rounded-lg border bg-[#F1F0FB] mb-6 overflow-auto">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-[#E5DEFF]">
           <TableRow>
             <TableHead>ID</TableHead>
             <TableHead>Name</TableHead>
@@ -28,20 +36,20 @@ const DriversTable = ({ drivers, onStatusToggle, onDeleteDriver, onLocateDriver 
         </TableHeader>
         <TableBody>
           {drivers.map((driver) => (
-            <TableRow key={driver.id}>
-              <TableCell>{driver.id}</TableCell>
-              <TableCell>{driver.name}</TableCell>
-              <TableCell>
+            <TableRow key={driver.id} className="hover:bg-[#f8f6ff]">
+              <TableCell className={cellBase}>{driver.id}</TableCell>
+              <TableCell className={cellBase}>{driver.name}</TableCell>
+              <TableCell className={cellBase}>
                 <Badge 
                   variant={driver.status === 'active' ? 'default' : 'outline'}
-                  className="cursor-pointer"
+                  className={`cursor-pointer transition ${statusColors[driver.status]} px-3 py-1 rounded-md`}
                   onClick={() => onStatusToggle(driver.id)}
                 >
                   {driver.status === 'active' ? 'Active' : 'Inactive'}
                 </Badge>
               </TableCell>
-              <TableCell>{driver.vehicle_type}</TableCell>
-              <TableCell className="flex items-center">
+              <TableCell className={cellBase}>{driver.vehicle_type}</TableCell>
+              <TableCell className={`${cellBase} flex items-center`}>
                 <MapPin className="h-4 w-4 mr-1 text-gray-400" />
                 {driver.current_location.address}
                 
@@ -51,17 +59,18 @@ const DriversTable = ({ drivers, onStatusToggle, onDeleteDriver, onLocateDriver 
                   </Badge>
                 )}
               </TableCell>
-              <TableCell className="space-x-2">
+              <TableCell className={actionCell}>
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={() => onLocateDriver(driver)}
+                  className="rounded-md"
                 >
                   <Locate className="h-4 w-4 mr-1" />
                   Locate
                 </Button>
                 
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="rounded-md">
                   <Edit className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
@@ -69,7 +78,7 @@ const DriversTable = ({ drivers, onStatusToggle, onDeleteDriver, onLocateDriver 
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-red-600 hover:text-red-700"
+                  className="text-red-600 hover:text-red-700 rounded-md"
                   onClick={() => onDeleteDriver(driver.id)}
                   disabled={driver.current_delivery !== null}
                 >

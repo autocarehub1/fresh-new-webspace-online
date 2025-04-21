@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw } from 'lucide-react';
@@ -15,6 +16,12 @@ import { useInterval } from '@/hooks/use-interval';
 interface DriversPanelProps {
   simulationActive?: boolean;
 }
+
+const panelBg = "bg-white shadow-lg border rounded-xl";
+const accentBanner = "bg-[#E5DEFF] px-6 py-4 rounded-t-xl border-b border-[#9b87f5] flex items-center justify-between";
+const headerText = "text-xl font-bold text-[#6E59A5]";
+const subText = "text-sm text-gray-600";
+const actionBar = "flex gap-2";
 
 const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
   const { 
@@ -118,42 +125,47 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     <div className="space-y-6">
       <DriversOverview activeDrivers={activeDrivers} totalDrivers={drivers} />
 
-      <div className="flex-1">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Driver Management</h2>
-          <div className="space-x-2">
+      {/* NEW: Main card with accent header for Manage Drivers */}
+      <div className={`${panelBg}`}>
+        <div className={`${accentBanner}`}>
+          <div>
+            <h2 className={headerText}>Driver Management</h2>
+            <div className={subText}>Assign, locate, and manage all drivers.</div>
+          </div>
+          <div className={actionBar}>
             <Button 
               onClick={handleToggleSimulation} 
-              className={isSimulating ? "bg-red-500 hover:bg-red-600" : ""}
+              className={`rounded-lg shadow-none ${isSimulating ? "bg-red-500 hover:bg-red-600" : "bg-[#9b87f5] hover:bg-[#7E69AB]"}`}
               variant={isSimulating ? "destructive" : "default"}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isSimulating ? "animate-spin" : ""}`} />
               {isSimulating ? "Stop Simulation" : "Simulate Movement"}
             </Button>
             
-            <Button>
+            <Button className="bg-[#6E59A5] hover:bg-[#7E69AB] text-white font-semibold rounded-lg shadow-none">
               <User className="h-4 w-4 mr-2" />
               Add New Driver
             </Button>
           </div>
         </div>
-        
-        <DriversTable 
-          drivers={drivers}
-          onStatusToggle={handleStatusToggle}
-          onDeleteDriver={handleDeleteDriver}
-          onLocateDriver={setSelectedDriver}
-        />
-        
-        <DriverAssignment 
-          drivers={drivers}
-          requests={availableRequests}
-          selectedDriverId={selectedDriverId}
-          selectedRequestId={selectedRequestId}
-          onDriverSelect={setSelectedDriverId}
-          onRequestSelect={setSelectedRequestId}
-          onAssignDriver={handleAssignDriver}
-        />
+        {/* Table and assignment form section */}
+        <div className="p-6 md:p-8">
+          <DriversTable 
+            drivers={drivers}
+            onStatusToggle={handleStatusToggle}
+            onDeleteDriver={handleDeleteDriver}
+            onLocateDriver={setSelectedDriver}
+          />
+          <DriverAssignment 
+            drivers={drivers}
+            requests={availableRequests}
+            selectedDriverId={selectedDriverId}
+            selectedRequestId={selectedRequestId}
+            onDriverSelect={setSelectedDriverId}
+            onRequestSelect={setSelectedRequestId}
+            onAssignDriver={handleAssignDriver}
+          />
+        </div>
       </div>
       
       <Dialog open={!!selectedDriver} onOpenChange={(open) => !open && setSelectedDriver(null)}>
