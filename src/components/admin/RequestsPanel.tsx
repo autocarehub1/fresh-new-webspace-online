@@ -21,20 +21,26 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import MapWrapper from '../map/MapWrapper';
 import { useDriverData } from '@/hooks/use-driver-data';
+import { useInterval } from '@/hooks/use-interval';
 
-const RequestsPanel = () => {
+interface RequestsPanelProps {
+  simulationActive?: boolean;
+}
+
+const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   const { 
     deliveries: requests, 
     isLoading,
     updateDeliveryRequest,
-    addTrackingUpdate
+    addTrackingUpdate,
+    simulateMovement
   } = useDeliveryData();
 
   const { drivers } = useDriverData();
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
   const [viewTrackingMap, setViewTrackingMap] = useState(false);
   const [isLocalLoading, setLocalIsLoading] = useState(true);
-
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setLocalIsLoading(false);
@@ -42,6 +48,13 @@ const RequestsPanel = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Set up simulation interval for the selected request if viewTrackingMap is active
+  useInterval(() => {
+    if (viewTrackingMap && selectedRequest && selectedRequest.id) {
+      simulateMovement.mutate(selectedRequest.id);
+    }
+  }, viewTrackingMap ? 1000 : null);
 
   const handleRequestAction = async (requestId: string, action: 'approve' | 'decline') => {
     const newStatus = action === 'approve' ? 'in_progress' : 'declined';

@@ -13,7 +13,11 @@ import { useDriverData } from '@/hooks/use-driver-data';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useInterval } from '@/hooks/use-interval';
 
-const DriversPanel = () => {
+interface DriversPanelProps {
+  simulationActive?: boolean;
+}
+
+const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
   const { 
     drivers,
     isLoading,
@@ -22,12 +26,17 @@ const DriversPanel = () => {
     updateDriverLocation
   } = useDriverData();
   
-  const { deliveries: requests } = useDeliveryData();
+  const { deliveries: requests, simulateMovement } = useDeliveryData();
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
   const [isLocalLoading, setIsLocalLoading] = useState(true); 
+  
+  // Update local simulation state when parent prop changes
+  useEffect(() => {
+    setIsSimulating(simulationActive);
+  }, [simulationActive]);
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -47,37 +56,7 @@ const DriversPanel = () => {
       // Simulate movement for each active driver
       activeDrivers.forEach(driver => {
         if (driver.current_delivery) {
-          const request = requests?.find(r => r.id === driver.current_delivery);
-          if (request?.delivery_coordinates && driver.current_location.coordinates) {
-            // Calculate new coordinates (simple linear interpolation)
-            const target = request.delivery_coordinates;
-            const current = driver.current_location.coordinates;
-            
-            const latDiff = target.lat - current.lat;
-            const lngDiff = target.lng - current.lng;
-            const stepSize = 0.001;
-            
-            // Check if we're close enough to destination
-            const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-            if (distance < 0.002) {
-              // We've arrived at the destination
-              toast.success(`Driver ${driver.name} has arrived at the destination`);
-              return;
-            }
-            
-            // Calculate new position
-            const newLat = current.lat + (latDiff / distance) * stepSize;
-            const newLng = current.lng + (lngDiff / distance) * stepSize;
-            
-            // Update driver location
-            updateDriverLocation.mutate({ 
-              id: driver.id, 
-              location: {
-                address: driver.current_location.address,
-                coordinates: { lat: newLat, lng: newLng }
-              }
-            });
-          }
+          simulateMovement.mutate(driver.current_delivery);
         }
       });
     }
@@ -137,7 +116,7 @@ const DriversPanel = () => {
 
   const activeDrivers = drivers.filter(d => d.status === 'active');
   const availableRequests = requests?.filter(r => 
-    (r.status === 'in_progress' || r.status === 'pending') && !r.assigned_driver
+    (r.status === 'pending' || r.status === 'in_progress') && !r.assigned_driver
   ) || [];
   
   return (
@@ -148,7 +127,11 @@ const DriversPanel = () => {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Driver Management</h2>
           <div className="space-x-2">
-            <Button onClick={handleToggleSimulation} className={isSimulating ? "bg-red-500 hover:bg-red-600" : ""}>
+            <Button 
+              onClick={handleToggleSimulation} 
+              className={isSimulating ? "bg-red-500 hover:bg-red-600" : ""}
+              variant={isSimulating ? "destructive" : "default"}
+            >
               <RefreshCw className={`h-4 w-4 mr-2 ${isSimulating ? "animate-spin" : ""}`} />
               {isSimulating ? "Stop Simulation" : "Simulate Movement"}
             </Button>

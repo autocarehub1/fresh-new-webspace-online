@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeliveryData } from '@/hooks/use-delivery-data'; 
 import Map from '../map/Map';
 import { BadgeCheck, Clock, Package, TrendingUp } from 'lucide-react';
+import { useInterval } from '@/hooks/use-interval';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('requests');
-  const { deliveries: requests, isLoading: deliveriesLoading } = useDeliveryData();
+  const { deliveries: requests, isLoading: deliveriesLoading, simulateMovement } = useDeliveryData();
   
   // Count deliveries for the overview
   const activeDeliveries = requests?.filter(r => r.status === 'in_progress').length || 0;
@@ -19,6 +20,7 @@ const AdminDashboard = () => {
   const totalRequests = requests?.length || 0;
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   // Set loaded after delay to avoid render issues
   useEffect(() => {
@@ -36,6 +38,25 @@ const AdminDashboard = () => {
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+  
+  // Set up simulation interval for active deliveries
+  useInterval(() => {
+    if (isSimulating && requests) {
+      // Find active deliveries
+      const activeRequests = requests.filter(r => 
+        r.status === 'in_progress' && r.assigned_driver && r.current_coordinates && r.delivery_coordinates
+      );
+      
+      // Simulate movement for each active delivery
+      activeRequests.forEach(request => {
+        simulateMovement.mutate(request.id);
+      });
+    }
+  }, isSimulating ? 1000 : null);
+
+  const handleToggleSimulation = () => {
+    setIsSimulating(prev => !prev);
   };
 
   return (
@@ -96,7 +117,16 @@ const AdminDashboard = () => {
       {/* Overview Map Card */}
       <Card className="mb-8">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Live Delivery Map</CardTitle>
+          <CardTitle className="text-lg flex justify-between items-center">
+            <span>Live Delivery Map</span>
+            <button 
+              onClick={handleToggleSimulation}
+              className={`text-sm px-3 py-1 rounded ${isSimulating ? 
+                'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}
+            >
+              {isSimulating ? 'Stop Simulation' : 'Start Simulation'}
+            </button>
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0 h-[300px] relative">
           {mapLoaded && (
@@ -121,11 +151,11 @@ const AdminDashboard = () => {
         </TabsList>
         
         <TabsContent value="requests" className={activeTab === "requests" ? "block" : "hidden"}>
-          <RequestsPanel />
+          <RequestsPanel simulationActive={isSimulating} />
         </TabsContent>
         
         <TabsContent value="drivers" className={activeTab === "drivers" ? "block" : "hidden"}>
-          <DriversPanel />
+          <DriversPanel simulationActive={isSimulating} />
         </TabsContent>
       </Tabs>
     </div>
