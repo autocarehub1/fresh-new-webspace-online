@@ -1,9 +1,8 @@
-
 import { create } from 'zustand';
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate, Coordinates } from '@/types/delivery';
 import { initialRequests } from './mockData';
 import { createStatusUpdate, createDeliveryUpdate, calculateMovement } from './requestUtils';
-import { useDriverStore } from '../drivers/driverStore';
+import { useDriverStore } from '@/store/driverStore';
 
 interface RequestStore {
   requests: DeliveryRequest[];

@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { useDriverStore } from '../drivers/driverStore';
+import { useDriverStore } from '@/store/driverStore'; // Fixed import path
 import { Coordinates, DeliveryRequest } from '@/types/delivery';
 
 interface TrackingOperationsStore {

@@ -1,7 +1,6 @@
-
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId } from '@/utils/deliveryUtils';
-import { useDriverStore } from '../drivers/driverStore';
+import { useDriverStore } from '@/store/driverStore';
 
 export const createStatusUpdate = (status: DeliveryStatus, location: string = 'Admin Dashboard'): TrackingUpdate => ({
   status: status === 'in_progress' ? 'Driver Assigned' : status.charAt(0).toUpperCase() + status.slice(1),
