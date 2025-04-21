@@ -4,19 +4,35 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import RequestsPanel from './RequestsPanel';
 import DriversPanel from './DriversPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDeliveryStore } from '@/store/deliveryStore';
+import { useDeliveryData } from '@/hooks/use-delivery-data'; 
 import Map from '../map/Map';
 import { BadgeCheck, Clock, Package, TrendingUp } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('requests');
-  const { requests } = useDeliveryStore();
+  const { deliveries: requests } = useDeliveryData();
   
   // Count deliveries for the overview
-  const activeDeliveries = requests.filter(r => r.status === 'in_progress').length;
-  const pendingRequests = requests.filter(r => r.status === 'pending').length;
-  const completedDeliveries = requests.filter(r => r.status === 'completed').length;
-  const totalRequests = requests.length;
+  const activeDeliveries = requests?.filter(r => r.status === 'in_progress').length || 0;
+  const pendingRequests = requests?.filter(r => r.status === 'pending').length || 0;
+  const completedDeliveries = requests?.filter(r => r.status === 'completed').length || 0;
+  const totalRequests = requests?.length || 0;
+
+  const [mapLoaded, setMapLoaded] = useState(false);
+
+  // Set loaded after delay to avoid render issues
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMapLoaded(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Get a driver and delivery for map view
+  const activeDelivery = requests?.find(r => 
+    r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -79,7 +95,13 @@ const AdminDashboard = () => {
           <CardTitle className="text-lg">Live Delivery Map</CardTitle>
         </CardHeader>
         <CardContent className="p-0 h-[300px] relative">
-          <Map />
+          {mapLoaded && (
+            <Map 
+              driverLocation={activeDelivery?.current_coordinates}
+              deliveryLocation={activeDelivery?.delivery_coordinates}
+              height="300px"
+            />
+          )}
           <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md">
             <h3 className="text-lg font-semibold mb-2">Live Overview</h3>
             <p className="text-sm mb-1">Active Deliveries: <span className="font-bold text-blue-600">{activeDeliveries}</span></p>

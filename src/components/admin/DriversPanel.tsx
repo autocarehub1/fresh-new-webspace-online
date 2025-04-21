@@ -61,6 +61,7 @@ const DriversPanel = () => {
             const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
             if (distance < 0.002) {
               // We've arrived at the destination
+              toast.success(`Driver ${driver.name} has arrived at the destination`);
               return;
             }
             
@@ -131,7 +132,7 @@ const DriversPanel = () => {
   };
 
   if (isLoading || isLocalLoading) {
-    return <div>Loading drivers...</div>;
+    return <div className="flex items-center justify-center py-10">Loading drivers...</div>;
   }
 
   const activeDrivers = drivers.filter(d => d.status === 'active');
@@ -186,7 +187,7 @@ const DriversPanel = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="h-[500px] rounded-md overflow-hidden">
-            <MapWrapper driverLocation={selectedDriver?.current_location.coordinates} />
+            <MapWrapper driverLocation={selectedDriver?.current_location.coordinates} height="500px" />
           </div>
         </DialogContent>
       </Dialog>

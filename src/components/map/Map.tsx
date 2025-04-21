@@ -4,15 +4,23 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '@/components/ui/input';
 import { Coordinates } from '@/types/delivery';
+import { Button } from '@/components/ui/button';
 
 interface MapProps {
   center?: [number, number];
   zoom?: number;
   driverLocation?: Coordinates;
   deliveryLocation?: Coordinates;
+  height?: string;
 }
 
-const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation }: MapProps) => {
+const Map = ({ 
+  center = [-74.5, 40], 
+  zoom = 15, 
+  driverLocation, 
+  deliveryLocation,
+  height = '400px'
+}: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const driverMarker = useRef<mapboxgl.Marker | null>(null);
@@ -81,12 +89,14 @@ const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation
           .addTo(map.current);
       }
       
-      // Center map on driver location
-      map.current.flyTo({
-        center: lngLat,
-        zoom: 14,
-        speed: 0.8
-      });
+      // Only center map on driver if there's no delivery location
+      if (!deliveryLocation) {
+        map.current.flyTo({
+          center: lngLat,
+          zoom: 14,
+          speed: 0.8
+        });
+      }
     } else if (driverMarker.current) {
       driverMarker.current.remove();
       driverMarker.current = null;
@@ -124,6 +134,13 @@ const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation
           padding: 100,
           maxZoom: 15
         });
+      } else {
+        // Only center on delivery location if no driver
+        map.current.flyTo({
+          center: lngLat,
+          zoom: 14,
+          speed: 0.8
+        });
       }
     } else if (deliveryMarker.current) {
       deliveryMarker.current.remove();
@@ -135,6 +152,19 @@ const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation
     const newToken = e.target.value;
     setToken(newToken);
     localStorage.setItem('mapbox_token', newToken);
+  };
+
+  const handleMapReset = () => {
+    if (map.current && driverLocation && deliveryLocation) {
+      const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend([driverLocation.lng, driverLocation.lat]);
+      bounds.extend([deliveryLocation.lng, deliveryLocation.lat]);
+      
+      map.current.fitBounds(bounds, {
+        padding: 100,
+        maxZoom: 15
+      });
+    }
   };
 
   return (
@@ -156,8 +186,19 @@ const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation
           />
         </div>
       )}
-      <div className="h-[400px] w-full rounded-lg overflow-hidden">
+      <div className={`w-full rounded-lg overflow-hidden`} style={{ height: height }}>
         <div ref={mapContainer} className="h-full w-full" />
+        {mounted && driverLocation && deliveryLocation && (
+          <div className="absolute bottom-4 right-4">
+            <Button 
+              size="sm" 
+              onClick={handleMapReset}
+              className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 shadow-md"
+            >
+              Reset View
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
