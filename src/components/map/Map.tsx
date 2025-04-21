@@ -3,16 +3,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Input } from '@/components/ui/input';
+import { Coordinates } from '@/types/delivery';
 
 interface MapProps {
   center?: [number, number];
   zoom?: number;
+  driverLocation?: Coordinates;
+  deliveryLocation?: Coordinates;
 }
 
-const Map = ({ center = [-74.5, 40], zoom = 15 }: MapProps) => {
+const Map = ({ center = [-74.5, 40], zoom = 15, driverLocation, deliveryLocation }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const driverMarker = useRef<mapboxgl.Marker | null>(null);
+  const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
   const [token, setToken] = useState(localStorage.getItem('mapbox_token') || '');
   const [mounted, setMounted] = useState(false);
 
@@ -39,21 +43,93 @@ const Map = ({ center = [-74.5, 40], zoom = 15 }: MapProps) => {
         'top-right'
       );
 
-      // Add marker
-      marker.current = new mapboxgl.Marker()
-        .setLngLat(center)
-        .addTo(map.current);
-
       setMounted(true);
     } catch (error) {
       console.error('Error initializing map:', error);
     }
 
     return () => {
-      marker.current?.remove();
+      if (driverMarker.current) driverMarker.current.remove();
+      if (deliveryMarker.current) deliveryMarker.current.remove();
       map.current?.remove();
     };
   }, [token, center, zoom]);
+
+  // Update markers when driver or delivery location changes
+  useEffect(() => {
+    if (!map.current || !mounted) return;
+
+    // Update or create driver marker
+    if (driverLocation) {
+      const lngLat: [number, number] = [driverLocation.lng, driverLocation.lat];
+      
+      if (driverMarker.current) {
+        driverMarker.current.setLngLat(lngLat);
+      } else {
+        // Create a driver element with custom style
+        const driverElement = document.createElement('div');
+        driverElement.className = 'driver-marker';
+        driverElement.style.width = '20px';
+        driverElement.style.height = '20px';
+        driverElement.style.borderRadius = '50%';
+        driverElement.style.backgroundColor = '#4353FF';
+        driverElement.style.border = '2px solid white';
+        driverElement.style.boxShadow = '0 0 0 2px rgba(67, 83, 255, 0.3)';
+        
+        driverMarker.current = new mapboxgl.Marker(driverElement)
+          .setLngLat(lngLat)
+          .addTo(map.current);
+      }
+      
+      // Center map on driver location
+      map.current.flyTo({
+        center: lngLat,
+        zoom: 14,
+        speed: 0.8
+      });
+    } else if (driverMarker.current) {
+      driverMarker.current.remove();
+      driverMarker.current = null;
+    }
+
+    // Update or create delivery marker
+    if (deliveryLocation) {
+      const lngLat: [number, number] = [deliveryLocation.lng, deliveryLocation.lat];
+      
+      if (deliveryMarker.current) {
+        deliveryMarker.current.setLngLat(lngLat);
+      } else {
+        // Create a delivery element with custom style
+        const deliveryElement = document.createElement('div');
+        deliveryElement.className = 'delivery-marker';
+        deliveryElement.style.width = '20px';
+        deliveryElement.style.height = '20px';
+        deliveryElement.style.borderRadius = '50%';
+        deliveryElement.style.backgroundColor = '#FF4545';
+        deliveryElement.style.border = '2px solid white';
+        deliveryElement.style.boxShadow = '0 0 0 2px rgba(255, 69, 69, 0.3)';
+        
+        deliveryMarker.current = new mapboxgl.Marker(deliveryElement)
+          .setLngLat(lngLat)
+          .addTo(map.current);
+      }
+
+      // If we have both markers, fit bounds to include both
+      if (driverLocation && deliveryLocation) {
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([driverLocation.lng, driverLocation.lat]);
+        bounds.extend([deliveryLocation.lng, deliveryLocation.lat]);
+        
+        map.current.fitBounds(bounds, {
+          padding: 100,
+          maxZoom: 15
+        });
+      }
+    } else if (deliveryMarker.current) {
+      deliveryMarker.current.remove();
+      deliveryMarker.current = null;
+    }
+  }, [driverLocation, deliveryLocation, mounted]);
 
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newToken = e.target.value;

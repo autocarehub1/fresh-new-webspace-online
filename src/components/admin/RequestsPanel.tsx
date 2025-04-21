@@ -9,7 +9,7 @@ import {
   ArrowRight, PackageCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDeliveryStore } from '@/store/deliveryStore';
+import { useDeliveryData } from '@/hooks/use-delivery-data';
 import type { DeliveryRequest } from '@/types/delivery';
 import {
   Dialog,
@@ -19,7 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDeliveryData } from '@/hooks/use-delivery-data';
+import MapWrapper from '../map/MapWrapper';
+import { useDriverData } from '@/hooks/use-driver-data';
 
 const RequestsPanel = () => {
   const { 
@@ -28,9 +29,10 @@ const RequestsPanel = () => {
     updateDeliveryRequest,
     addTrackingUpdate
   } = useDeliveryData();
-  const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
 
-  const { drivers } = useDeliveryStore();
+  const { drivers } = useDriverData();
+  const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
+  const [viewTrackingMap, setViewTrackingMap] = useState(false);
   const [isLocalLoading, setLocalIsLoading] = useState(true);
 
   useEffect(() => {
@@ -143,9 +145,14 @@ const RequestsPanel = () => {
     }
   };
 
+  const handleViewTracking = (request: DeliveryRequest) => {
+    setSelectedRequest(request);
+    setViewTrackingMap(true);
+  };
+
   const getDriverName = (driverId: string | undefined) => {
     if (!driverId) return 'None';
-    const driver = drivers.find(d => d.id === driverId);
+    const driver = drivers?.find(d => d.id === driverId);
     return driver ? driver.name : 'Unknown';
   };
 
@@ -324,6 +331,16 @@ const RequestsPanel = () => {
                     <Package className="h-4 w-4 mr-1" />
                     Details
                   </Button>
+                  {request.current_coordinates && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewTracking(request)}
+                    >
+                      <MapPin className="h-4 w-4 mr-1" />
+                      Map
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -331,7 +348,8 @@ const RequestsPanel = () => {
         </Table>
       </div>
       
-      <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
+      {/* Request Details Dialog */}
+      <Dialog open={!!selectedRequest && !viewTrackingMap} onOpenChange={(open) => !open && setSelectedRequest(null)}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Delivery Request Details</DialogTitle>
@@ -412,6 +430,27 @@ const RequestsPanel = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Live Tracking Map Dialog */}
+      <Dialog open={viewTrackingMap && !!selectedRequest} onOpenChange={(open) => !open && setViewTrackingMap(false)}>
+        <DialogContent className="sm:max-w-[800px] h-[600px]">
+          <DialogHeader>
+            <DialogTitle>Live Delivery Tracking</DialogTitle>
+            <DialogDescription>
+              Real-time location of the delivery.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[500px] rounded-md overflow-hidden">
+            {selectedRequest && (
+              <MapWrapper 
+                driverLocation={selectedRequest?.current_coordinates}
+                deliveryLocation={selectedRequest?.delivery_coordinates}
+                height="500px"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

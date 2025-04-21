@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { User, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
-import Map from '../map/Map';
+import MapWrapper from '../map/MapWrapper';
 import DriversOverview from './drivers/DriversOverview';
 import DriversTable from './drivers/DriversTable';
 import DriverAssignment from './drivers/DriverAssignment';
@@ -186,7 +186,7 @@ const DriversPanel = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="h-[500px] rounded-md overflow-hidden">
-            <Map driverLocation={selectedDriver?.current_location.coordinates} />
+            <MapWrapper driverLocation={selectedDriver?.current_location.coordinates} />
           </div>
         </DialogContent>
       </Dialog>
