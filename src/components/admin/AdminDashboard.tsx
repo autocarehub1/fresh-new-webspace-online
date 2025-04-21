@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import RequestsPanel from './RequestsPanel';
@@ -41,10 +40,10 @@ const AdminDashboard = () => {
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
 
-  // Fixed: properly handle tab change
+  // Handle tab change - ensure this updates the state correctly
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
     console.log("Tab changed to:", value);
+    setActiveTab(value);
   };
   
   // Set up simulation interval for active deliveries
@@ -151,8 +150,8 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      {/* Fixed: Properly implemented tabs to ensure clicking works */}
-      <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
+      {/* Updated tabs implementation with correct value binding */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
