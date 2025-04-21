@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +48,6 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Log data for debugging
   useEffect(() => {
     if (requests) {
       console.log("Requests data loaded:", requests.length, "items");
@@ -63,6 +61,38 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
       simulateMovement.mutate(selectedRequest.id);
     }
   }, viewTrackingMap ? 1000 : null);
+
+  const sendStatusNotification = async (request: DeliveryRequest, status: string, status_note?: string) => {
+    const email = (request as any).email || "demo@example.com";
+    if (!email) return;
+    const body = {
+      id: request.id,
+      trackingId: request.trackingId,
+      pickup_location: request.pickup_location,
+      delivery_location: request.delivery_location,
+      priority: request.priority,
+      package_type: request.packageType,
+      email,
+      status,
+      status_note,
+      assigned_driver: request.assigned_driver
+        ? getDriverName(request.assigned_driver)
+        : undefined,
+    };
+    try {
+      const baseUrl = "https://joziqntfciyflfsgvsqz.supabase.co";
+      await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      console.log("Notification email sent", { status, email });
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+    }
+  };
 
   const handleRequestAction = async (requestId: string, action: 'approve' | 'decline') => {
     const newStatus = action === 'approve' ? 'in_progress' : 'declined';
@@ -83,7 +113,10 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
           }
         });
       }
-      
+      const req = requests?.find(r => r.id === requestId);
+      if (req) {
+        await sendStatusNotification(req, newStatus);
+      }
       toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
     } catch (error) {
       toast.error('Failed to update request status');
@@ -158,7 +191,9 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
           note: statusText
         }
       });
-      
+
+      await sendStatusNotification(request, newStatus, statusText);
+
       toast.success(`Status updated: ${trackingStatus}`);
     } catch (error) {
       toast.error('Failed to update status');
