@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
@@ -25,11 +25,12 @@ const RequestsPanel = () => {
   const { 
     deliveries: requests, 
     isLoading,
-    updateDeliveryRequest 
+    updateDeliveryRequest,
+    addTrackingUpdate
   } = useDeliveryData();
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
 
-  const { drivers, addTrackingUpdate } = useDeliveryStore();
+  const { drivers } = useDeliveryStore();
   const [isLocalLoading, setLocalIsLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +48,20 @@ const RequestsPanel = () => {
         id: requestId, 
         status: newStatus 
       });
+
+      if (action === 'approve') {
+        // Add tracking update for approval
+        await addTrackingUpdate.mutateAsync({
+          requestId,
+          update: {
+            status: 'Request Approved',
+            timestamp: new Date().toISOString(),
+            location: 'Admin Dashboard',
+            note: 'Delivery request has been approved'
+          }
+        });
+      }
+      
       toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
     } catch (error) {
       toast.error('Failed to update request status');
@@ -59,6 +74,17 @@ const RequestsPanel = () => {
         id: requestId, 
         status: 'completed' 
       });
+
+      await addTrackingUpdate.mutateAsync({
+        requestId,
+        update: {
+          status: 'Delivered',
+          timestamp: new Date().toISOString(),
+          location: 'Delivery Location',
+          note: 'Package has been delivered successfully'
+        }
+      });
+      
       toast.success(`Request ${requestId} marked as delivered`);
     } catch (error) {
       toast.error('Failed to update request status');
@@ -71,18 +97,23 @@ const RequestsPanel = () => {
   ) => {
     let statusText = '';
     let trackingStatus = '';
+    let location = '';
+    
     switch (newStatus) {
       case 'picked_up':
         statusText = 'Picked up by courier';
         trackingStatus = 'Picked Up';
+        location = request.pickup_location;
         break;
       case 'in_transit':
         statusText = 'Package is in transit';
         trackingStatus = 'In Transit';
+        location = 'En route to delivery location';
         break;
       case 'delivered':
         statusText = 'Package delivered to destination';
         trackingStatus = 'Delivered';
+        location = request.delivery_location;
         break;
       default:
         return;
@@ -90,29 +121,26 @@ const RequestsPanel = () => {
 
     try {
       const statusForMain = newStatus === 'delivered' ? 'completed' : 'in_progress';
+      
       await updateDeliveryRequest.mutateAsync({
         id: request.id,
         status: statusForMain
       });
-      addTrackingUpdate(request.id, {
-        status: trackingStatus,
-        timestamp: new Date().toISOString(),
-        location: newStatus === 'delivered'
-          ? request.delivery_location
-          : request.current_coordinates
-            ? `${request.current_coordinates.lat}, ${request.current_coordinates.lng}`
-            : '',
-        note: statusText
+      
+      await addTrackingUpdate.mutateAsync({
+        requestId: request.id,
+        update: {
+          status: trackingStatus,
+          timestamp: new Date().toISOString(),
+          location: location,
+          note: statusText
+        }
       });
+      
       toast.success(`Status updated: ${trackingStatus}`);
     } catch (error) {
       toast.error('Failed to update status');
     }
-  };
-
-  const handleAddTrackingUpdate = (requestId: string, update: any) => {
-    addTrackingUpdate(requestId, update);
-    toast.success(`Tracking update added to request ${requestId}`);
   };
 
   const getDriverName = (driverId: string | undefined) => {
@@ -279,17 +307,6 @@ const RequestsPanel = () => {
                         Delivered
                       </Button>
                     </>
-                  )}
-                  {request.status === 'in_progress' && false && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-green-600 hover:text-green-700"
-                      onClick={() => handleMarkDelivered(request.id)}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Mark Delivered
-                    </Button>
                   )}
                   {request.trackingId && (
                     <Button asChild variant="outline" size="sm">

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDeliveryStore } from '@/store/deliveryStore';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import Map from '../map/Map';
 import DriversOverview from './drivers/DriversOverview';
@@ -11,6 +10,7 @@ import DriversTable from './drivers/DriversTable';
 import DriverAssignment from './drivers/DriverAssignment';
 import type { Driver } from '@/types/delivery';
 import { useDriverData } from '@/hooks/use-driver-data';
+import { useDeliveryData } from '@/hooks/use-delivery-data';
 
 const DriversPanel = () => {
   const { 
@@ -20,11 +20,12 @@ const DriversPanel = () => {
     assignDriver
   } = useDriverData();
   
+  const { deliveries: requests } = useDeliveryData();
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
-  const [isLocalLoading, setIsLocalLoading] = useState(true); // Renamed from setIsLoading to fix error
+  const [isLocalLoading, setIsLocalLoading] = useState(true); 
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -32,27 +33,6 @@ const DriversPanel = () => {
     }, 800);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (!isSimulating) return;
-
-    const activeRequests = drivers.filter(r => 
-      r.status === 'active' && r.current_delivery && r.current_location.coordinates
-    );
-
-    if (activeRequests.length === 0) {
-      setIsSimulating(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      // activeRequests.forEach(request => {
-      //   simulateMovement(request.id);
-      // });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isSimulating, drivers]);
 
   const handleStatusToggle = async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
@@ -102,11 +82,14 @@ const DriversPanel = () => {
     );
   };
 
-  if (isLoading || isLocalLoading) { // Updated to check both loading states
+  if (isLoading || isLocalLoading) {
     return <div>Loading drivers...</div>;
   }
 
   const activeDrivers = drivers.filter(d => d.status === 'active');
+  const availableRequests = requests?.filter(r => 
+    (r.status === 'in_progress' || r.status === 'pending') && !r.assigned_driver
+  ) || [];
   
   return (
     <div className="space-y-6">
@@ -137,7 +120,7 @@ const DriversPanel = () => {
         
         <DriverAssignment 
           drivers={drivers}
-          requests={[]}
+          requests={availableRequests}
           selectedDriverId={selectedDriverId}
           selectedRequestId={selectedRequestId}
           onDriverSelect={setSelectedDriverId}

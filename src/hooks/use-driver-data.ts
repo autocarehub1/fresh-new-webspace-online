@@ -19,64 +19,26 @@ type DbDriver = {
   user_id: string | null;
 };
 
-// Type for insertion to ensure required fields
-type DbDriverInsert = {
-  id: string;
-  name: string;
-  vehicle_type: string;
-  current_location: Json;
-  status?: string;
-  photo?: string | null;
-  phone?: string | null;
-  current_delivery?: string | null;
-  created_at?: string;
-  user_id?: string | null;
-};
-
-// Converts DB model to frontend model
-const mapDbToDriver = (dbItem: DbDriver): Driver => {
-  const currentLocation = dbItem.current_location as any;
+// Maps DB driver to frontend driver
+const mapDbToDriver = (dbDriver: DbDriver): Driver => {
+  const currentLocation = dbDriver.current_location as any;
   
   return {
-    id: dbItem.id,
-    name: dbItem.name,
-    status: dbItem.status as 'active' | 'inactive',
-    vehicle_type: dbItem.vehicle_type,
+    id: dbDriver.id,
+    name: dbDriver.name,
+    status: dbDriver.status as 'active' | 'inactive',
+    vehicle_type: dbDriver.vehicle_type,
     current_location: {
-      address: currentLocation.address || 'Unknown location',
+      address: currentLocation?.address || '',
       coordinates: {
-        lat: currentLocation.coordinates?.lat || 0,
-        lng: currentLocation.coordinates?.lng || 0
+        lat: currentLocation?.coordinates?.lat || 0,
+        lng: currentLocation?.coordinates?.lng || 0
       }
     },
-    photo: dbItem.photo || '',
-    phone: dbItem.phone || '',
-    current_delivery: dbItem.current_delivery || null
+    photo: dbDriver.photo || '',
+    phone: dbDriver.phone || '',
+    current_delivery: dbDriver.current_delivery
   };
-};
-
-// Maps frontend model to DB model for insert/update
-const mapDriverToDb = (item: Partial<Driver>): Partial<DbDriver> => {
-  const dbItem: Partial<DbDriver> = {
-    name: item.name,
-    status: item.status,
-    vehicle_type: item.vehicle_type,
-    photo: item.photo || null,
-    phone: item.phone || null,
-    current_delivery: item.current_delivery || null,
-  };
-  
-  if (item.current_location) {
-    dbItem.current_location = {
-      address: item.current_location.address,
-      coordinates: {
-        lat: item.current_location.coordinates.lat,
-        lng: item.current_location.coordinates.lng
-      }
-    } as unknown as Json;
-  }
-  
-  return dbItem;
 };
 
 export const useDriverData = () => {
@@ -95,53 +57,12 @@ export const useDriverData = () => {
     },
   });
   
-  // Create a new driver
-  const createDriver = useMutation({
-    mutationFn: async (newDriver: Partial<Driver>) => {
-      // For new drivers, ensure we have required fields
-      if (!newDriver.name || !newDriver.vehicle_type || !newDriver.current_location) {
-        throw new Error("Name, vehicle type, and current location are required");
-      }
-      
-      const dbDriver = mapDriverToDb(newDriver);
-      
-      // Generate a unique ID for the new driver
-      const uniqueId = crypto.randomUUID();
-      
-      // Ensure required fields for DB insert
-      const insertData: DbDriverInsert = {
-        id: uniqueId,
-        name: newDriver.name,
-        vehicle_type: newDriver.vehicle_type,
-        current_location: dbDriver.current_location as Json
-      };
-      
-      const { data, error } = await supabase
-        .from('drivers')
-        .insert(insertData)
-        .select()
-        .single();
-        
-      if (error) throw error;
-      return mapDbToDriver(data as DbDriver);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['drivers'] });
-      toast.success('Driver created successfully');
-    },
-    onError: (error: any) => {
-      toast.error(`Error creating driver: ${error.message}`);
-    }
-  });
-  
-  // Update a driver
+  // Update driver status
   const updateDriver = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<Driver> & { id: string }) => {
-      const dbUpdates = mapDriverToDb(updates);
-      
+    mutationFn: async ({ id, status }: { id: string, status: 'active' | 'inactive' }) => {
       const { data, error } = await supabase
         .from('drivers')
-        .update(dbUpdates)
+        .update({ status })
         .eq('id', id)
         .select()
         .single();
@@ -151,7 +72,6 @@ export const useDriverData = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['drivers'] });
-      toast.success('Driver updated successfully');
     },
     onError: (error: any) => {
       toast.error(`Error updating driver: ${error.message}`);
@@ -161,21 +81,39 @@ export const useDriverData = () => {
   // Assign driver to delivery
   const assignDriver = useMutation({
     mutationFn: async ({ driverId, deliveryId }: { driverId: string, deliveryId: string }) => {
-      // First update the delivery request
-      const { error: deliveryError } = await supabase
-        .from('delivery_requests')
-        .update({ assigned_driver: driverId, status: 'in_progress' })
-        .eq('id', deliveryId);
-        
-      if (deliveryError) throw deliveryError;
-      
-      // Then update the driver's current delivery
+      // First, update the driver's current_delivery
       const { error: driverError } = await supabase
         .from('drivers')
         .update({ current_delivery: deliveryId })
         .eq('id', driverId);
         
       if (driverError) throw driverError;
+      
+      // Then, update the delivery's assigned_driver
+      const { error: deliveryError } = await supabase
+        .from('delivery_requests')
+        .update({ 
+          assigned_driver: driverId,
+          status: 'in_progress'
+        })
+        .eq('id', deliveryId);
+        
+      if (deliveryError) throw deliveryError;
+
+      // Add a tracking update for driver assignment
+      const driver = drivers?.find(d => d.id === driverId);
+      
+      const { error: trackingError } = await supabase
+        .from('tracking_updates')
+        .insert({
+          request_id: deliveryId,
+          status: 'Driver Assigned',
+          timestamp: new Date().toISOString(),
+          location: driver?.current_location.address || 'Driver location',
+          note: `Driver ${driver?.name || 'Unknown'} assigned to delivery`
+        });
+      
+      if (trackingError) throw trackingError;
       
       return { success: true };
     },
@@ -189,12 +127,33 @@ export const useDriverData = () => {
     }
   });
   
+  // Update driver location
+  const updateDriverLocation = useMutation({
+    mutationFn: async ({ id, location }: { id: string, location: { address: string, coordinates: { lat: number, lng: number } } }) => {
+      const { data, error } = await supabase
+        .from('drivers')
+        .update({ current_location: location })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      return mapDbToDriver(data as DbDriver);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error updating driver location: ${error.message}`);
+    }
+  });
+  
   return {
     drivers: drivers || [],
     isLoading,
     error,
-    createDriver,
     updateDriver,
-    assignDriver
+    assignDriver,
+    updateDriverLocation
   };
 };

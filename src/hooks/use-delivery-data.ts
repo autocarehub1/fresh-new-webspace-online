@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { DeliveryRequest } from '@/types/delivery';
+import { DeliveryRequest, TrackingUpdate } from '@/types/delivery';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
@@ -67,7 +67,7 @@ const mapDbToDeliveryRequest = (dbItem: DbDeliveryRequest): DeliveryRequest => {
       lat: currentCoords.lat || 0,
       lng: currentCoords.lng || 0
     } : undefined,
-    assigned_driver: dbItem.assigned_driver || null,
+    assigned_driver: dbItem.assigned_driver || undefined,
     estimatedCost: dbItem.estimated_cost || 0,
     distance: dbItem.distance || 0
   };
@@ -186,6 +186,30 @@ export const useDeliveryData = () => {
     }
   });
 
+  // Add tracking update
+  const addTrackingUpdate = useMutation({
+    mutationFn: async ({ requestId, update }: { requestId: string, update: TrackingUpdate }) => {
+      const { error } = await supabase
+        .from('tracking_updates')
+        .insert({
+          request_id: requestId,
+          status: update.status,
+          timestamp: update.timestamp,
+          location: update.location,
+          note: update.note
+        });
+        
+      if (error) throw error;
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error adding tracking update: ${error.message}`);
+    }
+  });
+
   // Get a delivery request by tracking ID
   const getDeliveryByTrackingId = async (trackingId: string) => {
     const { data, error } = await supabase
@@ -204,6 +228,7 @@ export const useDeliveryData = () => {
     error,
     createDeliveryRequest,
     updateDeliveryRequest,
+    addTrackingUpdate,
     getDeliveryByTrackingId
   };
 };
