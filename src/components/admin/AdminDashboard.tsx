@@ -10,7 +10,7 @@ import { BadgeCheck, Clock, Package, TrendingUp } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('requests');
-  const { deliveries: requests } = useDeliveryData();
+  const { deliveries: requests, isLoading: deliveriesLoading } = useDeliveryData();
   
   // Count deliveries for the overview
   const activeDeliveries = requests?.filter(r => r.status === 'in_progress').length || 0;
@@ -33,6 +33,10 @@ const AdminDashboard = () => {
   const activeDelivery = requests?.find(r => 
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -110,17 +114,17 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      <Tabs defaultValue="requests" className="w-full" onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="requests">
+        <TabsContent value="requests" className={activeTab === "requests" ? "block" : "hidden"}>
           <RequestsPanel />
         </TabsContent>
         
-        <TabsContent value="drivers">
+        <TabsContent value="drivers" className={activeTab === "drivers" ? "block" : "hidden"}>
           <DriversPanel />
         </TabsContent>
       </Tabs>
