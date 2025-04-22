@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useDriverData } from '@/hooks/use-driver-data';
@@ -8,7 +7,8 @@ import RequestsStats from './RequestsStats';
 import RequestsTable from './RequestsTable';
 import RequestDetailsDialog from './RequestDetailsDialog';
 import TrackingMapDialog from './TrackingMapDialog';
-import type { DeliveryRequest } from '@/types/delivery';
+import type { DeliveryRequest, Driver } from '@/types/delivery';
+import { Package } from 'lucide-react';
 
 interface RequestsPanelProps {
   simulationActive?: boolean;
@@ -115,4 +115,3 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
 };
 
 export default RequestsPanel;
-
