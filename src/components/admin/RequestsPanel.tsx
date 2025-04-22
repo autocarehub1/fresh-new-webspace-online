@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -103,11 +102,17 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         body: JSON.stringify(body),
       });
       
-      const result = await response.json();
-      console.log("Email notification response:", result);
-      
       if (!response.ok) {
-        throw new Error(result.error || "Failed to send notification email");
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to send notification email");
+      }
+      
+      let result;
+      try {
+        const text = await response.text();
+        result = text ? JSON.parse(text) : {};
+      } catch (err) {
+        console.log("Response was not valid JSON:", err);
       }
       
       toast.success("Status notification email sent");
