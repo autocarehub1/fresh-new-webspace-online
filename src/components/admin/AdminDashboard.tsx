@@ -1,9 +1,9 @@
 
 import { useState, useEffect } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import RequestsPanel from './RequestsPanel';
 import DriversPanel from './DriversPanel';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeliveryData } from '@/hooks/use-delivery-data'; 
 import { useDriverData } from '@/hooks/use-driver-data';
 import Map from '../map/Map';
@@ -48,12 +48,6 @@ const AdminDashboard = () => {
   const activeDelivery = requests?.find(r => 
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
-
-  // Fix tab handling to ensure it's working properly
-  const handleTabChange = (value: string) => {
-    console.log("Tab changed to:", value);
-    setActiveTab(value);
-  };
   
   // Set up simulation interval for active deliveries
   useInterval(() => {
@@ -161,24 +155,30 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      {/* Tabs Implementation - Fix for tab click issues */}
-      <Tabs value="requests" className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger 
-            value="requests" 
+      {/* Custom Tab Implementation without using Radix UI Tabs */}
+      <div className="w-full">
+        <div className="flex mb-8 border-b">
+          <button 
             onClick={() => setActiveTab("requests")}
-            className="px-4 py-2"
+            className={`px-6 py-3 font-medium text-sm transition-colors ${
+              activeTab === "requests" 
+                ? "border-b-2 border-blue-600 text-blue-600" 
+                : "text-gray-600 hover:text-blue-600"
+            }`}
           >
             Delivery Requests
-          </TabsTrigger>
-          <TabsTrigger 
-            value="drivers" 
+          </button>
+          <button 
             onClick={() => setActiveTab("drivers")}
-            className="px-4 py-2"
+            className={`px-6 py-3 font-medium text-sm transition-colors ${
+              activeTab === "drivers" 
+                ? "border-b-2 border-blue-600 text-blue-600" 
+                : "text-gray-600 hover:text-blue-600"
+            }`}
           >
             Manage Drivers
-          </TabsTrigger>
-        </TabsList>
+          </button>
+        </div>
         
         {activeTab === "requests" && (
           <div className="space-y-4">
@@ -194,7 +194,7 @@ const AdminDashboard = () => {
             <DriversPanel simulationActive={isSimulating} />
           </div>
         )}
-      </Tabs>
+      </div>
     </div>
   );
 };
