@@ -14,7 +14,7 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-8">
+    <Tabs value={activeTab} onValueChange={onTabChange} className="mb-8">
       <TabsList className="w-full border-b rounded-none justify-start gap-2">
         <TabsTrigger 
           value="requests" 
