@@ -23,10 +23,14 @@ export const useNotificationEmail = () => {
         assigned_driver: request.assigned_driver,
       };
       
+      // Get the base URL to determine where to send the request
       const origin = window.location.origin;
-      const baseUrl = origin.includes('localhost') 
-        ? "https://joziqntfciyflfsgvsqz.supabase.co"
+      const projectId = 'joziqntfciyflfsgvsqz'; // Supabase project ID
+      const baseUrl = origin.includes('localhost') || origin.includes('lovableproject.com')
+        ? `https://${projectId}.supabase.co`
         : origin;
+      
+      console.log(`Sending notification to ${baseUrl}/functions/v1/send-confirmation`);
       
       const response = await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
         method: "POST",
@@ -38,6 +42,7 @@ export const useNotificationEmail = () => {
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("Email notification error response:", errorText);
         throw new Error(errorText || "Failed to send notification email");
       }
       
@@ -45,6 +50,7 @@ export const useNotificationEmail = () => {
       try {
         const text = await response.text();
         result = text ? JSON.parse(text) : {};
+        console.log("Email notification success:", result);
       } catch (err) {
         console.log("Response was not valid JSON:", err);
       }
@@ -58,4 +64,3 @@ export const useNotificationEmail = () => {
 
   return { sendStatusNotification };
 };
-
