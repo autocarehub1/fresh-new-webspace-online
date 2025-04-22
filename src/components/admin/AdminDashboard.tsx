@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import RequestsPanel from './RequestsPanel';
@@ -48,6 +49,7 @@ const AdminDashboard = () => {
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
 
+  // Fix: Ensure the handleTabChange function is being used correctly
   const handleTabChange = (value: string) => {
     console.log("Tab changed to:", value);
     setActiveTab(value);
@@ -161,7 +163,7 @@ const AdminDashboard = () => {
       
       {/* Tabs Implementation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="mb-8">
+        <TabsList className="mb-8 w-full md:w-auto">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
         </TabsList>
