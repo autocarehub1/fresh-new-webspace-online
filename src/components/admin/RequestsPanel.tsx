@@ -1,30 +1,14 @@
+
 import { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  Check, X, ExternalLink, Clock, Truck, 
-  MapPin, User, Package,
-  ArrowRight, PackageCheck
-} from 'lucide-react';
-import { toast } from 'sonner';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
-import type { DeliveryRequest, Driver } from '@/types/delivery';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import MapWrapper from '../map/MapWrapper';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { useInterval } from '@/hooks/use-interval';
+import { useRequestActions } from '@/hooks/use-request-actions';
 import RequestsStats from './RequestsStats';
 import RequestsTable from './RequestsTable';
 import RequestDetailsDialog from './RequestDetailsDialog';
 import TrackingMapDialog from './TrackingMapDialog';
+import type { DeliveryRequest } from '@/types/delivery';
 
 interface RequestsPanelProps {
   simulationActive?: boolean;
@@ -32,22 +16,17 @@ interface RequestsPanelProps {
 }
 
 const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
-  const { 
-    deliveries: requests, 
-    isLoading,
-    updateDeliveryRequest,
-    addTrackingUpdate,
-    simulateMovement
-  } = useDeliveryData();
-
+  const { deliveries: requests, isLoading, simulateMovement } = useDeliveryData();
   const { drivers } = useDriverData();
+  const { handleRequestAction, handleStatusUpdate } = useRequestActions();
+  
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
   const [viewTrackingMap, setViewTrackingMap] = useState(false);
-  const [isLocalLoading, setLocalIsLoading] = useState(true);
+  const [isLocalLoading, setLocalLoading] = useState(true);
   
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLocalIsLoading(false);
+      setLocalLoading(false);
     }, 800);
 
     return () => clearTimeout(timer);
@@ -67,176 +46,15 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
     }
   }, viewTrackingMap ? 1000 : null);
 
-  const sendStatusNotification = async (request: DeliveryRequest, status: string, status_note?: string) => {
-    try {
-      const email = (request as any).email || "demo@example.com";
-      if (!email) return;
-      
-      console.log("Sending status notification email to:", email, "status:", status);
-      
-      const body = {
-        id: request.id,
-        trackingId: request.trackingId,
-        pickup_location: request.pickup_location,
-        delivery_location: request.delivery_location,
-        priority: request.priority,
-        package_type: request.packageType,
-        email,
-        status,
-        status_note,
-        assigned_driver: request.assigned_driver
-          ? getDriverName(request.assigned_driver)
-          : undefined,
-      };
-      
-      const origin = window.location.origin;
-      const baseUrl = origin.includes('localhost') 
-        ? "https://joziqntfciyflfsgvsqz.supabase.co"
-        : origin;
-      
-      const response = await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to send notification email");
-      }
-      
-      let result;
-      try {
-        const text = await response.text();
-        result = text ? JSON.parse(text) : {};
-      } catch (err) {
-        console.log("Response was not valid JSON:", err);
-      }
-      
-      toast.success("Status notification email sent");
-    } catch (err) {
-      console.error("Failed to send notification:", err);
-      toast.error("Failed to send status notification email");
-    }
-  };
-
-  const handleRequestAction = async (requestId: string, action: 'approve' | 'decline') => {
-    const newStatus = action === 'approve' ? 'in_progress' : 'declined';
-    try {
-      await updateDeliveryRequest.mutateAsync({ 
-        id: requestId, 
-        status: newStatus 
-      });
-
-      if (action === 'approve') {
-        await addTrackingUpdate.mutateAsync({
-          requestId,
-          update: {
-            status: 'Request Approved',
-            timestamp: new Date().toISOString(),
-            location: 'Admin Dashboard',
-            note: 'Delivery request has been approved'
-          }
-        });
-      }
-      const req = requests?.find(r => r.id === requestId);
-      if (req) {
-        await sendStatusNotification(req, newStatus);
-      }
-      toast.success(`Request ${requestId} ${action === 'approve' ? 'approved' : 'declined'}`);
-    } catch (error) {
-      toast.error('Failed to update request status');
-    }
-  };
-
-  const handleMarkDelivered = async (requestId: string) => {
-    try {
-      await updateDeliveryRequest.mutateAsync({ 
-        id: requestId, 
-        status: 'completed' 
-      });
-
-      await addTrackingUpdate.mutateAsync({
-        requestId,
-        update: {
-          status: 'Delivered',
-          timestamp: new Date().toISOString(),
-          location: 'Delivery Location',
-          note: 'Package has been delivered successfully'
-        }
-      });
-      
-      toast.success(`Request ${requestId} marked as delivered`);
-    } catch (error) {
-      toast.error('Failed to update request status');
-    }
-  };
-
-  const handleStatusUpdate = async (
-    request: DeliveryRequest, 
-    newStatus: 'picked_up' | 'in_transit' | 'delivered'
-  ) => {
-    let statusText = '';
-    let trackingStatus = '';
-    let location = '';
-    
-    switch (newStatus) {
-      case 'picked_up':
-        statusText = 'Picked up by courier';
-        trackingStatus = 'Picked Up';
-        location = request.pickup_location;
-        break;
-      case 'in_transit':
-        statusText = 'Package is in transit';
-        trackingStatus = 'In Transit';
-        location = 'En route to delivery location';
-        break;
-      case 'delivered':
-        statusText = 'Package delivered to destination';
-        trackingStatus = 'Delivered';
-        location = request.delivery_location;
-        break;
-      default:
-        return;
-    }
-
-    try {
-      const statusForMain = newStatus === 'delivered' ? 'completed' : 'in_progress';
-      
-      await updateDeliveryRequest.mutateAsync({
-        id: request.id,
-        status: statusForMain
-      });
-      
-      await addTrackingUpdate.mutateAsync({
-        requestId: request.id,
-        update: {
-          status: trackingStatus,
-          timestamp: new Date().toISOString(),
-          location: location,
-          note: statusText
-        }
-      });
-
-      await sendStatusNotification(request, newStatus, statusText);
-
-      toast.success(`Status updated: ${trackingStatus}`);
-    } catch (error) {
-      toast.error('Failed to update status');
-    }
+  const getDriverName = (driverId: string | undefined) => {
+    if (!driverId) return 'None';
+    const driver = drivers?.find(d => d.id === driverId);
+    return driver ? driver.name : 'Unknown';
   };
 
   const handleViewTracking = (request: DeliveryRequest) => {
     setSelectedRequest(request);
     setViewTrackingMap(true);
-  };
-
-  const getDriverName = (driverId: string | undefined) => {
-    if (!driverId) return 'None';
-    const driver = drivers?.find(d => d.id === driverId);
-    return driver ? driver.name : 'Unknown';
   };
 
   if (isLoading || isLocalLoading) {
@@ -297,3 +115,4 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
 };
 
 export default RequestsPanel;
+
