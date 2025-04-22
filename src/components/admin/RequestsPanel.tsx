@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
-import type { DeliveryRequest } from '@/types/delivery';
+import type { DeliveryRequest, Driver } from '@/types/delivery';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import TrackingMapDialog from './TrackingMapDialog';
 
 interface RequestsPanelProps {
   simulationActive?: boolean;
+  availableDrivers?: Driver[];
 }
 
 const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {

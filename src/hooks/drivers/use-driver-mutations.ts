@@ -93,7 +93,8 @@ export const useDriverMutations = () => {
   });
 
   const addDriver = useMutation({
-    mutationFn: async (driverData: Omit<Driver, 'id' | 'status'>) => {
+    // Modify the type to make current_delivery optional
+    mutationFn: async (driverData: Omit<Driver, 'id' | 'status' | 'current_delivery'> & { current_delivery?: string | null }) => {
       const driverId = `DRV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
       const { data, error } = await supabase
