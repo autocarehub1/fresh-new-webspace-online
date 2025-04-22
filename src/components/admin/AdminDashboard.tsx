@@ -155,10 +155,12 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      {/* Custom Tab Implementation without using Radix UI Tabs */}
+      {/* Tabs */}
       <div className="w-full">
+        {/* Tab buttons */}
         <div className="flex mb-8 border-b">
           <button 
+            type="button"
             onClick={() => setActiveTab("requests")}
             className={`px-6 py-3 font-medium text-sm transition-colors ${
               activeTab === "requests" 
@@ -169,6 +171,7 @@ const AdminDashboard = () => {
             Delivery Requests
           </button>
           <button 
+            type="button"
             onClick={() => setActiveTab("drivers")}
             className={`px-6 py-3 font-medium text-sm transition-colors ${
               activeTab === "drivers" 
@@ -180,20 +183,17 @@ const AdminDashboard = () => {
           </button>
         </div>
         
-        {activeTab === "requests" && (
-          <div className="space-y-4">
+        {/* Tab content */}
+        <div className="space-y-4">
+          {activeTab === "requests" ? (
             <RequestsPanel 
               simulationActive={isSimulating} 
               availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
             />
-          </div>
-        )}
-        
-        {activeTab === "drivers" && (
-          <div className="space-y-4">
+          ) : (
             <DriversPanel simulationActive={isSimulating} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
