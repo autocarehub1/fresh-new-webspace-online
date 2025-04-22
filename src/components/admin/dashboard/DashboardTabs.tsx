@@ -8,11 +8,6 @@ interface DashboardTabsProps {
 }
 
 const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
-  const handleTabClick = (tab: string) => {
-    console.log('DashboardTabs: Clicked tab', tab);
-    onTabChange(tab);
-  };
-
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="mb-8">
       <TabsList className="w-full border-b rounded-none justify-start gap-2">
@@ -23,7 +18,6 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
               ? "border-b-2 border-blue-600 text-blue-600" 
               : "text-gray-600 hover:text-blue-600"
           }`}
-          onClick={() => handleTabClick("requests")}
         >
           Delivery Requests
         </TabsTrigger>
@@ -34,7 +28,6 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
               ? "border-b-2 border-blue-600 text-blue-600" 
               : "text-gray-600 hover:text-blue-600"
           }`}
-          onClick={() => handleTabClick("drivers")}
         >
           Manage Drivers
         </TabsTrigger>
