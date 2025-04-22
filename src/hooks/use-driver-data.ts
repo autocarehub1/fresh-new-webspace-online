@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Driver } from '@/types/delivery';
@@ -196,12 +195,44 @@ export const useDriverData = () => {
     }
   });
   
+  // Add new driver
+  const addDriver = useMutation({
+    mutationFn: async (driverData: Omit<Driver, 'id' | 'status'>) => {
+      const driverId = `DRV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      const { data, error } = await supabase
+        .from('drivers')
+        .insert({
+          id: driverId,
+          name: driverData.name,
+          status: 'active',
+          vehicle_type: driverData.vehicle_type,
+          current_location: driverData.current_location,
+          photo: driverData.photo,
+          phone: driverData.phone,
+          current_delivery: null
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapDbToDriver(data as any);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Error adding driver: ${error.message}`);
+    }
+  });
+
   return {
     drivers: drivers || localDrivers,
     isLoading,
     error,
     updateDriver,
     assignDriver,
-    updateDriverLocation
+    updateDriverLocation,
+    addDriver
   };
 };

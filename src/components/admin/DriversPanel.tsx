@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import MapWrapper from '../map/MapWrapper';
 import DriversOverview from './drivers/DriversOverview';
 import DriversTable from './drivers/DriversTable';
 import DriverAssignment from './drivers/DriverAssignment';
+import AddDriverDialog from './drivers/AddDriverDialog';
 import type { Driver } from '@/types/delivery';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
@@ -143,10 +143,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
               {isSimulating ? "Stop Simulation" : "Simulate Movement"}
             </Button>
             
-            <Button className="bg-[#6E59A5] hover:bg-[#7E69AB] text-white font-semibold rounded-lg shadow-none">
-              <User className="h-4 w-4 mr-2" />
-              Add New Driver
-            </Button>
+            <AddDriverDialog />
           </div>
         </div>
         {/* Table and assignment form section */}

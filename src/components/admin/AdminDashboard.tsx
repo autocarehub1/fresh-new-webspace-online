@@ -4,13 +4,20 @@ import RequestsPanel from './RequestsPanel';
 import DriversPanel from './DriversPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeliveryData } from '@/hooks/use-delivery-data'; 
+import { useDriverData } from '@/hooks/use-driver-data';
 import Map from '../map/Map';
 import { BadgeCheck, Clock, Package, TrendingUp } from 'lucide-react';
 import { useInterval } from '@/hooks/use-interval';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('requests');
-  const { deliveries: requests, isLoading: deliveriesLoading, simulateMovement } = useDeliveryData();
+  const { 
+    deliveries: requests, 
+    isLoading: deliveriesLoading, 
+    simulateMovement 
+  } = useDeliveryData();
+  
+  const { drivers, isLoading: driversLoading } = useDriverData();
   
   // Count deliveries for the overview
   const activeDeliveries = requests?.filter(r => r.status === 'in_progress').length || 0;
@@ -24,7 +31,8 @@ const AdminDashboard = () => {
   // Log data for debugging
   useEffect(() => {
     console.log("AdminDashboard - Requests data:", requests?.length || 0, "items");
-  }, [requests]);
+    console.log("AdminDashboard - Drivers data:", drivers?.length || 0, "drivers");
+  }, [requests, drivers]);
 
   // Set loaded after delay to avoid render issues
   useEffect(() => {
@@ -40,7 +48,6 @@ const AdminDashboard = () => {
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
 
-  // Handle tab change - ensure this updates the state correctly
   const handleTabChange = (value: string) => {
     console.log("Tab changed to:", value);
     setActiveTab(value);
@@ -49,12 +56,10 @@ const AdminDashboard = () => {
   // Set up simulation interval for active deliveries
   useInterval(() => {
     if (isSimulating && requests) {
-      // Find active deliveries
       const activeRequests = requests.filter(r => 
         r.status === 'in_progress' && r.assigned_driver && r.current_coordinates && r.delivery_coordinates
       );
       
-      // Simulate movement for each active delivery
       activeRequests.forEach(request => {
         simulateMovement.mutate(request.id);
       });
@@ -64,6 +69,10 @@ const AdminDashboard = () => {
   const handleToggleSimulation = () => {
     setIsSimulating(prev => !prev);
   };
+
+  if (deliveriesLoading || driversLoading) {
+    return <div className="container mx-auto px-4 py-8">Loading dashboard data...</div>;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -150,7 +159,7 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      {/* Updated tabs implementation with correct value binding */}
+      {/* Tabs Implementation */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
@@ -158,7 +167,10 @@ const AdminDashboard = () => {
         </TabsList>
         
         <TabsContent value="requests" className="space-y-4">
-          <RequestsPanel simulationActive={isSimulating} />
+          <RequestsPanel 
+            simulationActive={isSimulating} 
+            availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
+          />
         </TabsContent>
         
         <TabsContent value="drivers" className="space-y-4">
