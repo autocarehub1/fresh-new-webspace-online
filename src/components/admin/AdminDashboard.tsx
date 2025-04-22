@@ -60,16 +60,13 @@ const AdminDashboard = () => {
   };
 
   const handleTabChange = (tab: string) => {
-    console.log('AdminDashboard: Changing tab to:', tab);
+    console.log('AdminDashboard: Tab changed to:', tab);
     setActiveTab(tab);
   };
 
   if (deliveriesLoading || driversLoading) {
     return <div className="container mx-auto px-4 py-8">Loading dashboard data...</div>;
   }
-
-  console.log("AdminDashboard rendering with activeTab:", activeTab);
-  console.log("Drivers data available:", drivers?.length || 0);
 
   return (
     <div className="container mx-auto px-4 py-8">

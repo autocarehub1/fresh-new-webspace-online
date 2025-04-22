@@ -8,14 +8,8 @@ interface DashboardTabsProps {
 }
 
 const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
-  // Add explicit handler to debug tab changes
-  const handleTabChange = (value: string) => {
-    console.log('DashboardTabs: Tab changed to:', value);
-    onTabChange(value);
-  };
-
   return (
-    <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-8">
+    <Tabs value={activeTab} onValueChange={onTabChange} className="mb-8">
       <TabsList className="w-full border-b rounded-none justify-start gap-2">
         <TabsTrigger 
           value="requests" 
