@@ -14,7 +14,7 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
   };
 
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange} className="mb-8">
+    <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-8">
       <TabsList className="w-full border-b rounded-none justify-start gap-2">
         <TabsTrigger 
           value="requests" 
@@ -23,6 +23,7 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
               ? "border-b-2 border-blue-600 text-blue-600" 
               : "text-gray-600 hover:text-blue-600"
           }`}
+          onClick={() => handleTabClick("requests")}
         >
           Delivery Requests
         </TabsTrigger>
@@ -33,6 +34,7 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
               ? "border-b-2 border-blue-600 text-blue-600" 
               : "text-gray-600 hover:text-blue-600"
           }`}
+          onClick={() => handleTabClick("drivers")}
         >
           Manage Drivers
         </TabsTrigger>
