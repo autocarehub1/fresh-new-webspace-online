@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface DashboardTabsProps {
   activeTab: string;
@@ -13,30 +14,30 @@ const DashboardTabs = ({ activeTab, onTabChange }: DashboardTabsProps) => {
   };
 
   return (
-    <div className="flex mb-8 border-b">
-      <button 
-        type="button"
-        onClick={() => handleTabClick("requests")}
-        className={`px-6 py-3 font-medium text-sm transition-colors ${
-          activeTab === "requests" 
-            ? "border-b-2 border-blue-600 text-blue-600" 
-            : "text-gray-600 hover:text-blue-600"
-        }`}
-      >
-        Delivery Requests
-      </button>
-      <button 
-        type="button"
-        onClick={() => handleTabClick("drivers")}
-        className={`px-6 py-3 font-medium text-sm transition-colors ${
-          activeTab === "drivers" 
-            ? "border-b-2 border-blue-600 text-blue-600" 
-            : "text-gray-600 hover:text-blue-600"
-        }`}
-      >
-        Manage Drivers
-      </button>
-    </div>
+    <Tabs value={activeTab} onValueChange={onTabChange} className="mb-8">
+      <TabsList className="w-full border-b rounded-none justify-start gap-2">
+        <TabsTrigger 
+          value="requests" 
+          className={`px-6 py-3 font-medium text-sm transition-colors ${
+            activeTab === "requests" 
+              ? "border-b-2 border-blue-600 text-blue-600" 
+              : "text-gray-600 hover:text-blue-600"
+          }`}
+        >
+          Delivery Requests
+        </TabsTrigger>
+        <TabsTrigger 
+          value="drivers"
+          className={`px-6 py-3 font-medium text-sm transition-colors ${
+            activeTab === "drivers" 
+              ? "border-b-2 border-blue-600 text-blue-600" 
+              : "text-gray-600 hover:text-blue-600"
+          }`}
+        >
+          Manage Drivers
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
   );
 };
 
