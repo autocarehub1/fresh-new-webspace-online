@@ -161,23 +161,39 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
       
-      {/* Tabs Implementation */}
-      <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="mb-8 w-full md:w-auto">
-          <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
-          <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
+      {/* Tabs Implementation - Fix for tab click issues */}
+      <Tabs value="requests" className="w-full">
+        <TabsList className="mb-8">
+          <TabsTrigger 
+            value="requests" 
+            onClick={() => setActiveTab("requests")}
+            className="px-4 py-2"
+          >
+            Delivery Requests
+          </TabsTrigger>
+          <TabsTrigger 
+            value="drivers" 
+            onClick={() => setActiveTab("drivers")}
+            className="px-4 py-2"
+          >
+            Manage Drivers
+          </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="requests" className="space-y-4">
-          <RequestsPanel 
-            simulationActive={isSimulating} 
-            availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
-          />
-        </TabsContent>
+        {activeTab === "requests" && (
+          <div className="space-y-4">
+            <RequestsPanel 
+              simulationActive={isSimulating} 
+              availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
+            />
+          </div>
+        )}
         
-        <TabsContent value="drivers" className="space-y-4">
-          <DriversPanel simulationActive={isSimulating} />
-        </TabsContent>
+        {activeTab === "drivers" && (
+          <div className="space-y-4">
+            <DriversPanel simulationActive={isSimulating} />
+          </div>
+        )}
       </Tabs>
     </div>
   );
