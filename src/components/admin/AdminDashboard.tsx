@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import RequestsPanel from './RequestsPanel';
-import DriversPanel from './DriversPanel';
 import { useDeliveryData } from '@/hooks/use-delivery-data'; 
 import { useDriverData } from '@/hooks/use-driver-data';
-import Map from '../map/Map';
-import { BadgeCheck, Clock, Package, TrendingUp } from 'lucide-react';
 import { useInterval } from '@/hooks/use-interval';
+import RequestsPanel from './RequestsPanel';
+import DriversPanel from './DriversPanel';
+import StatisticsCards from './dashboard/StatisticsCards';
+import LiveDeliveryMap from './dashboard/LiveDeliveryMap';
+import DashboardTabs from './dashboard/DashboardTabs';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('requests');
@@ -20,7 +19,6 @@ const AdminDashboard = () => {
   
   const { drivers, isLoading: driversLoading } = useDriverData();
   
-  // Count deliveries for the overview
   const activeDeliveries = requests?.filter(r => r.status === 'in_progress').length || 0;
   const pendingRequests = requests?.filter(r => r.status === 'pending').length || 0;
   const completedDeliveries = requests?.filter(r => r.status === 'completed').length || 0;
@@ -29,27 +27,22 @@ const AdminDashboard = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
 
-  // Log data for debugging
   useEffect(() => {
     console.log("AdminDashboard - Requests data:", requests?.length || 0, "items");
     console.log("AdminDashboard - Drivers data:", drivers?.length || 0, "drivers");
   }, [requests, drivers]);
 
-  // Set loaded after delay to avoid render issues
   useEffect(() => {
     const timer = setTimeout(() => {
       setMapLoaded(true);
     }, 1000);
-    
     return () => clearTimeout(timer);
   }, []);
 
-  // Get a driver and delivery for map view
   const activeDelivery = requests?.find(r => 
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
   
-  // Set up simulation interval for active deliveries
   useInterval(() => {
     if (isSimulating && requests) {
       const activeRequests = requests.filter(r => 
@@ -74,116 +67,28 @@ const AdminDashboard = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
       
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="flex flex-row items-center justify-between p-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Active Deliveries</p>
-              <h3 className="text-2xl font-bold text-blue-600">{activeDeliveries}</h3>
-            </div>
-            <div className="p-2 bg-blue-100 rounded-full">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex flex-row items-center justify-between p-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
-              <h3 className="text-2xl font-bold text-yellow-600">{pendingRequests}</h3>
-            </div>
-            <div className="p-2 bg-yellow-100 rounded-full">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex flex-row items-center justify-between p-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Completed Deliveries</p>
-              <h3 className="text-2xl font-bold text-green-600">{completedDeliveries}</h3>
-            </div>
-            <div className="p-2 bg-green-100 rounded-full">
-              <BadgeCheck className="h-6 w-6 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="flex flex-row items-center justify-between p-6">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Requests</p>
-              <h3 className="text-2xl font-bold text-indigo-600">{totalRequests}</h3>
-            </div>
-            <div className="p-2 bg-indigo-100 rounded-full">
-              <Package className="h-6 w-6 text-indigo-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <StatisticsCards
+        activeDeliveries={activeDeliveries}
+        pendingRequests={pendingRequests}
+        completedDeliveries={completedDeliveries}
+        totalRequests={totalRequests}
+      />
       
-      {/* Overview Map Card */}
-      <Card className="mb-8">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex justify-between items-center">
-            <span>Live Delivery Map</span>
-            <button 
-              onClick={handleToggleSimulation}
-              className={`text-sm px-3 py-1 rounded ${isSimulating ? 
-                'bg-red-500 text-white' : 'bg-blue-500 text-white'}`}
-            >
-              {isSimulating ? 'Stop Simulation' : 'Start Simulation'}
-            </button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 h-[300px] relative">
-          {mapLoaded && (
-            <Map 
-              driverLocation={activeDelivery?.current_coordinates}
-              deliveryLocation={activeDelivery?.delivery_coordinates}
-              height="300px"
-            />
-          )}
-          <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-2">Live Overview</h3>
-            <p className="text-sm mb-1">Active Deliveries: <span className="font-bold text-blue-600">{activeDeliveries}</span></p>
-            <p className="text-sm">Pending Requests: <span className="font-bold text-yellow-600">{pendingRequests}</span></p>
-          </div>
-        </CardContent>
-      </Card>
+      <LiveDeliveryMap
+        activeDelivery={activeDelivery}
+        mapLoaded={mapLoaded}
+        isSimulating={isSimulating}
+        activeDeliveries={activeDeliveries}
+        pendingRequests={pendingRequests}
+        onToggleSimulation={handleToggleSimulation}
+      />
       
-      {/* Tabs */}
       <div className="w-full">
-        {/* Tab buttons */}
-        <div className="flex mb-8 border-b">
-          <button 
-            type="button"
-            onClick={() => setActiveTab("requests")}
-            className={`px-6 py-3 font-medium text-sm transition-colors ${
-              activeTab === "requests" 
-                ? "border-b-2 border-blue-600 text-blue-600" 
-                : "text-gray-600 hover:text-blue-600"
-            }`}
-          >
-            Delivery Requests
-          </button>
-          <button 
-            type="button"
-            onClick={() => setActiveTab("drivers")}
-            className={`px-6 py-3 font-medium text-sm transition-colors ${
-              activeTab === "drivers" 
-                ? "border-b-2 border-blue-600 text-blue-600" 
-                : "text-gray-600 hover:text-blue-600"
-            }`}
-          >
-            Manage Drivers
-          </button>
-        </div>
+        <DashboardTabs 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab} 
+        />
         
-        {/* Tab content */}
         <div className="space-y-4">
           {activeTab === "requests" ? (
             <RequestsPanel 
