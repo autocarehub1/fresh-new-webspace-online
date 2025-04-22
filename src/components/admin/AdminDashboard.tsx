@@ -49,7 +49,7 @@ const AdminDashboard = () => {
     r.status === 'in_progress' && r.assigned_driver && r.current_coordinates
   );
 
-  // Fix: Ensure the handleTabChange function is being used correctly
+  // Fix tab handling to ensure it's working properly
   const handleTabChange = (value: string) => {
     console.log("Tab changed to:", value);
     setActiveTab(value);
@@ -162,7 +162,7 @@ const AdminDashboard = () => {
       </Card>
       
       {/* Tabs Implementation */}
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs defaultValue={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-8 w-full md:w-auto">
           <TabsTrigger value="requests">Delivery Requests</TabsTrigger>
           <TabsTrigger value="drivers">Manage Drivers</TabsTrigger>
