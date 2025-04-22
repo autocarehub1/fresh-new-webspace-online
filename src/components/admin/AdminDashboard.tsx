@@ -59,6 +59,11 @@ const AdminDashboard = () => {
     setIsSimulating(prev => !prev);
   };
 
+  const handleTabChange = (tab: string) => {
+    console.log('Changing tab to:', tab);
+    setActiveTab(tab);
+  };
+
   if (deliveriesLoading || driversLoading) {
     return <div className="container mx-auto px-4 py-8">Loading dashboard data...</div>;
   }
@@ -86,16 +91,17 @@ const AdminDashboard = () => {
       <div className="w-full">
         <DashboardTabs 
           activeTab={activeTab} 
-          onTabChange={setActiveTab} 
+          onTabChange={handleTabChange}
         />
         
         <div className="space-y-4">
-          {activeTab === "requests" ? (
+          {activeTab === "requests" && (
             <RequestsPanel 
               simulationActive={isSimulating} 
               availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
             />
-          ) : (
+          )}
+          {activeTab === "drivers" && (
             <DriversPanel simulationActive={isSimulating} />
           )}
         </div>
