@@ -1,4 +1,3 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Driver } from '@/types/delivery';
@@ -49,7 +48,6 @@ export const useDriverMutations = () => {
           .from('drivers')
           .update({ current_delivery: deliveryId })
           .eq('id', driverId);
-          
         if (driverError) throw driverError;
         
         const { error: deliveryError } = await supabase
@@ -59,7 +57,6 @@ export const useDriverMutations = () => {
             status: 'in_progress'
           })
           .eq('id', deliveryId);
-          
         if (deliveryError) throw deliveryError;
 
         const { error: trackingError } = await supabase
@@ -71,7 +68,6 @@ export const useDriverMutations = () => {
             location: 'Driver location',
             note: `Driver assigned to delivery`
           });
-        
         if (trackingError) throw trackingError;
         
         updateLocalDriverDelivery(driverId, deliveryId);
@@ -92,9 +88,54 @@ export const useDriverMutations = () => {
     }
   });
 
+  const unassignDriver = useMutation({
+    mutationFn: async ({ driverId, deliveryId }: { driverId: string; deliveryId: string }) => {
+      const { error: driverError } = await supabase
+        .from('drivers')
+        .update({ current_delivery: null })
+        .eq('id', driverId);
+      if (driverError) throw driverError;
+
+      const { error: requestError } = await supabase
+        .from('delivery_requests')
+        .update({ assigned_driver: null, status: 'pending' })
+        .eq('id', deliveryId);
+      if (requestError) throw requestError;
+
+      const { error: trackingError } = await supabase
+        .from('tracking_updates')
+        .insert({
+          request_id: deliveryId,
+          status: 'Driver Unassigned',
+          timestamp: new Date().toISOString(),
+          location: 'Driver location',
+          note: 'Driver has been unassigned'
+        });
+      if (trackingError) console.warn('Driver unassign tracking update failed:', trackingError);
+
+      updateLocalDriverDelivery(driverId, null);
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+      toast.success('Driver unassigned successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Error unassigning driver: ${error.message}`);
+    }
+  });
+
   const addDriver = useMutation({
     mutationFn: async (driverData: Omit<Driver, 'id' | 'status' | 'current_delivery'> & { current_delivery?: string | null }) => {
       const driverId = `DRV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      console.log('Adding driver with data:', {
+        id: driverId,
+        name: driverData.name,
+        vehicle_type: driverData.vehicle_type,
+        photo: driverData.photo,
+      });
       
       const { data, error } = await supabase
         .from('drivers')
@@ -111,10 +152,15 @@ export const useDriverMutations = () => {
         .select()
         .single();
 
+      console.log('Driver added, returned data:', data);
+      
       if (error) throw error;
       return mapDbToDriver(data as any);
     },
-    onSuccess: () => {
+    onSuccess: (newDriver) => {
+      queryClient.setQueryData<Driver[]>(['drivers'], (oldDrivers = []) => {
+        return [...oldDrivers, newDriver];
+      });
       queryClient.invalidateQueries({ queryKey: ['drivers'] });
     },
     onError: (error: any) => {
@@ -122,9 +168,35 @@ export const useDriverMutations = () => {
     }
   });
 
+  const deleteDriver = useMutation({
+    mutationFn: async (driverId: string) => {
+      try {
+        const { error } = await supabase
+          .from('drivers')
+          .delete()
+          .eq('id', driverId);
+
+        if (error) throw error;
+        return { success: true };
+      } catch (err) {
+        console.error('Exception when deleting driver:', err);
+        throw err;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
+      toast.success('Driver deleted successfully');
+    },
+    onError: (error: any) => {
+      toast.error(`Error deleting driver: ${error.message}`);
+    }
+  });
+
   return {
     updateDriver,
     assignDriver,
-    addDriver
+    unassignDriver,
+    addDriver,
+    deleteDriver
   };
 };

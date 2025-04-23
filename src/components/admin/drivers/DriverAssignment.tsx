@@ -1,22 +1,26 @@
-
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
-import { Driver, DeliveryRequest } from '@/types/delivery';
-import { toast } from 'sonner';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Clock, MapPin, Package } from 'lucide-react';
+import type { Driver, Delivery } from '@/types/delivery';
 
 interface DriverAssignmentProps {
   drivers: Driver[];
-  requests: DeliveryRequest[];
+  requests: Delivery[];
   selectedDriverId: string;
   selectedRequestId: string;
   onDriverSelect: (driverId: string) => void;
   onRequestSelect: (requestId: string) => void;
   onAssignDriver: () => void;
 }
-
-// Soft purple card bg for the assignment section
-const assignBg = "bg-[#E5DEFF] p-5 rounded-lg shadow-sm";
 
 const DriverAssignment = ({
   drivers,
@@ -25,79 +29,170 @@ const DriverAssignment = ({
   selectedRequestId,
   onDriverSelect,
   onRequestSelect,
-  onAssignDriver
+  onAssignDriver,
 }: DriverAssignmentProps) => {
-  // Get available drivers and pending requests
-  const availableDrivers = drivers.filter(d => d.status === 'active' && !d.current_delivery);
-  const pendingRequests = requests.filter(r => r.status === 'pending');
-  
-  const handleAssignButtonClick = () => {
-    if (!selectedDriverId || !selectedRequestId) {
-      toast.error('Please select both a driver and a request');
-      return;
-    }
-    
-    onAssignDriver();
+  const [filter, setFilter] = useState<'all' | 'available'>('available');
+
+  const availableDrivers = drivers.filter(d => 
+    d.status === 'active' && !d.current_delivery
+  );
+
+  const pendingRequests = requests.filter(r => 
+    r.status === 'pending' && !r.assigned_driver
+  );
+
+  const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+  const selectedRequest = requests.find(r => r.id === selectedRequestId);
+
+  const calculateDistance = (driver: Driver, request: Delivery) => {
+    // This would be replaced with actual distance calculation
+    return Math.random() * 10; // Placeholder
   };
 
+  const getBestMatch = () => {
+    if (!selectedDriver || !pendingRequests.length) return null;
+    
+    return pendingRequests.reduce((best, request) => {
+      const distance = calculateDistance(selectedDriver, request);
+      if (!best || distance < calculateDistance(selectedDriver, best)) {
+        return request;
+      }
+      return best;
+    });
+  };
+
+  const bestMatch = getBestMatch();
+
   return (
-    <div className="mb-6">
-      <div className={assignBg}>
-        <h2 className="text-lg font-semibold mb-2 text-[#6E59A5]">Assign Driver to Delivery</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="select-driver">Select Driver</Label>
-            <select 
-              id="select-driver" 
-              className="w-full mt-1 rounded-md border border-gray-300 p-2"
-              value={selectedDriverId}
-              onChange={(e) => onDriverSelect(e.target.value)}
-            >
-              <option value="">Select a driver...</option>
-              {availableDrivers.map(driver => (
-                <option key={driver.id} value={driver.id}>
-                  {driver.name} - {driver.vehicle_type}
-                </option>
-              ))}
-            </select>
-            {availableDrivers.length === 0 && (
-              <p className="text-sm text-amber-600 mt-1">No available drivers</p>
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Driver Assignment</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Select Driver
+              </label>
+              <Select
+                value={selectedDriverId}
+                onValueChange={onDriverSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a driver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(filter === 'available' ? availableDrivers : drivers).map((driver) => (
+                    <SelectItem key={driver.id} value={driver.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{driver.name}</span>
+                        {driver.status === 'active' && !driver.current_delivery && (
+                          <Badge variant="secondary">Available</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedDriver && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Current Location: {selectedDriver.current_location.address}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Avg. Response Time: {selectedDriver.average_response_time?.toFixed(1)} min
+                  </span>
+                </div>
+              </div>
             )}
           </div>
-          
-          <div>
-            <Label htmlFor="select-request">Select Request</Label>
-            <select 
-              id="select-request" 
-              className="w-full mt-1 rounded-md border border-gray-300 p-2"
-              value={selectedRequestId}
-              onChange={(e) => onRequestSelect(e.target.value)}
-            >
-              <option value="">Select a request...</option>
-              {pendingRequests.map(request => (
-                <option key={request.id} value={request.id}>
-                  {request.id} - {request.pickup_location} to {request.delivery_location}
-                </option>
-              ))}
-            </select>
-            {pendingRequests.length === 0 && (
-              <p className="text-sm text-amber-600 mt-1">No pending requests</p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Select Delivery Request
+              </label>
+              <Select
+                value={selectedRequestId}
+                onValueChange={onRequestSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a request" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pendingRequests.map((request) => (
+                    <SelectItem key={request.id} value={request.id}>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        <span>Request #{request.id}</span>
+                        <Badge variant="outline">
+                          {request.priority} Priority
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedRequest && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Delivery Location: {selectedRequest.delivery_location.address}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    Time Window: {selectedRequest.delivery_time_window}
+                  </span>
+                </div>
+              </div>
             )}
-          </div>
-          
-          <div className="flex items-end">
-            <Button 
-              className="w-full bg-[#9b87f5] hover:bg-[#7E69AB] text-white font-semibold rounded-lg"
-              onClick={handleAssignButtonClick}
-              disabled={!selectedDriverId || !selectedRequestId}
-            >
-              <Send className="h-4 w-4 mr-2" /> 
-              Assign Driver
-            </Button>
           </div>
         </div>
-      </div>
-    </div>
+
+        {bestMatch && selectedDriver && !selectedRequestId && (
+          <div className="mt-4 p-4 bg-muted rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              Recommended assignment based on proximity:
+            </p>
+            <div className="mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                <span>Request #{bestMatch.id}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRequestSelect(bestMatch.id)}
+              >
+                Assign
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          <Button
+            onClick={onAssignDriver}
+            disabled={!selectedDriverId || !selectedRequestId}
+          >
+            Assign Driver to Delivery
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

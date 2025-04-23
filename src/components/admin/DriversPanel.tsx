@@ -29,7 +29,10 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     isLoading,
     updateDriver,
     assignDriver,
-    updateDriverLocation
+    unassignDriver,
+    updateDriverLocation,
+    addDriver,
+    deleteDriver
   } = useDriverData();
   
   const { deliveries: requests, isLoading: requestsLoading, simulateMovement } = useDeliveryData();
@@ -37,18 +40,10 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
   const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
-  const [isLocalLoading, setIsLocalLoading] = useState(true); 
-  
+
   useEffect(() => {
     setIsSimulating(simulationActive);
   }, [simulationActive]);
-  
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLocalLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   useInterval(() => {
     if (isSimulating && drivers) {
@@ -81,9 +76,22 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     }
   };
 
-  const handleDeleteDriver = (driverId: string) => {
+  const handleDeleteDriver = async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);
-    toast.success(`Driver ${driver?.name} has been removed`);
+    if (!driver) {
+      toast.error('Driver not found');
+      return;
+    }
+    if (driver.current_delivery) {
+      toast.warning('Cannot delete a driver currently on delivery.');
+      return;
+    }
+
+    try {
+      await deleteDriver.mutateAsync(driverId);
+    } catch (error) {
+      console.error('Failed to delete driver:', error);
+    }
   };
 
   const handleAssignDriver = async () => {
@@ -113,11 +121,28 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     );
   };
 
-  if (isLoading || isLocalLoading || requestsLoading) {
+  const handleUnassignDriver = (driverId: string) => {
+    const driver = drivers.find(d => d.id === driverId);
+    if (!driver) {
+      toast.error('Driver not found');
+      return;
+    }
+    if (!driver.current_delivery) {
+      toast.error('Driver is not assigned to any delivery');
+      return;
+    }
+    unassignDriver.mutate({ driverId, deliveryId: driver.current_delivery });
+  };
+
+  if (isLoading || requestsLoading) {
+    console.log('DriversPanel: Loading data...');
     return <div className="flex items-center justify-center py-10">Loading drivers data...</div>;
   }
 
-  const activeDrivers = drivers.filter(d => d.status === 'active');
+  console.log('DriversPanel: Data loaded, rendering content. Drivers:', drivers);
+  console.log('DriversPanel: Data loaded, rendering content. Requests:', requests);
+
+  const activeDrivers = drivers?.filter(d => d.status === 'active') || [];
   const availableRequests = requests?.filter(r => 
     (r.status === 'pending' || r.status === 'in_progress') && !r.assigned_driver
   ) || [];
@@ -126,7 +151,6 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     <div className="space-y-6">
       <DriversOverview activeDrivers={activeDrivers} totalDrivers={drivers} />
 
-      {/* Main card with accent header for Manage Drivers */}
       <div className={`${panelBg}`}>
         <div className={`${accentBanner}`}>
           <div>
@@ -146,13 +170,13 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
             <AddDriverDialog />
           </div>
         </div>
-        {/* Table and assignment form section */}
         <div className="p-6 md:p-8">
           <DriversTable 
             drivers={drivers}
             onStatusToggle={handleStatusToggle}
             onDeleteDriver={handleDeleteDriver}
             onLocateDriver={setSelectedDriver}
+            onUnassignDriver={handleUnassignDriver}
           />
           <DriverAssignment 
             drivers={drivers}

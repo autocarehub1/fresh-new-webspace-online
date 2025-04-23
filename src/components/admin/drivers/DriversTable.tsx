@@ -1,134 +1,186 @@
-
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MapPin, Package, Edit, Trash, Locate, Car, Truck, Bus, TrafficCone } from 'lucide-react';
-import { Driver } from '@/types/delivery';
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Search } from 'lucide-react';
+import type { Driver } from '@/types/delivery';
 
 interface DriversTableProps {
   drivers: Driver[];
   onStatusToggle: (driverId: string) => void;
   onDeleteDriver: (driverId: string) => void;
   onLocateDriver: (driver: Driver) => void;
+  onUnassignDriver: (driverId: string) => void;
 }
 
-const statusColors = {
-  active: 'bg-[#F2FCE2] text-green-800',
-  inactive: 'bg-[#FEF7CD] text-yellow-800 border border-yellow-300'
-};
+const DriversTable = ({
+  drivers,
+  onStatusToggle,
+  onDeleteDriver,
+  onLocateDriver,
+  onUnassignDriver,
+}: DriversTableProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<keyof Driver>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-const vehicleIcons: Record<string, React.ReactNode> = {
-  "Temperature-Controlled Van": <Truck className="inline-block h-4 w-4 mr-1 text-blue-700" />,
-  "Standard Delivery Vehicle": <Car className="inline-block h-4 w-4 mr-1 text-purple-600" />,
-  "Motorcycle Courier": <TrafficCone className="inline-block h-4 w-4 mr-1 text-orange-500" />,
-  "Bus": <Bus className="inline-block h-4 w-4 mr-1 text-gray-700" />
-};
+  const filteredDrivers = drivers.filter(driver =>
+    driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    driver.vehicle_number.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-// fallback initials utility
-const initials = (name?: string) =>
-  name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : 'D';
+  const sortedDrivers = [...filteredDrivers].sort((a, b) => {
+    const aValue = a[sortField];
+    const bValue = b[sortField];
+    
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
 
-const cellBase = "py-2 px-4 align-middle";
-const actionCell = "space-x-2 flex flex-wrap";
+  const handleSort = (field: keyof Driver) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
-const DriversTable = ({ drivers, onStatusToggle, onDeleteDriver, onLocateDriver }: DriversTableProps) => {
   return (
-    <div className="rounded-lg border bg-[#F1F0FB] mb-6 overflow-auto">
-      <Table>
-        <TableHeader className="bg-[#E5DEFF]">
-          <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Vehicle</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {drivers.length === 0 && (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search drivers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                No drivers found.
-              </TableCell>
+              <TableHead>Photo</TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort('name')}
+              >
+                Driver Name
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort('vehicle_number')}
+              >
+                Vehicle Number
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort('status')}
+              >
+                Status
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort('current_delivery')}
+              >
+                Current Delivery
+              </TableHead>
+              <TableHead 
+                className="cursor-pointer"
+                onClick={() => handleSort('average_response_time')}
+              >
+                Avg. Response Time
+              </TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          )}
-          {drivers.map((driver) => (
-            <TableRow key={driver.id} className="hover:bg-[#f8f6ff] transition">
-              <TableCell className={cellBase}>
-                <div className="flex items-center gap-2">
-                  <Avatar>
-                    <AvatarImage src={driver.photo || undefined} alt={driver.name} />
-                    <AvatarFallback>{initials(driver.name)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="text-sm">{driver.id}</div>
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell className={cellBase}>
-                {driver.name}
-                <div className="text-xs text-gray-500">{driver.phone}</div>
-              </TableCell>
-              <TableCell className={cellBase}>
-                <Badge 
-                  variant={driver.status === 'active' ? 'default' : 'outline'}
-                  className={`cursor-pointer transition ${statusColors[driver.status]} px-3 py-1 rounded-md`}
-                  onClick={() => onStatusToggle(driver.id)}
-                  title={driver.status === 'active' ? "Click to set inactive" : "Click to set active"}
-                >
-                  {driver.status === 'active' ? 'Active' : 'Inactive'}
-                </Badge>
-              </TableCell>
-              <TableCell className={cellBase}>
-                <span className="inline-flex items-center">
-                  {vehicleIcons[driver.vehicle_type] || <Car className="inline-block h-4 w-4 mr-1" />}
-                  {driver.vehicle_type}
-                </span>
-              </TableCell>
-              <TableCell className={`${cellBase} flex flex-col min-w-[160px]`}>
-                <span className="flex items-center">
-                  <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                  {driver.current_location.address}
-                </span>
-                {driver.current_delivery && (
-                  <Badge variant="secondary" className="mt-1 px-2 py-0.5">
-                    <Package className="h-3 w-3 mr-1" /> On Delivery
+          </TableHeader>
+          <TableBody>
+            {sortedDrivers.map((driver) => (
+              <TableRow key={driver.id}>
+                <TableCell className="px-2 py-1">
+                  <img
+                    src={driver.photo || 'https://placehold.co/80x80?text=No+Image'}
+                    alt={driver.name}
+                    className="h-8 w-8 rounded-full object-cover"
+                    onError={(e) => {
+                      console.error('Driver image failed to load:', driver.photo);
+                      e.currentTarget.src = 'https://placehold.co/80x80?text=No+Image';
+                    }}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">{driver.name}</TableCell>
+                <TableCell>{driver.vehicle_number}</TableCell>
+                <TableCell>
+                  <Badge
+                    variant={driver.status === 'active' ? 'default' : 'secondary'}
+                    className="cursor-pointer"
+                    onClick={() => onStatusToggle(driver.id)}
+                  >
+                    {driver.status}
                   </Badge>
-                )}
-              </TableCell>
-              <TableCell className={actionCell}>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => onLocateDriver(driver)}
-                  className="rounded-md"
-                  title="Locate driver on map"
-                >
-                  <Locate className="h-4 w-4 mr-1" />
-                  Locate
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-md" title="Edit (not implemented)">
-                  <Edit className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="text-red-600 hover:text-red-700 rounded-md"
-                  onClick={() => onDeleteDriver(driver.id)}
-                  disabled={driver.current_delivery !== null}
-                  title={driver.current_delivery ? "Driver is on delivery and cannot be deleted" : "Delete driver"}
-                >
-                  <Trash className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                </TableCell>
+                <TableCell>
+                  {driver.current_delivery ? (
+                    <Badge variant="outline">On Delivery</Badge>
+                  ) : (
+                    <Badge variant="secondary">Available</Badge>
+                  )}
+                </TableCell>
+                <TableCell>{driver.average_response_time?.toFixed(1)} min</TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onLocateDriver(driver)}>
+                        View Location
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onStatusToggle(driver.id)}>
+                        Toggle Status
+                      </DropdownMenuItem>
+                      {driver.current_delivery && (
+                        <DropdownMenuItem onClick={() => onUnassignDriver(driver.id)}>
+                          Unassign Driver
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() => onDeleteDriver(driver.id)}
+                      >
+                        Delete Driver
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };

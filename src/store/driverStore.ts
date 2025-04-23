@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { Driver } from '@/types/delivery';
 
@@ -13,7 +12,7 @@ const initialDrivers: Driver[] = [
       address: 'Medical District, San Antonio',
       coordinates: { lat: 29.508, lng: -98.579 }
     },
-    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
+    photo: 'https://placehold.co/200x200/4ECDC4/FFFFFF/png?text=John',
     phone: '+1 (555) 123-4567',
     current_delivery: 'MED-A1B2C3'
   },
@@ -26,7 +25,7 @@ const initialDrivers: Driver[] = [
       address: 'Downtown, San Antonio',
       coordinates: { lat: 29.424, lng: -98.493 }
     },
-    photo: 'https://randomuser.me/api/portraits/women/68.jpg',
+    photo: 'https://placehold.co/200x200/FF6B6B/FFFFFF/png?text=Maria',
     phone: '+1 (555) 987-6543',
     current_delivery: null
   },
@@ -39,7 +38,7 @@ const initialDrivers: Driver[] = [
       address: 'North San Antonio',
       coordinates: { lat: 29.555, lng: -98.496 }
     },
-    photo: 'https://randomuser.me/api/portraits/men/75.jpg',
+    photo: 'https://placehold.co/200x200/6B4CE6/FFFFFF/png?text=David',
     phone: '+1 (555) 234-5678',
     current_delivery: null
   },
@@ -52,7 +51,7 @@ const initialDrivers: Driver[] = [
       address: 'East San Antonio',
       coordinates: { lat: 29.45, lng: -98.41 }
     },
-    photo: 'https://randomuser.me/api/portraits/women/45.jpg',
+    photo: 'https://placehold.co/200x200/FF9966/FFFFFF/png?text=Sarah',
     phone: '+1 (555) 345-6789',
     current_delivery: null
   }

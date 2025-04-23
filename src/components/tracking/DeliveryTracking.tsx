@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
@@ -10,6 +10,7 @@ import CourierInfo from './CourierInfo';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import { useQueryClient } from '@tanstack/react-query';
 
 const generatePDF = (delivery: DeliveryRequest) => {
   const doc = new jsPDF();
@@ -48,81 +49,129 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
   const [delivery, setDelivery] = useState<DeliveryRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
-  useEffect(() => {
-    const fetchDeliveryData = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching delivery data for tracking ID:', trackingId);
-        
-        const { data, error } = await supabase
-          .from('delivery_requests')
-          .select('*, tracking_updates(*)')
-          .or(`tracking_id.eq.${trackingId},id.eq.${trackingId}`)
+  // Fetch delivery and assigned driver info
+  const fetchDeliveryData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching delivery data for tracking ID:', trackingId);
+      
+      const { data, error } = await supabase
+        .from('delivery_requests')
+        .select('*, tracking_updates(*)')
+        .or(`tracking_id.eq.${trackingId},id.eq.${trackingId}`)
+        .single();
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Delivery data received:', data);
+      
+      if (!data) {
+        setError('No delivery found with this tracking ID');
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch actual driver info if assigned
+      let courierInfo;
+      if (data.assigned_driver) {
+        console.log('Fetching driver data for ID:', data.assigned_driver);
+        const { data: driverData, error: driverError } = await supabase
+          .from('drivers')
+          .select('name,photo,vehicle_type,phone')
+          .eq('id', data.assigned_driver)
           .single();
         
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
+        console.log('Driver data from DB:', {
+          id: data.assigned_driver,
+          name: driverData?.name,
+          photo: driverData?.photo,
+          error: driverError
+        });
+        
+        if (!driverError && driverData) {
+          courierInfo = {
+            name: driverData.name,
+            photo: driverData.photo || '',
+            vehicle: driverData.vehicle_type,
+            phone: driverData.phone || ''
+          };
+          console.log('Created courierInfo:', courierInfo);
         }
-        
-        console.log('Delivery data received:', data);
-        
-        if (!data) {
-          setError('No delivery found with this tracking ID');
-          setLoading(false);
-          return;
-        }
-        
-        const enhancedRequest: DeliveryRequest = {
-          id: data.id,
-          trackingId: data.tracking_id || data.id,
-          status: data.status,
-          pickup_location: data.pickup_location,
-          delivery_location: data.delivery_location,
-          created_at: data.created_at,
-          priority: data.priority || 'normal',
-          packageType: data.package_type || 'Medical Supplies',
-          tracking_updates: data.tracking_updates || [],
-          pickupLocation: { 
-            name: "Medical Facility", 
-            address: data.pickup_location 
-          },
-          deliveryLocation: { 
-            name: "Hospital", 
-            address: data.delivery_location 
-          },
-          estimatedDelivery: data.estimated_delivery,
-          temperature: data.temperature || {
-            current: '2°C',
-            required: '2-8°C',
-            status: 'normal'
-          },
-          courier: data.assigned_driver ? {
-            name: "Medical Courier",
-            photo: "https://randomuser.me/api/portraits/men/32.jpg",
-            vehicle: "Medical Delivery Vehicle",
-            phone: "+1 (555) 123-4567"
-          } : undefined,
-          pickup_coordinates: data.pickup_coordinates,
-          delivery_coordinates: data.delivery_coordinates,
-          current_coordinates: data.current_coordinates,
-          assigned_driver: data.assigned_driver
-        };
-        
-        setDelivery(enhancedRequest);
-      } catch (err: any) {
-        console.error('Error fetching delivery:', err);
-        setError(err.message || 'Failed to fetch delivery information');
-      } finally {
-        setLoading(false);
       }
-    };
-    
-    if (trackingId) {
-      fetchDeliveryData();
+      
+      // Debug: Log courierInfo and assigned_driver
+      console.log('DeliveryTracking - assigned_driver ID:', data.assigned_driver);
+      console.log('DeliveryTracking - final courierInfo:', courierInfo);
+      
+      const enhancedRequest: DeliveryRequest = {
+        id: data.id,
+        trackingId: data.tracking_id || data.id,
+        status: data.status,
+        pickup_location: data.pickup_location,
+        delivery_location: data.delivery_location,
+        created_at: data.created_at,
+        priority: data.priority || 'normal',
+        packageType: data.package_type || 'Medical Supplies',
+        tracking_updates: data.tracking_updates || [],
+        pickupLocation: { 
+          name: "Medical Facility", 
+          address: data.pickup_location 
+        },
+        deliveryLocation: { 
+          name: "Hospital", 
+          address: data.delivery_location 
+        },
+        estimatedDelivery: data.estimated_delivery,
+        temperature: data.temperature || {
+          current: '2°C',
+          required: '2-8°C',
+          status: 'normal'
+        },
+        courier: courierInfo,
+        pickup_coordinates: data.pickup_coordinates,
+        delivery_coordinates: data.delivery_coordinates,
+        current_coordinates: data.current_coordinates,
+        assigned_driver: data.assigned_driver
+      };
+      
+      setDelivery(enhancedRequest);
+    } catch (err: any) {
+      console.error('Error fetching delivery:', err);
+      setError(err.message || 'Failed to fetch delivery information');
+    } finally {
+      setLoading(false);
     }
   }, [trackingId]);
+
+  // Initial fetch and set up realtime listener
+  useEffect(() => {
+    if (!trackingId) return;
+    fetchDeliveryData();
+    // Subscribe to changes on this delivery record
+    const channel = supabase
+      .channel(`delivery_requests_${trackingId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'delivery_requests',
+        filter: `id=eq.${trackingId}`
+      }, () => {
+        console.log('Realtime update detected for delivery:', trackingId);
+        // Invalidate any cached deliveryRequests and drivers
+        queryClient.invalidateQueries(['deliveryRequests']);
+        queryClient.invalidateQueries(['drivers']);
+        fetchDeliveryData();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [trackingId, fetchDeliveryData, queryClient]);
 
   if (loading) {
     return (

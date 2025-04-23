@@ -1,7 +1,6 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Driver } from '@/types/delivery';
+import { Activity, Clock, MapPin, Users } from 'lucide-react';
+import type { Driver } from '@/types/delivery';
 
 interface DriversOverviewProps {
   activeDrivers: Driver[];
@@ -9,32 +8,57 @@ interface DriversOverviewProps {
 }
 
 const DriversOverview = ({ activeDrivers, totalDrivers }: DriversOverviewProps) => {
-  const inactiveDrivers = totalDrivers.filter(d => d.status === 'inactive');
-  const percentActive = totalDrivers.length > 0 ? (activeDrivers.length / totalDrivers.length) * 100 : 0;
+  const totalActive = activeDrivers.length;
+  const totalInactive = totalDrivers.length - totalActive;
+  const averageResponseTime = activeDrivers.reduce((acc, driver) => {
+    return acc + (driver.average_response_time || 0);
+  }, 0) / (totalActive || 1);
+
+  const metrics = [
+    {
+      title: "Total Drivers",
+      value: totalDrivers.length,
+      icon: Users,
+      description: "All registered drivers"
+    },
+    {
+      title: "Active Drivers",
+      value: totalActive,
+      icon: Activity,
+      description: "Currently on duty"
+    },
+    {
+      title: "Average Response",
+      value: `${averageResponseTime.toFixed(1)} min`,
+      icon: Clock,
+      description: "Time to accept delivery"
+    },
+    {
+      title: "Coverage Area",
+      value: "100%",
+      icon: MapPin,
+      description: "Service coverage"
+    }
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-[#6E59A5]">Active Drivers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-baseline gap-2">
-            <div className="text-3xl font-bold text-[#6E59A5]">{activeDrivers.length}</div>
-            <span className="ml-2 text-gray-500">/ {totalDrivers.length} total</span>
-          </div>
-          <Progress className="mt-2" value={percentActive} />
-          <div className="text-xs text-gray-500 mt-2">
-            {inactiveDrivers.length > 0 ? (
-              <span>
-                <span className="font-semibold">{inactiveDrivers.length}</span> inactive
-              </span>
-            ) : (
-              <span>All drivers are active</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      {/* Suggestion: Add more cards if needed (e.g., "On Delivery" drivers) */}
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {metrics.map((metric) => (
+        <Card key={metric.title}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {metric.title}
+            </CardTitle>
+            <metric.icon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metric.value}</div>
+            <p className="text-xs text-muted-foreground">
+              {metric.description}
+            </p>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

@@ -1,10 +1,15 @@
-
 import { useDriverQueries } from './drivers/use-driver-queries';
 import { useDriverMutations } from './drivers/use-driver-mutations';
 
 export const useDriverData = () => {
   const { drivers, isLoading, error } = useDriverQueries();
-  const { updateDriver, assignDriver, addDriver } = useDriverMutations();
+  const { updateDriver, assignDriver, unassignDriver, addDriver, deleteDriver } = useDriverMutations();
+
+  console.log('useDriverData - Current drivers:', drivers?.map(d => ({
+    id: d.id,
+    name: d.name,
+    photo: d.photo
+  })));
 
   // Add the missing updateDriverLocation function
   const updateDriverLocation = (driverId: string, location: { 
@@ -22,7 +27,9 @@ export const useDriverData = () => {
     error,
     updateDriver,
     assignDriver,
+    unassignDriver,
     addDriver,
+    deleteDriver,
     updateDriverLocation
   };
 };

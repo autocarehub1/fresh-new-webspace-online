@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Driver } from '@/types/delivery';
@@ -12,6 +11,7 @@ export const useDriverQueries = () => {
     queryKey: ['drivers'],
     queryFn: async () => {
       try {
+        console.log('Fetching drivers from Supabase...');
         const { data, error } = await supabase
           .from('drivers')
           .select('*');
@@ -21,7 +21,15 @@ export const useDriverQueries = () => {
           return localDrivers;
         }
         
-        return (data as any[]).map(mapDbToDriver);
+        console.log('Raw driver data from Supabase:', data);
+        const mappedDrivers = (data as any[]).map(mapDbToDriver);
+        console.log('Mapped drivers:', mappedDrivers.map(d => ({
+          id: d.id,
+          name: d.name,
+          photo: d.photo
+        })));
+        
+        return mappedDrivers;
       } catch (err) {
         console.error('Exception when fetching drivers:', err);
         return localDrivers;

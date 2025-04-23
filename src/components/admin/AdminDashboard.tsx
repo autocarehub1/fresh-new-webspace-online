@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDeliveryData } from '@/hooks/use-delivery-data'; 
 import { useDriverData } from '@/hooks/use-driver-data';
@@ -10,7 +9,7 @@ import LiveDeliveryMap from './dashboard/LiveDeliveryMap';
 import DashboardTabs from './dashboard/DashboardTabs';
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('requests');
+  const [activeTab, setActiveTab] = useState<'requests' | 'drivers'>('requests');
   const { 
     deliveries: requests, 
     isLoading: deliveriesLoading, 
@@ -26,6 +25,10 @@ const AdminDashboard = () => {
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  useEffect(() => {
+    console.log('AdminDashboard - Tab state changed:', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     console.log("AdminDashboard - Requests data:", requests?.length || 0, "items");
@@ -59,9 +62,15 @@ const AdminDashboard = () => {
     setIsSimulating(prev => !prev);
   };
 
-  const handleTabChange = (tab: string) => {
-    console.log('AdminDashboard: Tab changed to:', tab);
-    setActiveTab(tab);
+  const handleTabChange = (tab: 'requests' | 'drivers') => {
+    console.log('AdminDashboard: Tab change requested:', tab);
+    console.log('AdminDashboard: Current tab:', activeTab);
+    if (tab !== activeTab) {
+      console.log('AdminDashboard: Changing tab to:', tab);
+      setActiveTab(tab);
+    } else {
+      console.log('AdminDashboard: Tab is already active, no change needed');
+    }
   };
 
   if (deliveriesLoading || driversLoading) {
@@ -88,21 +97,23 @@ const AdminDashboard = () => {
         onToggleSimulation={handleToggleSimulation}
       />
       
-      <div className="w-full">
+      <div className="w-full mt-8">
         <DashboardTabs 
           activeTab={activeTab} 
           onTabChange={handleTabChange}
         />
         
-        <div className="space-y-4">
-          {activeTab === "requests" && (
+        <div className="mt-6">
+          {activeTab === "requests" ? (
             <RequestsPanel 
               simulationActive={isSimulating} 
               availableDrivers={drivers?.filter(d => d.status === 'active' && !d.current_delivery) || []}
             />
-          )}
-          {activeTab === "drivers" && (
-            <DriversPanel simulationActive={isSimulating} />
+          ) : (
+            <DriversPanel 
+              simulationActive={isSimulating}
+              availableRequests={requests?.filter(r => r.status === 'pending') || []}
+            />
           )}
         </div>
       </div>
