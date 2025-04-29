@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate } from '@/types/delivery';
 import { generateTrackingId } from '@/utils/deliveryUtils';
@@ -10,8 +9,8 @@ const initialRequests: DeliveryRequest[] = [
     id: 'REQ-001',
     trackingId: 'MED-A1B2C3',
     status: 'in_progress',
-    pickup_location: '123 Medical Center, San Antonio, TX',
-    delivery_location: '456 Hospital Ave, San Antonio, TX',
+    pickup_location: '7400 Merton Minter Blvd, San Antonio, TX 78229',
+    delivery_location: '4502 Medical Dr, San Antonio, TX 78229',
     created_at: '2025-04-16T14:22:00Z',
     distance: 5.2,
     estimatedCost: 25,
@@ -46,8 +45,8 @@ const initialRequests: DeliveryRequest[] = [
     id: 'REQ-002',
     trackingId: 'MED-D4E5F6',
     status: 'pending',
-    pickup_location: '789 Clinic Road, San Antonio, TX',
-    delivery_location: '101 Emergency Dept, San Antonio, TX',
+    pickup_location: '4242 Medical Drive, San Antonio, TX 78229',
+    delivery_location: '8300 Floyd Curl Dr, San Antonio, TX 78229',
     created_at: '2025-04-17T09:15:00Z',
     distance: 3.8,
     estimatedCost: 22,

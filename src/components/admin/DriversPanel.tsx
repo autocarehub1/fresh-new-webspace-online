@@ -12,6 +12,7 @@ import type { Driver } from '@/types/delivery';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useInterval } from '@/hooks/use-interval';
+import { supabase } from '@/lib/supabase';
 
 interface DriversPanelProps {
   simulationActive?: boolean;
@@ -58,6 +59,62 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
       });
     }
   }, isSimulating ? 1000 : null);
+
+  // Effect to check for completed deliveries and update driver availability
+  useEffect(() => {
+    const updateDriversForCompletedDeliveries = async () => {
+      if (!drivers || !requests) return;
+      
+      // Find drivers that are still assigned to completed requests
+      const driversToUpdate = drivers.filter(driver => {
+        if (!driver.current_delivery) return false;
+        
+        const assignedRequest = requests.find(req => 
+          req.id === driver.current_delivery && req.status === 'completed'
+        );
+        
+        return !!assignedRequest;
+      });
+      
+      if (driversToUpdate.length > 0) {
+        console.log(`Found ${driversToUpdate.length} drivers with completed deliveries that need to be made available`);
+        
+        for (const driver of driversToUpdate) {
+          console.log(`Making driver ${driver.name} (${driver.id}) available after completed delivery`);
+          
+          const { error } = await supabase
+            .from('drivers')
+            .update({ current_delivery: null })
+            .eq('id', driver.id);
+            
+          if (error) {
+            console.error(`Error making driver ${driver.id} available:`, error);
+          } else {
+            console.log(`Driver ${driver.name} is now available for new deliveries`);
+            toast.success(`Driver ${driver.name} is now available for new deliveries`);
+          }
+        }
+      }
+      
+      // Clear the selected driver if they have a completed delivery
+      if (selectedDriverId) {
+        const selectedDriver = drivers.find(d => d.id === selectedDriverId);
+        if (selectedDriver?.current_delivery) {
+          const deliveryCompleted = requests.find(
+            r => r.id === selectedDriver.current_delivery && r.status === 'completed'
+          );
+          
+          if (deliveryCompleted) {
+            // Reset selection to allow new assignment
+            console.log(`Clearing selected driver ${selectedDriverId} as they now have a completed delivery`);
+            setSelectedDriverId('');
+          }
+        }
+      }
+    };
+    
+    updateDriversForCompletedDeliveries();
+  }, [drivers, requests, selectedDriverId]);
 
   const handleStatusToggle = async (driverId: string) => {
     const driver = drivers.find(d => d.id === driverId);

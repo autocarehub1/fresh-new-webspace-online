@@ -52,7 +52,7 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-        // ExpressMed custom colors
+        // Catalyst Network Logistics custom colors
         medical: {
           blue: {
             DEFAULT: '#0A2463',

@@ -13,14 +13,19 @@ import { useDeliveryStore } from '@/store/deliveryStore';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+// Temporarily comment out Stripe imports
+// import { StripeProvider } from '@/components/payment/StripeProvider';
+// import { PaymentForm } from '@/components/payment/PaymentForm';
 
 export const RequestPickupForm = () => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
   const [requestData, setRequestData] = useState<{
     trackingId: string;
     id: string;
+    estimatedCost: number;
   } | null>(null);
   
   const [pickupLocation, setPickupLocation] = useState('');
@@ -31,6 +36,22 @@ export const RequestPickupForm = () => {
 
   const { generateTrackingId } = useDeliveryStore();
   
+  const calculateEstimatedCost = () => {
+    let cost = 20;
+    
+    if (priority === 'urgent') {
+      cost += 15;
+    } else if (priority === 'same-day') {
+      cost += 5;
+    }
+    
+    const estimatedDistance = 5;
+    
+    cost += estimatedDistance * 2;
+    
+    return Math.round(cost * 100);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -51,8 +72,10 @@ export const RequestPickupForm = () => {
       const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
       const priorityValue = priority === 'urgent' ? 'urgent' : 'normal';
+      const estimatedCost = calculateEstimatedCost();
       
-      const requestData = {
+      // Instead of showing payment, directly submit the request (temporary)
+      const requestDataWithPayment = {
         id: requestId,
         tracking_id: trackingId,
         pickup_location: pickupLocation,
@@ -60,13 +83,14 @@ export const RequestPickupForm = () => {
         priority: priorityValue,
         package_type: packageType || 'Medical Supplies',
         status: 'pending',
+        estimated_cost: estimatedCost / 100,
       };
       
-      console.log('Submitting request with data:', requestData);
+      console.log('Submitting request:', requestDataWithPayment);
       
       const { data, error } = await supabase
         .from('delivery_requests')
-        .insert(requestData)
+        .insert(requestDataWithPayment)
         .select();
         
       if (error) {
@@ -76,28 +100,24 @@ export const RequestPickupForm = () => {
       
       console.log('Request submitted successfully:', data);
       
-      const emailResponse = await supabase.functions.invoke('send-confirmation', {
-        body: {
-          id: requestId,
-          trackingId,
-          pickup_location: pickupLocation,
-          delivery_location: deliveryLocation,
-          priority: priorityValue,
-          package_type: packageType || 'Medical Supplies',
-          email: email,
-        },
+      console.log('Simulating confirmation email to:', email);
+      
+      console.log('Would send confirmation email with data:', {
+        id: requestId,
+        trackingId,
+        pickup_location: pickupLocation,
+        delivery_location: deliveryLocation,
+        priority: priorityValue,
+        package_type: packageType || 'Medical Supplies',
+        email: email,
       });
-
-      if (emailResponse.error) {
-        console.error('Error sending confirmation email:', emailResponse.error);
-        toast.error('Request submitted but failed to send confirmation email');
-      } else {
-        console.log('Confirmation email sent successfully');
-      }
+      
+      console.log('Confirmation email simulated successfully');
       
       setRequestData({
         trackingId,
-        id: requestId
+        id: requestId,
+        estimatedCost
       });
       
       setSuccess(true);
@@ -108,6 +128,18 @@ export const RequestPickupForm = () => {
       setSubmitting(false);
     }
   };
+
+  // Comment out payment functions
+  /*
+  const handlePaymentSuccess = async (paymentIntentId: string) => {
+    // ...payment handling code...
+  };
+  
+  const handlePaymentCancel = () => {
+    setShowPayment(false);
+    setRequestData(null);
+  };
+  */
 
   const handleTrackDelivery = () => {
     if (requestData?.trackingId) {
@@ -146,7 +178,7 @@ export const RequestPickupForm = () => {
               <Button onClick={() => setSuccess(false)} variant="outline">Request Another Pickup</Button>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <InfoIcon size={16} />
-                <span>Need help? Call (210) 555-0123</span>
+                <span>Need help? Call (432)-202-2150</span>
               </div>
             </div>
           </div>
@@ -155,12 +187,34 @@ export const RequestPickupForm = () => {
     );
   }
   
+  // Comment out the payment UI
+  /*
+  if (showPayment && requestData) {
+    return (
+      <StripeProvider>
+        <PaymentForm
+          amount={requestData.estimatedCost}
+          onSuccess={handlePaymentSuccess}
+          onCancel={handlePaymentCancel}
+          metadata={{
+            requestId: requestData.id,
+            trackingId: requestData.trackingId,
+            email
+          }}
+          description="Medical Delivery Service"
+        />
+      </StripeProvider>
+    );
+  }
+  */
+
+  // Always show the form
   return (
     <Card>
       <CardHeader>
         <CardTitle>Request Medical Courier Pickup</CardTitle>
         <CardDescription>
-          Fill out the form below to request a pickup. For emergencies, call (210) 555-0123.
+          Fill out the form below to request a pickup. For emergencies, call (432)-202-2150.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -177,7 +231,7 @@ export const RequestPickupForm = () => {
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-3 mb-4">
                     <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-amber-800">
-                      For life-critical emergencies requiring immediate pickup, please call our dedicated emergency line at <strong>(210) 555-0123</strong>.
+                      For life-critical emergencies requiring immediate pickup, please call our dedicated emergency line at <strong>(432)-202-2150</strong>.
                     </p>
                   </div>
                   <RadioGroup defaultValue="same-day" value={priority} onValueChange={setPriority} className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -375,8 +429,8 @@ export const RequestPickupForm = () => {
                 <p className="text-sm text-gray-500 mb-4">
                   For recurring pickup schedules, please contact our customer service team.
                 </p>
-                <Button asChild variant="outline">
-                  <a href="tel:2105550123">(210) 555-0123</a>
+                <Button asChild variant="default" className="bg-medical-teal text-white hover:bg-medical-teal/90">
+                  <a href="tel:4322022150" className="font-medium">(432)-202-2150</a>
                 </Button>
               </div>
             </TabsContent>

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,7 @@ import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import { AuthProvider } from "./lib/auth";
 import { useAuth } from "./lib/auth";
+import DriverDashboard from "./pages/DriverDashboard";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +62,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/login" element={<Login />} />
+            <Route path="/driver/:driverId" element={<DriverDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

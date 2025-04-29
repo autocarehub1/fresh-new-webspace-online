@@ -59,7 +59,7 @@ export const useDeliveryData = () => {
           temperature: item.temperature,
           tracking_updates: item.tracking_updates || [],
           // Extract email from users join
-          email: item.users?.email || "demo@example.com"
+          email: item.users?.email || "catalystlogistics2025@gmail.com"
         }));
       }
       // If no records, return []
@@ -202,6 +202,39 @@ export const useDeliveryData = () => {
     error,
     updateDeliveryRequest,
     addTrackingUpdate,
-    simulateMovement
+    simulateMovement,
+    deleteDeliveryRequest: useMutation({
+      mutationFn: async (id: string) => {
+        // First, delete any associated tracking updates
+        const { error: trackingError } = await supabase
+          .from('tracking_updates')
+          .delete()
+          .eq('request_id', id);
+        
+        if (trackingError) {
+          console.error('Error deleting tracking updates:', trackingError);
+          throw trackingError;
+        }
+        
+        // Then delete the delivery request
+        const { error } = await supabase
+          .from('delivery_requests')
+          .delete()
+          .eq('id', id);
+        
+        if (error) {
+          throw error;
+        }
+        
+        return { success: true };
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+        toast.success('Delivery request deleted successfully');
+      },
+      onError: (error: any) => {
+        toast.error(`Error deleting request: ${error.message}`);
+      }
+    })
   };
 };

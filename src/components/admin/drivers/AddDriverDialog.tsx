@@ -22,6 +22,7 @@ import { Plus } from 'lucide-react';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { fixImageUrl } from '@/lib/storage-helpers';
 
 const vehicleTypes = [
   { id: 'standard', label: 'Standard Delivery Vehicle', capacity: 'Medium' },
@@ -78,30 +79,54 @@ const AddDriverDialog = () => {
 
     // Upload driver photo if provided, and retrieve its public URL
     let photoUrl = '';
+    let photoBase64 = '';
+
     if (photoFile) {
       console.log('Starting photo upload for file:', photoFile.name);
+      
+      // First, store the image as a base64 string we can use as a fallback
+      try {
+        const reader = new FileReader();
+        photoBase64 = await new Promise((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(photoFile);
+        });
+        
+        console.log(`Created base64 image data (${photoBase64.length} chars)`);
+        
+        // Store the base64 data in localStorage as a fallback mechanism
+        localStorage.setItem(`driver-photo-${Date.now()}`, photoBase64);
+      } catch (err) {
+        console.error('Failed to create base64 image:', err);
+      }
+      
+      // Now try the regular Supabase upload
       const ext = photoFile.name.split('.').pop();
       const fileName = `driver-${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase
-        .storage
-        .from('driver-photos')
-        .upload(fileName, photoFile, { cacheControl: '3600', upsert: false });
-      if (uploadError) {
-        console.error('Error uploading driver photo:', uploadError);
-        toast.error('Driver photo upload failed');
-      } else {
-        console.log('Photo uploaded successfully, getting public URL...');
-        // Properly get the public URL from the storage API
-        const { data: urlData, error: publicUrlError } = supabase
+      
+      try {
+        // First, try to upload the file
+        const { error: uploadError } = await supabase
           .storage
           .from('driver-photos')
-          .getPublicUrl(fileName);
-        if (publicUrlError) {
-          console.error('Error getting public URL:', publicUrlError);
+          .upload(fileName, photoFile, { cacheControl: '3600', upsert: false });
+        
+        if (uploadError) {
+          console.error('Error uploading driver photo:', uploadError);
+          toast.error('Driver photo upload failed - using base64 fallback');
+          photoUrl = photoBase64; // Use the base64 data directly as the URL
         } else {
-          console.log('Photo public URL obtained:', urlData.publicUrl);
-          photoUrl = urlData.publicUrl;
+          console.log('Photo uploaded successfully to path:', fileName);
+          
+          // Store BOTH the filename AND the base64 data separated by a special marker
+          // This way we can try multiple approaches when displaying
+          photoUrl = `${fileName}|||${photoBase64}`;
+          console.log('Saving combined photo data with both filename and base64');
         }
+      } catch (err) {
+        console.error('Exception during upload process:', err);
+        toast.error('Using base64 fallback due to upload error');
+        photoUrl = photoBase64;
       }
     }
 

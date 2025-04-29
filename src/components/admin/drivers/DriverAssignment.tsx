@@ -33,9 +33,23 @@ const DriverAssignment = ({
 }: DriverAssignmentProps) => {
   const [filter, setFilter] = useState<'all' | 'available'>('available');
 
-  const availableDrivers = drivers.filter(d => 
-    d.status === 'active' && !d.current_delivery
-  );
+  const availableDrivers = drivers.filter(d => {
+    // Active drivers with no delivery are always available
+    if (d.status === 'active' && !d.current_delivery) {
+      return true;
+    }
+    
+    // Active drivers with a completed delivery should also be considered available
+    if (d.status === 'active' && d.current_delivery) {
+      // Find the driver's current delivery in the requests array
+      const currentDelivery = requests.find(r => r.id === d.current_delivery);
+      
+      // If the delivery is completed or doesn't exist (might have been deleted), consider the driver available
+      return currentDelivery?.status === 'completed' || !currentDelivery;
+    }
+    
+    return false;
+  });
 
   const pendingRequests = requests.filter(r => 
     r.status === 'pending' && !r.assigned_driver
@@ -83,16 +97,27 @@ const DriverAssignment = ({
                   <SelectValue placeholder="Choose a driver" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(filter === 'available' ? availableDrivers : drivers).map((driver) => (
-                    <SelectItem key={driver.id} value={driver.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{driver.name}</span>
-                        {driver.status === 'active' && !driver.current_delivery && (
-                          <Badge variant="secondary">Available</Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {(filter === 'available' ? availableDrivers : drivers).map((driver) => {
+                    // Check if the driver has a completed delivery
+                    const hasCompletedDelivery = driver.current_delivery && 
+                      requests.find(r => r.id === driver.current_delivery)?.status === 'completed';
+                    
+                    return (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{driver.name}</span>
+                          {driver.status === 'active' && !driver.current_delivery && (
+                            <Badge variant="secondary">Available</Badge>
+                          )}
+                          {driver.status === 'active' && hasCompletedDelivery && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              Completed Delivery
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

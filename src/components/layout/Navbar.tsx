@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -13,9 +12,9 @@ export const Navbar = () => {
       <div className="container mx-auto px-4 sm:px-6 flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl text-medical-blue">
           <div className="w-8 h-8 rounded-md bg-gradient-to-br from-medical-blue to-medical-teal grid place-items-center">
-            <span className="text-white text-xs font-bold">EMD</span>
+            <span className="text-white text-xs font-bold">CNL</span>
           </div>
-          <span>ExpressMed<span className="text-medical-teal">Dispatch</span></span>
+          <span>Catalyst<span className="text-medical-teal">Network</span></span>
         </Link>
 
         {/* Desktop Menu */}
@@ -40,7 +39,7 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-4">
           <Button variant="ghost" size="sm" className="gap-2">
             <Phone size={16} />
-            <span>Emergency: (210) 555-0123</span>
+            <span className="text-medical-teal font-medium">(432)-202-2150</span>
           </Button>
           <Button asChild variant="default" size="sm">
             <Link to="/request-pickup">Request Pickup</Link>
@@ -89,8 +88,8 @@ export const Navbar = () => {
               </Button>
               <div className="mt-4 border-t pt-4">
                 <p className="text-sm font-medium">Emergency Pickup</p>
-                <a href="tel:2105550123" className="text-lg font-bold text-medical-red hover:underline">
-                  (210) 555-0123
+                <a href="tel:4322022150" className="text-lg font-bold text-medical-teal hover:underline">
+                  (432)-202-2150
                 </a>
               </div>
             </nav>

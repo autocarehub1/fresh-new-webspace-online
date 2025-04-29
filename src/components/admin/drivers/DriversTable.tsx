@@ -16,8 +16,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search } from 'lucide-react';
+import { MoreHorizontal, Search, Pencil, Trash, MapPin } from 'lucide-react';
 import type { Driver } from '@/types/delivery';
+import { StorageImage } from '@/components/ui/storage-image';
+import { DirectStorageImage } from '@/components/ui/direct-storage-image';
+import { DualSourceImage } from '@/components/ui/dual-source-image';
 
 interface DriversTableProps {
   drivers: Driver[];
@@ -118,15 +121,11 @@ const DriversTable = ({
           <TableBody>
             {sortedDrivers.map((driver) => (
               <TableRow key={driver.id}>
-                <TableCell className="px-2 py-1">
-                  <img
-                    src={driver.photo || 'https://placehold.co/80x80?text=No+Image'}
+                <TableCell>
+                  <DualSourceImage 
+                    photoData={driver.photo}
                     alt={driver.name}
-                    className="h-8 w-8 rounded-full object-cover"
-                    onError={(e) => {
-                      console.error('Driver image failed to load:', driver.photo);
-                      e.currentTarget.src = 'https://placehold.co/80x80?text=No+Image';
-                    }}
+                    className="h-10 w-10 rounded-full object-cover"
                   />
                 </TableCell>
                 <TableCell className="font-medium">{driver.name}</TableCell>
@@ -149,32 +148,44 @@ const DriversTable = ({
                 </TableCell>
                 <TableCell>{driver.average_response_time?.toFixed(1)} min</TableCell>
                 <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onLocateDriver(driver)}>
-                        View Location
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onStatusToggle(driver.id)}>
-                        Toggle Status
-                      </DropdownMenuItem>
-                      {driver.current_delivery && (
-                        <DropdownMenuItem onClick={() => onUnassignDriver(driver.id)}>
-                          Unassign Driver
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => onDeleteDriver(driver.id)}
-                      >
-                        Delete Driver
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => onLocateDriver(driver)}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span className="sr-only">Locate</span>
+                    </Button>
+                    <Button
+                      onClick={() => onStatusToggle(driver.id)}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Button>
+                    <Button
+                      onClick={() => onDeleteDriver(driver.id)}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                    <Button
+                      onClick={() => window.open(`/driver/${driver.id}`, '_blank')}
+                      size="sm"
+                      variant="outline"
+                      className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      <span className="sr-only">Driver Interface</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

@@ -1,4 +1,3 @@
-
 import { Json } from '@/integrations/supabase/types';
 import { Driver } from '@/types/delivery';
 
@@ -17,6 +16,9 @@ type DbDriver = {
 
 export const mapDbToDriver = (dbDriver: DbDriver): Driver => {
   const currentLocation = dbDriver.current_location as any;
+  
+  // Log the driver photo URL for debugging
+  console.log(`Processing driver ${dbDriver.id} (${dbDriver.name}) with photo URL:`, dbDriver.photo);
   
   return {
     id: dbDriver.id,

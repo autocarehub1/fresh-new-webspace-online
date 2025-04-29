@@ -1,7 +1,6 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, MapPin, User, Package, Check, X, Truck, ArrowRight, PackageCheck } from 'lucide-react';
+import { ExternalLink, MapPin, User, Package, Check, X, Truck, ArrowRight, PackageCheck, Trash } from 'lucide-react';
 import { DeliveryRequest } from '@/types/delivery';
 
 interface RequestsTableProps {
@@ -12,6 +11,7 @@ interface RequestsTableProps {
   onStatusUpdate: (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered') => void;
   onViewDetails: (req: DeliveryRequest) => void;
   onViewTracking: (req: DeliveryRequest) => void;
+  onDelete: (id: string) => void;
 }
 
 const RequestsTable = ({
@@ -21,7 +21,8 @@ const RequestsTable = ({
   onDecline,
   onStatusUpdate,
   onViewDetails,
-  onViewTracking
+  onViewTracking,
+  onDelete
 }: RequestsTableProps) => (
   <div className="rounded-md border">
     <table className="w-full caption-bottom text-sm">
@@ -157,6 +158,15 @@ const RequestsTable = ({
                   Map
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => onDelete(request.id)}
+              >
+                <Trash className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
             </td>
           </tr>
         ))}

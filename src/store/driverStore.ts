@@ -9,7 +9,7 @@ const initialDrivers: Driver[] = [
     status: 'active',
     vehicle_type: 'Temperature-Controlled Van',
     current_location: {
-      address: 'Medical District, San Antonio',
+      address: '7703 Floyd Curl Dr, San Antonio, TX 78229',
       coordinates: { lat: 29.508, lng: -98.579 }
     },
     photo: 'https://placehold.co/200x200/4ECDC4/FFFFFF/png?text=John',
@@ -22,7 +22,7 @@ const initialDrivers: Driver[] = [
     status: 'active',
     vehicle_type: 'Standard Delivery Vehicle',
     current_location: {
-      address: 'Downtown, San Antonio',
+      address: '4411 Medical Dr, San Antonio, TX 78229',
       coordinates: { lat: 29.424, lng: -98.493 }
     },
     photo: 'https://placehold.co/200x200/FF6B6B/FFFFFF/png?text=Maria',
@@ -35,7 +35,7 @@ const initialDrivers: Driver[] = [
     status: 'inactive',
     vehicle_type: 'Motorcycle Courier',
     current_location: {
-      address: 'North San Antonio',
+      address: '8300 Floyd Curl Dr, San Antonio, TX 78229',
       coordinates: { lat: 29.555, lng: -98.496 }
     },
     photo: 'https://placehold.co/200x200/6B4CE6/FFFFFF/png?text=David',
@@ -48,7 +48,7 @@ const initialDrivers: Driver[] = [
     status: 'active',
     vehicle_type: 'Standard Delivery Vehicle',
     current_location: {
-      address: 'East San Antonio',
+      address: '7400 Merton Minter Blvd, San Antonio, TX 78229',
       coordinates: { lat: 29.45, lng: -98.41 }
     },
     photo: 'https://placehold.co/200x200/FF9966/FFFFFF/png?text=Sarah',

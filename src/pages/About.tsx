@@ -1,9 +1,8 @@
-
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Clock, ShieldCheck, ThumbsUp, Users } from 'lucide-react';
+import { Clock, ShieldCheck, ThumbsUp, Users, Truck, FileText, TestTube, Pill, Hospital } from 'lucide-react';
 
 const About = () => {
   return (
@@ -14,9 +13,9 @@ const About = () => {
         <section className="bg-medical-blue py-16 md:py-24 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">About ExpressMed Dispatch</h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-6">About Us</h1>
               <p className="text-xl">
-                San Antonio's premier medical courier service, dedicated to supporting healthcare providers with reliable, compliant transportation solutions.
+                Catalyst Network Logistics is a trusted medical courier service based in San Antonio, Texas, dedicated to delivering critical healthcare logistics with precision, care, and speed.
               </p>
             </div>
           </div>
@@ -26,53 +25,91 @@ const About = () => {
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-medical-blue mb-6">Our Story</h2>
+              <h2 className="text-3xl font-bold text-medical-blue mb-6">Who We Are</h2>
               <p className="text-gray-700 mb-4">
-                ExpressMed Dispatch was founded in 2018 by a team of healthcare logistics professionals who recognized the critical need for specialized medical courier services in the San Antonio area. With backgrounds spanning hospital administration, laboratory services, and logistics management, our founding team combined their expertise to create a service specifically designed for healthcare transportation needs.
+                As a locally owned and operated 2-member LLC, we are driven by a shared mission: to be the vital link between healthcare providers, laboratories, and patients—ensuring that time-sensitive and life-saving materials reach their destinations safely and on time.
               </p>
               <p className="text-gray-700 mb-4">
-                What began as a small operation with three vehicles has grown into a comprehensive medical courier service with a fleet of specialized vehicles and a team of trained professionals serving healthcare facilities throughout the San Antonio metropolitan area.
-              </p>
-              <p className="text-gray-700">
-                Today, ExpressMed Dispatch is trusted by hospitals, laboratories, clinics, and pharmaceutical companies to transport their most sensitive and time-critical materials. Our commitment to reliability, compliance, and customer service has made us the preferred partner for healthcare logistics in the region.
+                Founded by two passionate professionals with backgrounds in healthcare logistics and business operations, Catalyst Network Logistics was born out of the need for consistent, accountable, and HIPAA-compliant transport solutions. We understand the critical nature of every specimen, document, and piece of equipment we handle. With every delivery, we uphold our commitment to accuracy, discretion, and professionalism.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Values */}
+        {/* Mission Section */}
         <section className="py-16 bg-medical-lightGray">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-medical-blue mb-12 text-center">Our Core Values</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
-                  <Clock className="text-medical-blue h-8 w-8" />
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-3xl font-bold text-medical-blue mb-6">Our Mission</h2>
+              <p className="text-gray-700 text-xl italic">
+                "To provide reliable, secure, and timely courier services that support the medical community and enhance patient outcomes across San Antonio and surrounding regions."
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* What We Do Section */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold text-medical-blue mb-8">What We Do</h2>
+              <p className="text-gray-700 mb-6">
+                We specialize in the secure transport of:
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div className="flex items-start gap-3">
+                  <TestTube className="text-medical-blue h-6 w-6 flex-shrink-0 mt-1" />
+                  <p className="text-gray-700">Lab specimens and diagnostic samples</p>
                 </div>
-                <h3 className="text-xl font-bold text-center mb-3">Reliability</h3>
-                <p className="text-gray-600 text-center">
-                  We understand that timing is critical in healthcare. Our services are designed to deliver consistently and punctually, every time.
-                </p>
+                <div className="flex items-start gap-3">
+                  <Truck className="text-medical-blue h-6 w-6 flex-shrink-0 mt-1" />
+                  <p className="text-gray-700">Medical equipment and devices</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Pill className="text-medical-blue h-6 w-6 flex-shrink-0 mt-1" />
+                  <p className="text-gray-700">Pharmaceuticals and prescriptions</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <FileText className="text-medical-blue h-6 w-6 flex-shrink-0 mt-1" />
+                  <p className="text-gray-700">Healthcare documents and records</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Hospital className="text-medical-blue h-6 w-6 flex-shrink-0 mt-1" />
+                  <p className="text-gray-700">Hospital-to-clinic supply transfers</p>
+                </div>
               </div>
               
+              <p className="text-gray-700">
+                Whether it's a routine pickup or an urgent, time-sensitive delivery, we tailor our services to meet the unique needs of our healthcare partners.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Why Choose Us */}
+        <section className="py-16 bg-medical-lightGray">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl font-bold text-medical-blue mb-12 text-center">Why Choose Us?</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
                   <ShieldCheck className="text-medical-blue h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-3">Compliance</h3>
+                <h3 className="text-xl font-bold text-center mb-3">HIPAA-Compliant</h3>
                 <p className="text-gray-600 text-center">
-                  We maintain the highest standards of regulatory compliance, including HIPAA, OSHA, and DOT requirements for medical transport.
+                  We handle all items with the utmost respect for privacy and security.
                 </p>
               </div>
               
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
-                  <ThumbsUp className="text-medical-blue h-8 w-8" />
+                  <Clock className="text-medical-blue h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-3">Quality</h3>
+                <h3 className="text-xl font-bold text-center mb-3">Real-Time Tracking</h3>
                 <p className="text-gray-600 text-center">
-                  Our commitment to excellence drives everything we do, from our hiring practices to our delivery protocols.
+                  Know where your package is, every step of the way.
                 </p>
               </div>
               
@@ -80,55 +117,45 @@ const About = () => {
                 <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
                   <Users className="text-medical-blue h-8 w-8" />
                 </div>
-                <h3 className="text-xl font-bold text-center mb-3">Partnership</h3>
+                <h3 className="text-xl font-bold text-center mb-3">Locally Owned & Operated</h3>
                 <p className="text-gray-600 text-center">
-                  We work closely with our clients to understand their needs and develop customized solutions that support their operations.
+                  We know San Antonio—and we care deeply about our community.
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
+                  <ThumbsUp className="text-medical-blue h-8 w-8" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Flexible Scheduling</h3>
+                <p className="text-gray-600 text-center">
+                  Same-day, scheduled, and on-demand delivery options available.
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="w-16 h-16 rounded-full bg-medical-blue/10 flex items-center justify-center mb-4 mx-auto">
+                  <Truck className="text-medical-blue h-8 w-8" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Professionalism First</h3>
+                <p className="text-gray-600 text-center">
+                  Our team is uniformed, insured, background-checked, and trained for medical logistics.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Team Section */}
+        {/* Serving San Antonio Section */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-medical-blue mb-12 text-center">Our Leadership Team</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              <div className="text-center">
-                <div className="w-48 h-48 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                <h3 className="text-xl font-bold">Dr. Maria Rodriguez</h3>
-                <p className="text-medical-blue mb-2">Chief Executive Officer</p>
-                <p className="text-gray-600 text-sm">Former Director of Laboratory Services with over 15 years of healthcare logistics experience.</p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-48 h-48 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                <h3 className="text-xl font-bold">James Wilson</h3>
-                <p className="text-medical-blue mb-2">Chief Operations Officer</p>
-                <p className="text-gray-600 text-sm">Logistics specialist with experience managing transportation for major hospital systems.</p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-48 h-48 bg-gray-200 rounded-full mx-auto mb-4"></div>
-                <h3 className="text-xl font-bold">Sarah Chen</h3>
-                <p className="text-medical-blue mb-2">Director of Compliance</p>
-                <p className="text-gray-600 text-sm">Healthcare regulatory specialist focused on maintaining the highest standards of compliance and safety.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="bg-medical-teal text-white py-12">
-          <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Join the ExpressMed Dispatch Team</h2>
-              <p className="mb-6">
-                We're always looking for dedicated professionals to join our team. Check out our current opportunities.
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-3xl font-bold text-medical-blue mb-6">Serving San Antonio and Beyond</h2>
+              <p className="text-gray-700 mb-8">
+                While we're proud to call San Antonio home, our services extend to clinics, labs, hospitals, pharmacies, and medical practices throughout Central and South Texas.
               </p>
-              <Button asChild size="lg" variant="default" className="bg-white text-medical-teal hover:bg-gray-100">
-                <Link to="/careers">View Career Opportunities</Link>
+              <Button asChild size="lg" variant="default" className="bg-medical-blue hover:bg-medical-blue/90">
+                <Link to="/contact">Contact Us Today</Link>
               </Button>
             </div>
           </div>

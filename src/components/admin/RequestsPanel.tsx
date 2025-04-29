@@ -18,7 +18,7 @@ interface RequestsPanelProps {
 const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   const { deliveries: requests, isLoading, simulateMovement } = useDeliveryData();
   const { drivers } = useDriverData();
-  const { handleRequestAction, handleStatusUpdate } = useRequestActions();
+  const { handleRequestAction, handleStatusUpdate, handleDeleteRequest } = useRequestActions();
   
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
   const [viewTrackingMap, setViewTrackingMap] = useState(false);
@@ -98,6 +98,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         onStatusUpdate={handleStatusUpdate}
         onViewDetails={setSelectedRequest}
         onViewTracking={handleViewTracking}
+        onDelete={handleDeleteRequest}
       />
       <RequestDetailsDialog
         open={!!selectedRequest && !viewTrackingMap}

@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Shield, Check } from 'lucide-react';
@@ -28,7 +27,7 @@ export const ComplianceSection = () => {
               Setting the Standard for Medical Transport Compliance
             </h2>
             <p className="text-gray-600 mb-8">
-              At ExpressMed Dispatch, compliance isn't just a feature—it's the foundation of everything we do. Our comprehensive approach ensures that all medical specimens, documents, and pharmaceuticals are handled according to strict regulatory standards.
+              At Catalyst Network Logistics, compliance isn't just a feature—it's the foundation of everything we do. Our comprehensive approach ensures that all medical specimens, documents, and pharmaceuticals are handled according to strict regulatory standards.
             </p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mb-8">
@@ -76,7 +75,7 @@ export const ComplianceSection = () => {
               
               <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-sm text-gray-600 italic">
-                  "ExpressMed Dispatch's attention to compliance details gives us complete confidence in their handling of our sensitive materials."
+                  "Catalyst Network Logistics's attention to compliance details gives us complete confidence in their handling of our sensitive materials."
                 </p>
                 <p className="text-sm font-medium mt-2">— San Antonio Medical Center Lab Director</p>
               </div>

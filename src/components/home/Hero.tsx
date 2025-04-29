@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Clock, Shield, ThermometerSnowflake, MapPin, Navigation } from 'lucide-react';
@@ -14,10 +13,10 @@ export const Hero = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            Medical Courier Excellence in San Antonio
+            Professional Logistics Solutions in San Antonio
           </h1>
           <p className="text-lg md:text-xl mb-8 text-gray-100">
-            Specialized transportation for medical specimens, pharmaceuticals, and sensitive documents with real-time tracking and HIPAA compliance.
+            Specialized transportation for packages, documents, and sensitive items with real-time tracking and secure delivery guarantees.
           </p>
           
           <div className="flex flex-wrap gap-4">
@@ -64,7 +63,7 @@ export const Hero = () => {
               <h3 className="text-xl font-semibold">Real-Time Tracking</h3>
             </div>
             <p className="text-gray-200">
-              Track your medical deliveries with precision. Our advanced tracking system provides real-time location updates, estimated delivery times, and instant notifications to keep you informed every step of the way.
+              Track your deliveries with precision. Our advanced tracking system provides real-time location updates, estimated delivery times, and instant notifications to keep you informed every step of the way.
             </p>
           </div>
         </div>

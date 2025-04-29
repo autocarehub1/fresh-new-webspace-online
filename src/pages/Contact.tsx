@@ -62,9 +62,9 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl font-semibold mb-1">Call Us</h3>
                       <p className="text-gray-600 mb-1">General Inquiries:</p>
-                      <p className="font-medium text-lg">(210) 555-1234</p>
+                      <p className="font-medium text-lg">(432)-202-2150</p>
                       <p className="text-gray-600 mb-1 mt-3">Emergency Pickup:</p>
-                      <p className="font-medium text-lg text-medical-teal">(210) 555-0123</p>
+                      <p className="font-medium text-lg text-medical-teal">(432)-202-2150</p>
                     </div>
                   </div>
                   
@@ -75,11 +75,11 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl font-semibold mb-1">Email Us</h3>
                       <p className="text-gray-600 mb-1">General Information:</p>
-                      <p className="font-medium">info@expressmedsa.com</p>
+                      <p className="font-medium">catalystlogistics2025@gmail.com</p>
                       <p className="text-gray-600 mb-1 mt-3">Dispatch:</p>
-                      <p className="font-medium">dispatch@expressmedsa.com</p>
+                      <p className="font-medium">catalystlogistics2025@gmail.com</p>
                       <p className="text-gray-600 mb-1 mt-3">Customer Support:</p>
-                      <p className="font-medium">support@expressmedsa.com</p>
+                      <p className="font-medium">catalystlogistics2025@gmail.com</p>
                     </div>
                   </div>
                   
@@ -89,8 +89,7 @@ const Contact = () => {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-1">Visit Us</h3>
-                      <p className="text-gray-600 mb-1">Main Office:</p>
-                      <p className="font-medium">123 Medical Parkway<br />San Antonio, TX 78229</p>
+                      <p className="font-medium">San Antonio, Texas 78254</p>
                     </div>
                   </div>
                   
@@ -183,7 +182,7 @@ const Contact = () => {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-medical-blue mb-8 text-center">Our Location</h2>
             <div className="max-w-5xl mx-auto">
-              <Map center={[-98.5784, 29.5077]} />
+              <Map center={[-98.6615, 29.5301]} />
             </div>
           </div>
         </section>

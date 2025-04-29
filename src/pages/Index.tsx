@@ -1,4 +1,3 @@
-
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import Hero from '@/components/home/Hero';
@@ -6,7 +5,8 @@ import Services from '@/components/home/Services';
 import Features from '@/components/home/Features';
 import CtaBanner from '@/components/home/CtaBanner';
 import ComplianceSection from '@/components/home/ComplianceSection';
-import Testimonials from '@/components/home/Testimonials';
+// Testimonials component is imported but won't be used until we have Google reviews
+// import Testimonials from '@/components/home/Testimonials';
 
 const Index = () => {
   return (
@@ -18,7 +18,7 @@ const Index = () => {
         <Features />
         <CtaBanner />
         <ComplianceSection />
-        <Testimonials />
+        {/* Testimonials component will be rendered here when Google reviews are available */}
       </main>
       <Footer />
     </div>
