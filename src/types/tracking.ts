@@ -4,7 +4,7 @@ export interface TrackingProps {
 }
 
 export interface TrackingUpdate {
-  id: string;
+  id?: string;
   status: string;
   timestamp: string;
   location?: string;
@@ -13,6 +13,7 @@ export interface TrackingUpdate {
     lng: number;
   };
   notes?: string;
+  note?: string;
 }
 
 export interface Coordinates {
