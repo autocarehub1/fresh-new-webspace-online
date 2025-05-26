@@ -7,13 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DriverAuth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { signIn, signUp, user, isLoading } = useAuth();
+  const { signIn, signUp, resetPassword, user, isLoading } = useAuth();
   
   // Form states
   const [signInData, setSignInData] = useState({
@@ -31,8 +31,10 @@ const DriverAuth = () => {
     phone: '',
     licenseNumber: ''
   });
-  
+
+  const [resetEmail, setResetEmail] = useState('');
   const [activeTab, setActiveTab] = useState('signin');
+  const [showResetForm, setShowResetForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,8 +56,14 @@ const DriverAuth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      console.log('User authenticated, redirecting to driver dashboard');
-      navigate('/driver-dashboard');
+      console.log('User authenticated, redirecting to driver dashboard or onboarding');
+      // Check if user needs onboarding
+      const userMetadata = user.user_metadata;
+      if (!userMetadata?.onboarding_completed) {
+        navigate('/driver-onboarding');
+      } else {
+        navigate('/driver-dashboard');
+      }
     }
   }, [user, isLoading, navigate]);
 
@@ -127,6 +135,39 @@ const DriverAuth = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      setErrors({ resetEmail: 'Email is required' });
+      return;
+    }
+    
+    if (!validateEmail(resetEmail)) {
+      setErrors({ resetEmail: 'Please enter a valid email address' });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setErrors({});
+    
+    try {
+      const { error } = await resetPassword(resetEmail);
+      
+      if (error) {
+        setErrors({ resetEmail: error.message });
+      } else {
+        toast.success('Password reset email sent! Check your inbox.');
+        setShowResetForm(false);
+        setResetEmail('');
+      }
+    } catch (error) {
+      setErrors({ resetEmail: 'An unexpected error occurred. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Sign in form submitted');
@@ -155,7 +196,6 @@ const DriverAuth = () => {
       } else {
         console.log('Sign in successful');
         toast.success('Welcome back! Redirecting to your dashboard...');
-        // Navigation will be handled by the useEffect above
       }
     } catch (error) {
       console.error('Sign in error:', error);
@@ -183,7 +223,8 @@ const DriverAuth = () => {
         last_name: signUpData.lastName,
         phone: signUpData.phone,
         license_number: signUpData.licenseNumber,
-        user_type: 'driver'
+        user_type: 'driver',
+        onboarding_completed: false
       };
       
       console.log('Attempting to sign up with:', signUpData.email, metadata);
@@ -225,6 +266,74 @@ const DriverAuth = () => {
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Password reset form
+  if (showResetForm) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowResetForm(false)}
+                  className="p-0 h-auto"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div>
+                  <CardTitle>Reset Password</CardTitle>
+                  <CardDescription>
+                    Enter your email to receive a password reset link
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              {errors.resetEmail && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{errors.resetEmail}</AlertDescription>
+                </Alert>
+              )}
+
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email Address</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={resetEmail}
+                    onChange={(e) => {
+                      setResetEmail(e.target.value);
+                      if (errors.resetEmail) setErrors({ ...errors, resetEmail: '' });
+                    }}
+                    className={errors.resetEmail ? 'border-red-500' : ''}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending Reset Link...
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -306,16 +415,29 @@ const DriverAuth = () => {
                     {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="remember-me"
-                      checked={signInData.rememberMe}
-                      onChange={(e) => setSignInData({ ...signInData, rememberMe: e.target.checked })}
-                      className="rounded border-gray-300"
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="remember-me"
+                        checked={signInData.rememberMe}
+                        onChange={(e) => setSignInData({ ...signInData, rememberMe: e.target.checked })}
+                        className="rounded border-gray-300"
+                        disabled={isSubmitting}
+                      />
+                      <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowResetForm(true)}
+                      className="text-sm text-blue-600 hover:text-blue-700 p-0 h-auto"
                       disabled={isSubmitting}
-                    />
-                    <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
+                    >
+                      Forgot password?
+                    </Button>
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -331,6 +453,7 @@ const DriverAuth = () => {
                 </form>
               </TabsContent>
 
+              {/* Keep existing signup form exactly the same */}
               <TabsContent value="signup" className="space-y-4">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">

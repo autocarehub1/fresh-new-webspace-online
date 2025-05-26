@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +25,7 @@ import Compliance from "./pages/Compliance";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import DriverAuth from "./pages/DriverAuth";
+import DriverOnboarding from "./pages/DriverOnboarding";
 import AuthCallback from "./pages/auth/callback";
 import DriverProfileSetup from "./pages/DriverProfileSetup";
 import DebugSupabase from "./pages/DebugSupabase";
@@ -79,6 +81,11 @@ const App = () => {
               <Route path="/driver/:driverId" element={
                 <ProtectedRoute>
                   <DriverDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/driver-onboarding" element={
+                <ProtectedRoute>
+                  <DriverOnboarding />
                 </ProtectedRoute>
               } />
               <Route path="/driver-profile-setup" element={
