@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import * as Slack from '@/integrations/slack';
 
 export default function DeliveryRequestForm() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState<{
     success?: boolean;
@@ -160,7 +161,7 @@ export default function DeliveryRequestForm() {
       
       // Redirect to tracking page or thank you page
       setTimeout(() => {
-        router.push(`/tracking/${requestId}`);
+        navigate(`/tracking/${requestId}`);
       }, 1500);
       
     } catch (error) {
@@ -314,4 +315,4 @@ export default function DeliveryRequestForm() {
       </form>
     </div>
   );
-} 
+}

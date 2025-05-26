@@ -1,3 +1,4 @@
+
 export type DeliveryStatus = 'pending' | 'in_progress' | 'completed' | 'declined';
 
 export interface TrackingUpdate {
@@ -17,6 +18,7 @@ export interface Driver {
   name: string;
   status: 'active' | 'inactive';
   vehicle_type: string;
+  vehicle_number?: string;
   current_location: {
     address: string;
     coordinates: Coordinates;
@@ -24,6 +26,8 @@ export interface Driver {
   photo: string;
   phone: string;
   current_delivery: string | null;
+  rating?: number;
+  average_response_time?: number;
 }
 
 export interface DeliveryRequest {
@@ -80,4 +84,13 @@ export interface DeliveryRequest {
 
   // Proof of delivery photo URL
   proofOfDeliveryPhoto?: string;
+
+  // Additional time fields that are being referenced
+  pickup_time?: string;
+  delivery_time?: string;
+  pickup_address?: string;
+  delivery_address?: string;
 }
+
+// Export Delivery as an alias for DeliveryRequest for compatibility
+export type Delivery = DeliveryRequest;
