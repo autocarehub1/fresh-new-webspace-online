@@ -1,21 +1,26 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { DeliveryRequest, DeliveryStatus } from '@/types/delivery';
-import { TrackingProps } from '@/types/tracking';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Download, Clock, Truck, Info } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import TrackingTimeline from './TrackingTimeline';
 import PackageInfo from './PackageInfo';
 import CourierInfo from './CourierInfo';
+import DeliveryTrackingControls from './DeliveryTrackingControls';
+import DeliveryTrackingETA from './DeliveryTrackingETA';
+import DeliveryTrackingMap from './DeliveryTrackingMap';
+import DeliveryTrackingProof from './DeliveryTrackingProof';
 import { generatePDF } from '@/utils/generatePDF';
+
+interface TrackingProps {
+  trackingId?: string;
+}
 
 // Add a function to calculate ETA based on distance and speed
 const calculateETA = (
@@ -66,13 +71,6 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
   const [etaStart, setEtaStart] = useState<number | null>(null);
   const [etaEnd, setEtaEnd] = useState<number | null>(null);
   const [etaCountdown, setEtaCountdown] = useState<number | null>(null);
-  
-  // For the Map component issue, let's create a placeholder for now
-  const MapComponent = ({ driverLocation, deliveryLocation, pickupLocation, height, showTraffic, trafficCondition, estimatedTimeMinutes }: any) => (
-    <div className={`bg-gray-100 rounded-md flex items-center justify-center`} style={{ height }}>
-      <p className="text-gray-500">Map View - Driver tracking in progress</p>
-    </div>
-  );
 
   // Fetch delivery and assigned driver info
   const fetchDeliveryData = useCallback(async () => {
@@ -204,92 +202,22 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
     }
   }, [delivery, trafficCondition]);
 
-  // Function to start live tracking simulation
-  const startLiveTracking = useCallback((speed: 'slow' | 'normal' | 'fast' = 'normal') => {
-    if (!delivery || intervalRef.current) return;
+  // Helper function from requestUtils.ts
+  const calculateMovement = (current: { lat: number; lng: number }, target: { lat: number; lng: number }, stepSize: number) => {
+    const latDiff = target.lat - current.lat;
+    const lngDiff = target.lng - current.lng;
+    const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
     
-    console.log('Starting live tracking simulation at speed:', speed);
-    setIsLiveTracking(true);
-    setSimulationSpeed(speed);
+    if (distance < 0.002) {
+      return null;
+    }
     
-    // Set interval based on speed
-    const intervalTime = speed === 'slow' ? 5000 : speed === 'fast' ? 1000 : 3000;
-    
-    // Randomly set traffic condition at start of simulation
-    const trafficOptions: Array<'good' | 'moderate' | 'heavy'> = ['good', 'moderate', 'heavy'];
-    setTrafficCondition(trafficOptions[Math.floor(Math.random() * trafficOptions.length)]);
-    
-    // Simulate movement at different intervals based on speed
-    intervalRef.current = window.setInterval(() => {
-      if (!delivery) return;
-      
-      // Only simulate if delivery is in progress
-      if (delivery.status === 'in_progress') {
-        console.log('Simulating movement for delivery:', delivery.id);
-        
-        // Get current and target coordinates
-        const current = delivery.current_coordinates;
-        const target = delivery.delivery_coordinates;
-        
-        if (!current || !target) {
-          console.log('Missing coordinates, cannot simulate movement');
-          return;
-        }
-        
-        // Calculate new position (moving 0.001 degrees toward destination)
-        // Factor in traffic conditions
-        const trafficFactor = trafficCondition === 'good' ? 1.0 : 
-                             trafficCondition === 'moderate' ? 0.7 : 0.4;
-        
-        const stepSize = 0.001 * trafficFactor;
-        const newCoordinates = calculateMovement(current, target, stepSize);
-        
-        if (!newCoordinates) {
-          console.log('Reached destination, stopping simulation');
-          
-          // Update delivery status to completed
-          updateDeliveryStatus('completed');
-          clearInterval(intervalRef.current!);
-          intervalRef.current = null;
-          setIsLiveTracking(false);
-          return;
-        }
-        
-        // Update delivery with new coordinates
-        updateDeliveryPosition(newCoordinates);
-        
-        // Update ETA and detailed status
-        updateETA();
-        
-        // Occasionally change traffic conditions (10% chance every update)
-        if (Math.random() < 0.1) {
-          const trafficOptions: Array<'good' | 'moderate' | 'heavy'> = ['good', 'moderate', 'heavy'];
-          const newTraffic = trafficOptions[Math.floor(Math.random() * trafficOptions.length)];
-          setTrafficCondition(newTraffic);
-          
-          // Add traffic update if condition changes
-          if (newTraffic !== trafficCondition) {
-            const trafficMessages = {
-              good: 'Traffic is flowing well',
-              moderate: 'Moderate traffic conditions',
-              heavy: 'Heavy traffic encountered'
-            };
-            
-            toast.info(`Traffic Update: ${trafficMessages[newTraffic]}`);
-          }
-        }
-      }
-    }, intervalTime);
-    
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setIsLiveTracking(false);
+    return {
+      lat: current.lat + (latDiff / distance) * stepSize,
+      lng: current.lng + (lngDiff / distance) * stepSize
     };
-  }, [delivery, updateETA]);
-  
+  };
+
   // Update delivery position in UI and optionally in database
   const updateDeliveryPosition = async (coordinates: { lat: number; lng: number }) => {
     if (!delivery) return;
@@ -380,21 +308,91 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
     }
   };
 
-  // Helper function from requestUtils.ts
-  const calculateMovement = (current: { lat: number; lng: number }, target: { lat: number; lng: number }, stepSize: number) => {
-    const latDiff = target.lat - current.lat;
-    const lngDiff = target.lng - current.lng;
-    const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+  // Function to start live tracking simulation
+  const startLiveTracking = useCallback((speed: 'slow' | 'normal' | 'fast' = 'normal') => {
+    if (!delivery || intervalRef.current) return;
     
-    if (distance < 0.002) {
-      return null;
-    }
+    console.log('Starting live tracking simulation at speed:', speed);
+    setIsLiveTracking(true);
+    setSimulationSpeed(speed);
     
-    return {
-      lat: current.lat + (latDiff / distance) * stepSize,
-      lng: current.lng + (lngDiff / distance) * stepSize
+    // Set interval based on speed
+    const intervalTime = speed === 'slow' ? 5000 : speed === 'fast' ? 1000 : 3000;
+    
+    // Randomly set traffic condition at start of simulation
+    const trafficOptions: Array<'good' | 'moderate' | 'heavy'> = ['good', 'moderate', 'heavy'];
+    setTrafficCondition(trafficOptions[Math.floor(Math.random() * trafficOptions.length)]);
+    
+    // Simulate movement at different intervals based on speed
+    intervalRef.current = window.setInterval(() => {
+      if (!delivery) return;
+      
+      // Only simulate if delivery is in progress
+      if (delivery.status === 'in_progress') {
+        console.log('Simulating movement for delivery:', delivery.id);
+        
+        // Get current and target coordinates
+        const current = delivery.current_coordinates;
+        const target = delivery.delivery_coordinates;
+        
+        if (!current || !target) {
+          console.log('Missing coordinates, cannot simulate movement');
+          return;
+        }
+        
+        // Calculate new position (moving 0.001 degrees toward destination)
+        // Factor in traffic conditions
+        const trafficFactor = trafficCondition === 'good' ? 1.0 : 
+                             trafficCondition === 'moderate' ? 0.7 : 0.4;
+        
+        const stepSize = 0.001 * trafficFactor;
+        const newCoordinates = calculateMovement(current, target, stepSize);
+        
+        if (!newCoordinates) {
+          console.log('Reached destination, stopping simulation');
+          
+          // Update delivery status to completed
+          updateDeliveryStatus('completed');
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          setIsLiveTracking(false);
+          return;
+        }
+        
+        // Update delivery with new coordinates
+        updateDeliveryPosition(newCoordinates);
+        
+        // Update ETA and detailed status
+        updateETA();
+        
+        // Occasionally change traffic conditions (10% chance every update)
+        if (Math.random() < 0.1) {
+          const trafficOptions: Array<'good' | 'moderate' | 'heavy'> = ['good', 'moderate', 'heavy'];
+          const newTraffic = trafficOptions[Math.floor(Math.random() * trafficOptions.length)];
+          setTrafficCondition(newTraffic);
+          
+          // Add traffic update if condition changes
+          if (newTraffic !== trafficCondition) {
+            const trafficMessages = {
+              good: 'Traffic is flowing well',
+              moderate: 'Moderate traffic conditions',
+              heavy: 'Heavy traffic encountered'
+            };
+            
+            toast.info(`Traffic Update: ${trafficMessages[newTraffic]}`);
+          }
+        }
+      }
+    }, intervalTime);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setIsLiveTracking(false);
     };
-  };
+  }, [delivery, updateETA]);
 
   // Add a function to stop the simulation
   const stopLiveTracking = useCallback(() => {
@@ -449,6 +447,15 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
       toast.error('Failed to reset simulation');
     }
   }, [delivery, stopLiveTracking, startLiveTracking, simulationSpeed]);
+
+  // Handle simulation speed change
+  const handleSpeedChange = (speed: 'slow' | 'normal' | 'fast') => {
+    setSimulationSpeed(speed);
+    if (isLiveTracking) {
+      stopLiveTracking();
+      setTimeout(() => startLiveTracking(speed), 100);
+    }
+  };
 
   // Initial fetch and set up realtime listener
   useEffect(() => {
@@ -628,173 +635,27 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
         <Card className="md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Live Tracking</CardTitle>
-            <div className="flex items-center gap-2">
-              {!isLiveTracking ? (
-                <Button 
-                  size="sm" 
-                  variant="default" 
-                  className="px-3"
-                  onClick={() => startLiveTracking(simulationSpeed)}
-                  disabled={!delivery || delivery.status === 'completed'}
-                >
-                  Start Tracking
-                </Button>
-              ) : (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="px-3"
-                  onClick={stopLiveTracking}
-                >
-                  Pause
-                </Button>
-              )}
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="px-3"
-                onClick={resetSimulation}
-                disabled={!delivery || (delivery.status !== 'in_progress' && delivery.status !== 'completed')}
-              >
-                Reset
-              </Button>
-            </div>
+            <DeliveryTrackingControls
+              isLiveTracking={isLiveTracking}
+              simulationSpeed={simulationSpeed}
+              delivery={delivery}
+              onStart={startLiveTracking}
+              onStop={stopLiveTracking}
+              onReset={resetSimulation}
+              onSpeedChange={handleSpeedChange}
+            />
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-sm mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600">Simulation Speed:</span>
-                  <div className="flex border rounded-md overflow-hidden">
-                    <button 
-                      className={`px-2 py-0.5 text-xs ${simulationSpeed === 'slow' ? 'bg-gray-200 font-medium' : 'bg-white'}`}
-                      onClick={() => {
-                        setSimulationSpeed('slow');
-                        if (isLiveTracking) {
-                          stopLiveTracking();
-                          setTimeout(() => startLiveTracking('slow'), 100);
-                        }
-                      }}
-                    >
-                      Slow
-                    </button>
-                    <button 
-                      className={`px-2 py-0.5 text-xs ${simulationSpeed === 'normal' ? 'bg-gray-200 font-medium' : 'bg-white'}`}
-                      onClick={() => {
-                        setSimulationSpeed('normal');
-                        if (isLiveTracking) {
-                          stopLiveTracking();
-                          setTimeout(() => startLiveTracking('normal'), 100);
-                        }
-                      }}
-                    >
-                      Normal
-                    </button>
-                    <button 
-                      className={`px-2 py-0.5 text-xs ${simulationSpeed === 'fast' ? 'bg-gray-200 font-medium' : 'bg-white'}`}
-                      onClick={() => {
-                        setSimulationSpeed('fast');
-                        if (isLiveTracking) {
-                          stopLiveTracking();
-                          setTimeout(() => startLiveTracking('fast'), 100);
-                        }
-                      }}
-                    >
-                      Fast
-                    </button>
-                  </div>
-                </div>
-                
-                {delivery?.status === 'in_progress' && (
-                  <div className="flex items-center gap-1 text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="text-green-600 flex items-center gap-1">
-                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                      En Route
-                    </span>
-                  </div>
-                )}
-                
-                {delivery?.status === 'completed' && (
-                  <div className="flex items-center gap-1 text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="text-green-600">Delivered</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* ETA and Traffic Information */}
-              {delivery?.status === 'in_progress' && eta && (
-                <div className="bg-gray-50 rounded-md p-3 mb-4 flex flex-col sm:flex-row sm:items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-medical-blue" />
-                    <span>
-                      <strong>ETA:</strong> {eta.eta} minutes
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-medical-blue" />
-                    <span>
-                      <strong>Distance:</strong> {eta.distance} km
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {trafficCondition === 'good' ? (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span>Traffic: Good</span>
-                      </div>
-                    ) : trafficCondition === 'moderate' ? (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                        <span>Traffic: Moderate</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span>Traffic: Heavy</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Detailed Status */}
-              {delivery?.status === 'in_progress' && detailedStatus && (
-                <div className="bg-blue-50 text-blue-800 rounded-md p-2 mb-4 flex items-center gap-2 text-sm">
-                  <Info className="h-4 w-4" />
-                  <span>{detailedStatus}</span>
-                </div>
-              )}
-              
-              {/* Progress Bar and Countdown */}
-              <div className="mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Progress value={etaProgress} className="h-2 bg-gray-200" />
-                  </div>
-                  <div className="w-32 text-right text-xs text-gray-600">
-                    {etaCountdown !== null && etaCountdown > 0 ? (
-                      <span>
-                        {Math.floor(etaCountdown / 60)}:{(etaCountdown % 60).toString().padStart(2, '0')} min left
-                      </span>
-                    ) : (
-                      <span>Arriving soon</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-between text-xs text-gray-500 mb-4">
-                <div>{delivery?.pickup_location}</div>
-                <div className="border-t border-dashed border-gray-300 grow mx-2 mt-2"></div>
-                <div>{delivery?.delivery_location}</div>
-              </div>
-            </div>
+            <DeliveryTrackingETA
+              delivery={delivery}
+              eta={eta}
+              trafficCondition={trafficCondition}
+              detailedStatus={detailedStatus}
+              etaProgress={etaProgress}
+              etaCountdown={etaCountdown}
+            />
             
-            <MapComponent 
+            <DeliveryTrackingMap 
               driverLocation={delivery.current_coordinates}
               deliveryLocation={delivery.delivery_coordinates}
               pickupLocation={delivery.pickup_coordinates}
@@ -807,23 +668,7 @@ export const DeliveryTracking: React.FC<TrackingProps> = ({ trackingId: propTrac
         </Card>
       </div>
       
-      {delivery?.status === 'completed' && delivery.proofOfDeliveryPhoto && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg">Proof of Delivery</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center">
-              <img
-                src={delivery.proofOfDeliveryPhoto}
-                alt="Proof of Delivery"
-                className="rounded shadow-md max-w-xs max-h-80 border"
-              />
-              <span className="text-xs text-gray-500 mt-2">Photo provided by driver at delivery completion</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <DeliveryTrackingProof delivery={delivery} />
       
       <Card className="mb-8">
         <CardHeader>
