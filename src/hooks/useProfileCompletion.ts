@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ProfileData } from '@/components/driver/profile-completion/types';
 import { validateProfileForm } from '@/components/driver/profile-completion/validation';
+import { refreshSchemaCache } from '@/lib/supabase';
 
 export const useProfileCompletion = (user: any, onComplete: () => void) => {
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -52,6 +53,29 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
         throw new Error('User email is required for profile update');
       }
 
+      // First, try to refresh the schema cache
+      console.log('Refreshing schema cache...');
+      await refreshSchemaCache();
+
+      // Check if the driver record exists first
+      console.log('Checking if driver record exists...');
+      const { data: existingDriver, error: checkError } = await supabase
+        .from('drivers')
+        .select('id, name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking existing driver:', checkError);
+        throw new Error(`Failed to check existing driver: ${checkError.message}`);
+      }
+
+      if (!existingDriver) {
+        throw new Error('Driver profile not found. Please complete the initial profile setup first.');
+      }
+
+      console.log('Existing driver found:', existingDriver);
+
       // Update the existing driver record with additional profile information
       const updateData = {
         address: profileData.address,
@@ -80,6 +104,12 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
 
       if (updateError) {
         console.error('Profile update error:', updateError);
+        
+        // Provide more specific error messages based on the error
+        if (updateError.message.includes('column') && updateError.message.includes('does not exist')) {
+          throw new Error('Database schema is not up to date. Please contact support or try refreshing the page.');
+        }
+        
         throw new Error(`Failed to update profile: ${updateError.message}`);
       }
 
@@ -107,11 +137,11 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
       let errorMessage = 'Failed to update profile';
       
       if (error?.message) {
-        errorMessage = `Failed to update profile: ${error.message}`;
+        errorMessage = error.message;
       } else if (error?.error?.message) {
-        errorMessage = `Failed to update profile: ${error.error.message}`;
+        errorMessage = error.error.message;
       } else if (typeof error === 'string') {
-        errorMessage = `Failed to update profile: ${error}`;
+        errorMessage = error;
       }
       
       toast.error(errorMessage);

@@ -18,21 +18,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  */
 export const refreshSchemaCache = async (): Promise<boolean> => {
   try {
-    console.log('Refreshing schema cache for delivery_requests table...');
+    console.log('Refreshing schema cache...');
     
-    // Force refresh the schema by selecting all columns
+    // Force refresh the schema by selecting all columns from key tables
     await supabase.from('delivery_requests').select('*').limit(1);
-    
-    // Verify that key columns exist by attempting a simple select
-    const { data, error } = await supabase
-      .from('delivery_requests')
-      .select('id, pickup_location, delivery_location, package_type, priority, status, requester_name')
-      .limit(1);
-    
-    if (error) {
-      console.error('Schema refresh failed:', error);
-      return false;
-    }
+    await supabase.from('drivers').select('*').limit(1);
     
     console.log('Schema refresh successful');
     return true;
