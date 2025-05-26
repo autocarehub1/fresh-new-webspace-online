@@ -1,39 +1,22 @@
-import { Json } from '@/integrations/supabase/types';
+
 import { Driver } from '@/types/delivery';
 
-type DbDriver = {
-  id: string;
-  name: string;
-  status: string;
-  vehicle_type: string;
-  current_location: Json;
-  photo: string | null;
-  phone: string | null;
-  current_delivery: string | null;
-  created_at: string;
-  user_id: string | null;
-};
-
-export const mapDbToDriver = (dbDriver: DbDriver): Driver => {
-  const currentLocation = dbDriver.current_location as any;
-  
-  // Log the driver photo URL for debugging
-  console.log(`Processing driver ${dbDriver.id} (${dbDriver.name}) with photo URL:`, dbDriver.photo);
-  
+export const mapDbToDriver = (dbDriver: any): Driver => {
   return {
     id: dbDriver.id,
-    name: dbDriver.name,
-    status: dbDriver.status as 'active' | 'inactive',
-    vehicle_type: dbDriver.vehicle_type,
-    current_location: {
-      address: currentLocation?.address || '',
-      coordinates: {
-        lat: currentLocation?.coordinates?.lat || 0,
-        lng: currentLocation?.coordinates?.lng || 0
-      }
-    },
-    photo: dbDriver.photo || '',
+    name: dbDriver.name || 'Unknown Driver',
     phone: dbDriver.phone || '',
-    current_delivery: dbDriver.current_delivery
+    photo: dbDriver.photo || '',
+    status: dbDriver.status || 'active',
+    vehicle_type: dbDriver.vehicle_type || 'Car',
+    vehicle_number: dbDriver.vehicle_number || undefined,
+    current_location: dbDriver.current_location || { 
+      address: 'Location not available',
+      coordinates: { lat: 0, lng: 0 }
+    },
+    current_delivery: dbDriver.current_delivery || null,
+    rating: dbDriver.rating || undefined,
+    average_response_time: dbDriver.average_response_time || undefined,
+    created_at: dbDriver.created_at || new Date().toISOString()
   };
 };

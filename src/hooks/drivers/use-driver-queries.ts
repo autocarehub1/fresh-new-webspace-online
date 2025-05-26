@@ -17,7 +17,7 @@ export const useDriverQueries = () => {
         // Query with only essential columns that should always exist
         const { data, error } = await supabase
           .from('drivers')
-          .select('id, name, phone, photo, status, vehicle_type, current_location, created_at')
+          .select('id, name, phone, photo, status, vehicle_type, current_location, current_delivery, created_at')
           .order('created_at', { ascending: false });
           
         if (error) {
@@ -42,6 +42,7 @@ export const useDriverQueries = () => {
               return localDrivers;
             }
             
+            // Ensure complete Driver objects with all required properties
             return (basicData as any[]).map(driver => ({
               id: driver.id,
               name: driver.name || 'Unknown Driver',
@@ -49,9 +50,16 @@ export const useDriverQueries = () => {
               photo: '',
               status: driver.status || 'active',
               vehicle_type: 'Car',
-              current_location: { lat: 0, lng: 0 },
+              current_location: { 
+                address: 'Location not available',
+                coordinates: { lat: 0, lng: 0 }
+              },
+              current_delivery: null,
+              rating: undefined,
+              average_response_time: undefined,
+              vehicle_number: undefined,
               created_at: new Date().toISOString()
-            }));
+            } as Driver));
           }
           
           throw error;

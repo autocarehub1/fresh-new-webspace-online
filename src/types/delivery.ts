@@ -28,6 +28,7 @@ export interface Driver {
   current_delivery: string | null;
   rating?: number;
   average_response_time?: number;
+  created_at?: string;
 }
 
 export interface DeliveryRequest {
