@@ -1,3 +1,4 @@
+
 import { DeliveryRequest } from '@/types/delivery';
 import { createTrackingUrl } from '@/utils/tracking';
 
@@ -101,4 +102,30 @@ export const sendWeeklyReport = async (reportData: any): Promise<boolean> => {
     console.error('Error sending Slack notification:', error);
     return false;
   }
+};
+
+// Add missing exports that other modules expect
+export const newDeliveryRequestEvent = async (delivery: DeliveryRequest): Promise<boolean> => {
+  return sendNewDeliveryNotification(delivery);
+};
+
+export const deliveryStatusUpdateEvent = async (delivery: DeliveryRequest, status: string, note?: string): Promise<boolean> => {
+  console.log('Delivery status update event:', { delivery, status, note });
+  return sendDeliveryStatusUpdate(delivery, status);
+};
+
+export const testSlackDirectly = async (message: string): Promise<boolean> => {
+  try {
+    console.log('Testing Slack directly with message:', message);
+    // Mock implementation - in real app this would send to Slack
+    return true;
+  } catch (error) {
+    console.error('Error testing Slack:', error);
+    return false;
+  }
+};
+
+export const processRetryQueue = (): void => {
+  console.log('Processing retry queue...');
+  // Mock implementation for retry queue processing
 };

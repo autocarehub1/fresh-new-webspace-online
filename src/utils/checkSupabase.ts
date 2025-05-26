@@ -18,3 +18,15 @@ export const checkSupabaseConnection = async (): Promise<boolean> => {
     return false;
   }
 };
+
+export const checkSupabaseSetup = async (): Promise<{ connected: boolean; error?: string }> => {
+  try {
+    const connected = await checkSupabaseConnection();
+    return { connected };
+  } catch (error) {
+    return { 
+      connected: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+};

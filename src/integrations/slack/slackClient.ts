@@ -1,5 +1,5 @@
 import { DeliveryRequest, TrackingUpdate } from '@/types/delivery';
-import { deliveryStatusUpdateEvent } from '@/services/EventsService';
+import { sendDeliveryStatusUpdate } from '@/services/EventsService';
 
 // Configuration object for Slack integration
 interface SlackConfig {
@@ -10,7 +10,7 @@ interface SlackConfig {
 }
 
 // Load configuration from localStorage if available
-const loadConfigFromStorage = (): SlackConfig => {
+function loadConfigFromStorage(): SlackConfig {
   if (typeof window === 'undefined') return { ...defaultConfig };
   
   try {
@@ -24,7 +24,7 @@ const loadConfigFromStorage = (): SlackConfig => {
   }
   
   return { ...defaultConfig };
-};
+}
 
 // Default config with placeholder values
 const defaultConfig: SlackConfig = {
@@ -50,7 +50,7 @@ interface QueuedMessage {
 const messageQueue: QueuedMessage[] = [];
 
 // Save configuration to localStorage
-const saveConfigToStorage = (config: SlackConfig) => {
+function saveConfigToStorage(config: SlackConfig) {
   if (typeof window === 'undefined') return;
   
   try {
@@ -58,7 +58,7 @@ const saveConfigToStorage = (config: SlackConfig) => {
   } catch (error) {
     console.error('[SLACK] Error saving config to storage:', error);
   }
-};
+}
 
 /**
  * Configure the Slack integration
@@ -593,4 +593,4 @@ export const getSlackConfig = (): SlackConfig => {
 };
 
 // Export the EventsService function to maintain compatibility
-export { deliveryStatusUpdateEvent }; 
+export { sendDeliveryStatusUpdate };
