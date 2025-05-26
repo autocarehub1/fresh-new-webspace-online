@@ -116,95 +116,68 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ user, onComplete 
         throw new Error('User email is required for profile update');
       }
 
-      // Check if profile exists in driver_profiles table
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('driver_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error checking existing profile:', fetchError);
-        throw new Error(`Failed to check existing profile: ${fetchError.message}`);
-      }
-
-      const profileUpdate = {
-        user_id: user.id,
-        email: user.email,
-        full_name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.user_metadata?.name || 'Driver',
-        phone: user.user_metadata?.phone || '',
-        license_number: user.user_metadata?.license_number || '',
-        preferences: {
-          notifications: true,
-          location_sharing: true,
-          auto_accept_deliveries: false,
-          availability: profileData.availability,
-          preferred_areas: profileData.preferredAreas
-        },
-        documents: {
-          date_of_birth: profileData.dateOfBirth,
-          address: {
-            street: profileData.address,
-            city: profileData.city,
-            state: profileData.state,
-            zip_code: profileData.zipCode
-          },
-          emergency_contact: {
-            name: profileData.emergencyContactName,
-            phone: profileData.emergencyContactPhone,
-            relation: profileData.emergencyContactRelation
-          },
-          work_experience: profileData.workExperience
-        }
+      // Update the existing driver record with additional profile information
+      const updateData = {
+        address: profileData.address,
+        city: profileData.city,
+        state: profileData.state,
+        zip_code: profileData.zipCode,
+        date_of_birth: profileData.dateOfBirth,
+        emergency_contact_name: profileData.emergencyContactName,
+        emergency_contact_phone: profileData.emergencyContactPhone,
+        emergency_contact_relation: profileData.emergencyContactRelation,
+        work_experience: profileData.workExperience,
+        availability: profileData.availability,
+        preferred_areas: profileData.preferredAreas,
+        profile_completed: true,
+        updated_at: new Date().toISOString()
       };
 
-      let updateError;
-      if (existingProfile) {
-        console.log('Updating existing profile...');
-        const { error } = await supabase
-          .from('driver_profiles')
-          .update(profileUpdate)
-          .eq('user_id', user.id);
-        updateError = error;
-      } else {
-        console.log('Creating new profile...');
-        const { error } = await supabase
-          .from('driver_profiles')
-          .insert(profileUpdate);
-        updateError = error;
-      }
+      console.log('Updating driver with data:', updateData);
+
+      const { data: updatedDriver, error: updateError } = await supabase
+        .from('drivers')
+        .update(updateData)
+        .eq('id', user.id)
+        .select()
+        .single();
 
       if (updateError) {
-        console.error('Profile update/insert error:', updateError);
-        throw new Error(`Failed to save profile: ${updateError.message || 'Unknown database error'}`);
+        console.error('Profile update error:', updateError);
+        throw new Error(`Failed to update profile: ${updateError.message}`);
       }
 
-      // Also try to update the drivers table if it exists
-      try {
-        const { error: driversUpdateError } = await supabase
-          .from('drivers')
-          .update({
-            name: profileUpdate.full_name,
-            phone: profileUpdate.phone,
-            status: 'active'
-          })
-          .eq('id', user.id);
+      console.log('Profile updated successfully:', updatedDriver);
 
-        if (driversUpdateError) {
-          console.warn('Could not update drivers table:', driversUpdateError.message);
-          // Don't fail the whole process if drivers table update fails
+      // Update user metadata
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          profile_completed: true,
+          onboarding_completed: true
         }
-      } catch (driversError) {
-        console.warn('Drivers table may not exist or is not accessible:', driversError);
+      });
+
+      if (metadataError) {
+        console.warn('Metadata update warning:', metadataError.message);
+        // Don't fail the whole process for metadata issues
       }
 
-      console.log('Profile completed successfully');
+      console.log('Profile completion successful');
       toast.success('Profile completed successfully');
       onComplete();
 
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      const errorMessage = error?.message || error?.error?.message || 'Failed to update profile - please try again';
+      let errorMessage = 'Failed to update profile';
+      
+      if (error?.message) {
+        errorMessage = `Failed to update profile: ${error.message}`;
+      } else if (error?.error?.message) {
+        errorMessage = `Failed to update profile: ${error.error.message}`;
+      } else if (typeof error === 'string') {
+        errorMessage = `Failed to update profile: ${error}`;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
