@@ -22,7 +22,7 @@ const Tracking = () => {
     // Update URL with tracking ID for shareable links
     const url = new URL(window.location.href);
     url.searchParams.set('id', id);
-    window.history.pushState({}, '', url);
+    window.history.pushState({}, '', url.toString());
     
     setTrackingId(id);
   };
@@ -31,7 +31,7 @@ const Tracking = () => {
     // Clear tracking ID from URL
     const url = new URL(window.location.href);
     url.searchParams.delete('id');
-    window.history.pushState({}, '', url);
+    window.history.pushState({}, '', url.toString());
     
     setTrackingId(null);
   };

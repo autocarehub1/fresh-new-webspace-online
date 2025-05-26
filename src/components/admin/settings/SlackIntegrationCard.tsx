@@ -1,412 +1,221 @@
-import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { useSlackNotification } from '@/hooks/use-slack-notification';
-import { getSlackConfig } from '@/integrations/slack/slackClient';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { CheckCircle, AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { sendSlackNotification, testSlackConnection, getSlackConnectionStatus, disconnectSlack } from '@/services/slackService';
+import { DeliveryRequest } from '@/types/delivery';
 
-// Connection status component
-const ConnectionStatus = ({ status }: { status: 'connected' | 'not_configured' | 'error' }) => {
-  if (status === 'connected') {
-    return (
-      <div className="flex items-center gap-2 text-sm text-green-600 font-medium mt-2">
-        <CheckCircle className="h-4 w-4" />
-        <span>Connected and ready to send notifications</span>
-      </div>
-    );
-  } else if (status === 'not_configured') {
-    return (
-      <div className="flex items-center gap-2 text-sm text-amber-600 font-medium mt-2">
-        <AlertTriangle className="h-4 w-4" />
-        <span>Not configured. Add a webhook URL to enable.</span>
-      </div>
-    );
-  } else {
-    return (
-      <div className="flex items-center gap-2 text-sm text-red-600 font-medium mt-2">
-        <AlertCircle className="h-4 w-4" />
-        <span>Connection error. Please check your webhook URL.</span>
-      </div>
-    );
-  }
-};
+const SlackIntegrationCard: React.FC = () => {
+  const [isConfigured, setIsConfigured] = useState(false);
+  const [slackWebhookUrl, setSlackWebhookUrl] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Fetch connection status
+  const { data: isConnected, isLoading: isStatusLoading } = useQuery({
+    queryKey: ['slackConnectionStatus'],
+    queryFn: getSlackConnectionStatus,
+    retry: false,
+  });
+  
+  // Mutation for testing the connection
+  const testConnectionMutation = useMutation({
+    mutationFn: testSlackConnection,
+    onSuccess: () => {
+      toast.success('Slack connection test successful!');
+    },
+    onError: (error: any) => {
+      toast.error(`Slack connection test failed: ${error.message || 'Unknown error'}`);
+    },
+    onSettled: () => {
+      setIsTesting(false);
+    },
+  });
+  
+  // Mutation for disconnecting Slack
+  const disconnectMutation = useMutation({
+    mutationFn: disconnectSlack,
+    onSuccess: () => {
+      toast.success('Slack disconnected successfully!');
+      setIsConfigured(false);
+      setSlackWebhookUrl('');
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to disconnect Slack: ${error.message || 'Unknown error'}`);
+    },
+    onSettled: () => {
+      setIsDisconnecting(false);
+    },
+  });
+  
+  useEffect(() => {
+    if (isConnected !== undefined) {
+      setIsConfigured(isConnected);
+    }
+  }, [isConnected]);
+  
+  const handleWebhookChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlackWebhookUrl(e.target.value);
+  };
+  
+  const handleConnect = async () => {
+    if (!slackWebhookUrl) {
+      setErrorMessage('Please enter a Slack Webhook URL');
+      return;
+    }
+    
+    setIsConnecting(true);
+    setErrorMessage('');
+    
+    try {
+      const result = await testSlackConnection(slackWebhookUrl);
+      
+      if (result) {
+        toast.success('Slack connection successful!');
+        setIsConfigured(true);
+      } else {
+        setErrorMessage('Failed to connect to Slack. Please check your Webhook URL.');
+        toast.error('Failed to connect to Slack. Please check your Webhook URL.');
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to connect to Slack');
+      toast.error('Failed to connect to Slack');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
-// Slack message preview component
-const SlackPreview = () => {
-  const [expanded, setExpanded] = useState(false);
+  const handleTestMessage = async () => {
+    if (!isConnected) {
+      toast.error('Please connect to Slack first');
+      return;
+    }
+    
+    try {
+      setIsTesting(true);
+      
+      const testDelivery: DeliveryRequest = {
+        id: 'test-123',
+        pickup_location: '123 Medical Center Dr, Boston, MA',
+        delivery_location: '456 Hospital Ave, Cambridge, MA',
+        status: 'in_progress' as const,
+        priority: 'urgent' as const,
+        packageType: 'Lab Samples',
+        distance: 2.5,
+        trackingId: 'TRK-TEST-001',
+        created_at: new Date().toISOString() // Add required field
+      };
+      
+      const result = await sendSlackNotification(testDelivery, 'new_delivery');
+      
+      if (result) {
+        const urgentTestDelivery: DeliveryRequest = {
+          ...testDelivery,
+          id: 'test-urgent-123',
+          status: 'completed' as const,
+          created_at: new Date().toISOString() // Add required field
+        };
+        
+        await sendSlackNotification(urgentTestDelivery, 'delivery_completed');
+        
+        toast.success('Test notifications sent successfully!');
+      } else {
+        toast.error('Failed to send test notification');
+      }
+    } catch (error) {
+      console.error('Test notification error:', error);
+      toast.error('Failed to send test notification');
+    } finally {
+      setIsTesting(false);
+    }
+  };
+  
+  const handleDisconnect = async () => {
+    setIsDisconnecting(true);
+    try {
+      await disconnectMutation.mutateAsync();
+    } catch (error) {
+      console.error('Disconnect error:', error);
+      toast.error('Failed to disconnect Slack');
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
   
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label>Notification Preview</Label>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8 px-2" 
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </Button>
-      </div>
-      
-      {expanded && (
-        <div className="border rounded-md p-4 bg-slate-50">
-          <Tabs defaultValue="new_request">
-            <TabsList className="mb-4">
-              <TabsTrigger value="new_request">New Request</TabsTrigger>
-              <TabsTrigger value="status_update">Status Update</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="new_request">
-              <div className="space-y-3 text-sm">
-                <div className="font-semibold text-base">🚚 New Delivery Request</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="font-semibold">Request ID:</div>
-                    <div>REQ-ABC123</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">Priority:</div>
-                    <div>urgent</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="font-semibold">Pickup:</div>
-                    <div>Memorial Hospital Lab</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">Delivery:</div>
-                    <div>Central Medical Center</div>
-                  </div>
-                </div>
-                <div className="p-2 border rounded bg-white text-blue-600 font-medium text-center">
-                  View Details
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="status_update">
-              <div className="space-y-3 text-sm">
-                <div className="font-semibold text-base">🚚 Delivery Status Update</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="font-semibold">Request ID:</div>
-                    <div>REQ-ABC123</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">Status:</div>
-                    <div>Out for delivery</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="font-semibold">Tracking ID:</div>
-                    <div>TRK-XYZ789</div>
-                  </div>
-                  <div>
-                    <div className="font-semibold">Time:</div>
-                    <div>2:45 PM</div>
-                  </div>
-                </div>
-                <div className="p-2 border rounded bg-white text-blue-600 font-medium text-center">
-                  View Details
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SlackIntegrationCard = () => {
-  const { configureSlackIntegration, isConfigured, sendNewRequestNotification, sendStatusUpdateNotification } = useSlackNotification();
-  const [webhookUrl, setWebhookUrl] = useState<string>('');
-  const [channelId, setChannelId] = useState<string>('');
-  const [enabled, setEnabled] = useState<boolean>(true);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isTesting, setIsTesting] = useState<boolean>(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'not_configured' | 'error'>('not_configured');
-
-  // Add a state for expanded testing panel
-  const [showTestPanel, setShowTestPanel] = useState<boolean>(false);
-
-  // Load existing configuration on component mount
-  useEffect(() => {
-    const config = getSlackConfig();
-    if (config.webhookUrl && config.webhookUrl !== 'YOUR_SLACK_WEBHOOK_URL') {
-      setWebhookUrl(config.webhookUrl);
-      setConnectionStatus(isConfigured ? 'connected' : 'not_configured');
-    }
-    if (config.channelId) {
-      setChannelId(config.channelId);
-    }
-    setEnabled(config.enabled);
-  }, [isConfigured]);
-
-  const handleSave = () => {
-    if (!webhookUrl) {
-      toast.error('Please enter a webhook URL');
-      return;
-    }
-
-    if (!webhookUrl.startsWith('https://hooks.slack.com/services/')) {
-      toast.error('Invalid webhook URL format. It should start with "https://hooks.slack.com/services/"');
-      setConnectionStatus('error');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      configureSlackIntegration(webhookUrl, channelId, enabled);
-      setConnectionStatus('connected');
-      setIsSaving(false);
-    } catch (error) {
-      console.error('Error saving Slack configuration:', error);
-      toast.error('Failed to save Slack configuration');
-      setConnectionStatus('error');
-      setIsSaving(false);
-    }
-  };
-
-  const testSlackIntegration = async () => {
-    if (!isConfigured && (!webhookUrl || webhookUrl === 'YOUR_SLACK_WEBHOOK_URL')) {
-      toast.error('Please configure and save Slack settings first');
-      return;
-    }
-
-    setIsTesting(true);
-    try {
-      // Create a temporary configuration if not saved yet
-      if (!isConfigured) {
-        configureSlackIntegration(webhookUrl, channelId, enabled);
-      }
-
-      const testMessage = {
-        text: "🧪 This is a test message from the Express Medical Dispatch system",
-        blocks: [
-          {
-            "type": "header",
-            "text": {
-              "type": "plain_text",
-              "text": "🧪 Test Notification",
-              "emoji": true
-            }
-          },
-          {
-            "type": "section",
-            "text": {
-              "type": "mrkdwn",
-              "text": "This is a test message from the *Express Medical Dispatch* system. If you're seeing this, your Slack integration is working correctly!"
-            }
-          },
-          {
-            "type": "context",
-            "elements": [
-              {
-                "type": "mrkdwn",
-                "text": "Sent from Express Medical Dispatch Admin Dashboard"
-              }
-            ]
-          }
-        ]
-      };
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(testMessage)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        setConnectionStatus('error');
-        throw new Error(`Slack responded with: ${errorText}`);
-      }
-
-      setConnectionStatus('connected');
-      toast.success('Test message sent successfully to Slack');
-    } catch (error) {
-      console.error('Error testing Slack integration:', error);
-      setConnectionStatus('error');
-      toast.error(`Failed to send test message: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  // Add this new function to test different notification types
-  const testNotificationType = async (type: string) => {
-    setIsTesting(true);
-    try {
-      // Create a sample delivery request for testing
-      const sampleRequest = {
-        id: `TEST-${Math.floor(Math.random() * 10000)}`,
-        pickup_location: 'Memorial Hospital',
-        delivery_location: 'Central Medical Center',
-        status: 'pending',
-        priority: 'high',
-        packageType: 'Medical Samples',
-        distance: 5.2,
-        trackingId: `TRK-${Math.floor(Math.random() * 10000)}`,
-      };
-      
-      let success = false;
-      
-      switch(type) {
-        case 'new_request':
-          success = await sendNewRequestNotification(sampleRequest);
-          break;
-        case 'status_update':
-          success = await sendStatusUpdateNotification(sampleRequest, 'in_progress', 'Driver on the way');
-          break;
-        default:
-          // Just test the basic integration
-          success = await testSlackIntegration();
-          break;
-      }
-      
-      if (success) {
-        toast.success(`Test ${type} notification sent successfully`);
-      } else {
-        toast.error(`Failed to send ${type} notification`);
-      }
-    } catch (error) {
-      console.error('Error testing notification:', error);
-      toast.error('Error during test: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Slack Integration</CardTitle>
+        <CardTitle className="flex items-center text-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-slack mr-2 h-5 w-5 text-medical-blue"><path d="M3 8h3v8.3c0 .4.3.7.7.7H3"/><path d="M6 8h3v8.3c0 .4.3.7.7.7H6"/><path d="M15 8h3v8.3c0 .4.3.7.7.7h-3"/><path d="M12 8h3v8.3c0 .4.3.7.7.7h-3"/><path d="M8 3h8v3c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1V3"/><path d="M8 6h8v3c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1V6"/><path d="M8 15h8v3c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-3"/><path d="M8 12h8v3c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1v-3"/></svg>
+          Slack Integration
+        </CardTitle>
         <CardDescription>
-          Receive real-time notifications in Slack for new requests and status updates
+          Receive real-time delivery updates directly in your Slack channels.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ConnectionStatus status={connectionStatus} />
-        
-        <div className="space-y-2">
-          <Label htmlFor="webhook-url">Webhook URL</Label>
-          <Input
-            id="webhook-url"
-            placeholder="https://hooks.slack.com/services/TXXXXXX/BXXXXXX/XXXXXXXX"
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Create a webhook URL in your Slack workspace settings under the "Incoming Webhooks" section.
-            The URL must start with "https://hooks.slack.com/services/".
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="channel-id">Channel ID (Optional)</Label>
-          <Input
-            id="channel-id"
-            placeholder="C12345678"
-            value={channelId}
-            onChange={(e) => setChannelId(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            The channel ID where notifications will be sent (if different from webhook default)
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="notifications-enabled">Enable Notifications</Label>
-            <p className="text-xs text-muted-foreground">
-              Turn Slack notifications on or off
-            </p>
+        {isStatusLoading ? (
+          <div className="flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
           </div>
-          <Switch
-            id="notifications-enabled"
-            checked={enabled}
-            onCheckedChange={setEnabled}
-          />
-        </div>
-        
-        <SlackPreview />
-
-        {isConfigured && (
-          <div className="space-y-2 mt-6 pt-6 border-t">
-            <div className="flex items-center justify-between">
-              <Label>Test Notifications</Label>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2" 
-                onClick={() => setShowTestPanel(!showTestPanel)}
-              >
-                {showTestPanel ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
+        ) : isConfigured ? (
+          <div className="space-y-4">
+            <div className="flex items-center text-green-600">
+              <CheckCircle2 className="mr-2 h-5 w-5" />
+              <span className="font-medium">Slack integration is active</span>
             </div>
-            
-            {showTestPanel && (
-              <div className="space-y-4 mt-2">
-                <p className="text-sm text-muted-foreground">
-                  Send test notifications to verify different notification types.
-                </p>
-                
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testNotificationType('new_request')}
-                    disabled={isTesting}
-                  >
-                    Test New Request
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testNotificationType('status_update')}
-                    disabled={isTesting}
-                  >
-                    Test Status Update
-                  </Button>
+            <p className="text-sm text-gray-500">
+              Delivery updates will be sent to your Slack channel in real-time.
+            </p>
+            <Button
+              variant="destructive"
+              onClick={handleDisconnect}
+              disabled={isDisconnecting}
+            >
+              {isDisconnecting ? 'Disconnecting...' : 'Disconnect Slack'}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="slack-webhook">Slack Webhook URL</Label>
+              <Input
+                id="slack-webhook"
+                placeholder="Enter your Slack Webhook URL"
+                type="url"
+                value={slackWebhookUrl}
+                onChange={handleWebhookChange}
+                disabled={isConnecting}
+              />
+              {errorMessage && (
+                <div className="text-red-500 text-sm flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  {errorMessage}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+            <Button onClick={handleConnect} disabled={isConnecting}>
+              {isConnecting ? 'Connecting...' : 'Connect to Slack'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleTestMessage}
+              disabled={isTesting}
+            >
+              {isTesting ? 'Testing...' : 'Send Test Message'}
+            </Button>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={testSlackIntegration}
-          disabled={isTesting || isSaving || (!isConfigured && !webhookUrl)}
-        >
-          {isTesting ? 'Sending...' : 'Test Integration'}
-        </Button>
-        <Button onClick={handleSave} disabled={isSaving || !webhookUrl}>
-          {isSaving ? 'Saving...' : 'Save Settings'}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
 
-export default SlackIntegrationCard; 
+export default SlackIntegrationCard;

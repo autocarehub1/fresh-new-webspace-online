@@ -83,12 +83,12 @@ export default function CustomerNewRequest() {
     setIsSubmitting(true);
     
     try {
-      // Build the delivery request with user info
+      // Build the delivery request with user info and proper typing
       const deliveryRequest = {
         ...values,
         email: user.email,
         user_id: user.id,
-        status: "pending",
+        status: 'pending' as const, // Proper type casting
       };
       
       // Submit to the API service
@@ -338,4 +338,4 @@ export default function CustomerNewRequest() {
       </form>
     </Form>
   );
-} 
+}

@@ -223,7 +223,7 @@ export default function CustomerRequestHistory() {
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                   
@@ -241,6 +241,7 @@ export default function CustomerRequestHistory() {
                           <PaginationLink
                             isActive={page === currentPage}
                             onClick={() => setCurrentPage(page)}
+                            className="cursor-pointer"
                           >
                             {page}
                           </PaginationLink>
@@ -263,7 +264,7 @@ export default function CustomerRequestHistory() {
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -293,4 +294,4 @@ export default function CustomerRequestHistory() {
       )}
     </div>
   );
-} 
+}

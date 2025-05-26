@@ -1,254 +1,229 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Package, AlertCircle } from 'lucide-react';
-import type { Driver, Delivery } from '@/types/delivery';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { MapPin, Clock, Package, User, Phone, Mail, FileText, CheckCircle2, ClipboardCheck, PlusCircle, AlertCircle } from 'lucide-react';
+import { DeliveryRequest, Driver } from '@/types/delivery';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DriverAssignmentProps {
-  drivers: Driver[];
-  requests: Delivery[];
-  selectedDriverId: string;
-  selectedRequestId: string;
-  onDriverSelect: (driverId: string) => void;
-  onRequestSelect: (requestId: string) => void;
-  onAssignDriver: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  request: DeliveryRequest | undefined;
+  onSuccess: () => void;
 }
 
-const DriverAssignment = ({
-  drivers,
-  requests,
-  selectedDriverId,
-  selectedRequestId,
-  onDriverSelect,
-  onRequestSelect,
-  onAssignDriver,
-}: DriverAssignmentProps) => {
-  const [filter, setFilter] = useState<'all' | 'available'>('available');
-
-  // Add console logs to help with debugging
-  useEffect(() => {
-    console.log('DriverAssignment: Drivers count:', drivers.length);
-    console.log('DriverAssignment: Requests count:', requests.length);
-    console.log('DriverAssignment: Selected driver ID:', selectedDriverId);
-    console.log('DriverAssignment: Selected request ID:', selectedRequestId);
-  }, [drivers, requests, selectedDriverId, selectedRequestId]);
-
-  const availableDrivers = drivers.filter(d => {
-    // Active drivers with no delivery are always available
-    if (d.status === 'active' && !d.current_delivery) {
-      return true;
-    }
-    
-    // Active drivers with a completed delivery should also be considered available
-    if (d.status === 'active' && d.current_delivery) {
-      // Find the driver's current delivery in the requests array
-      const currentDelivery = requests.find(r => r.id === d.current_delivery);
-      
-      // If the delivery is completed or doesn't exist (might have been deleted), consider the driver available
-      return currentDelivery?.status === 'completed' || !currentDelivery;
-    }
-    
-    return false;
-  });
-
-  const pendingRequests = requests.filter(r => 
-    (r.status === 'pending' || r.status === 'in_progress') && !r.assigned_driver
-  );
-
-  // Log the filtered lists
-  useEffect(() => {
-    console.log('DriverAssignment: Available drivers:', availableDrivers.length);
-    console.log('DriverAssignment: Pending requests:', pendingRequests.length);
-    console.log('DriverAssignment: Pending request IDs:', pendingRequests.map(r => r.id));
-  }, [availableDrivers, pendingRequests]);
-
-  const selectedDriver = drivers.find(d => d.id === selectedDriverId);
-  const selectedRequest = requests.find(r => r.id === selectedRequestId);
-
-  const calculateDistance = (driver: Driver, request: Delivery) => {
-    // This would be replaced with actual distance calculation
-    return Math.random() * 10; // Placeholder
-  };
-
-  const getBestMatch = () => {
-    if (!selectedDriver || !pendingRequests.length) return null;
-    
-    return pendingRequests.reduce((best, request) => {
-      const distance = calculateDistance(selectedDriver, request);
-      if (!best || distance < calculateDistance(selectedDriver, best)) {
-        return request;
+const DriverAssignment: React.FC<DriverAssignmentProps> = ({ open, onOpenChange, request, onSuccess }) => {
+  const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
+  const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  React.useEffect(() => {
+    const fetchDrivers = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('drivers')
+          .select('*')
+          .eq('status', 'active');
+        
+        if (error) {
+          throw error;
+        }
+        
+        setAvailableDrivers(data || []);
+      } catch (error: any) {
+        console.error('Error fetching drivers:', error);
+        setError(error.message || 'Failed to load drivers');
+        toast.error('Failed to load drivers');
+      } finally {
+        setIsLoading(false);
       }
-      return best;
-    });
+    };
+    
+    fetchDrivers();
+  }, []);
+  
+  const handleAssignDriver = async (driverId: string) => {
+    if (!request) return;
+    
+    try {
+      setIsAssigning(driverId);
+      
+      // Fix the address property access
+      const pickupAddress = typeof request.pickup_location === 'string' 
+        ? request.pickup_location 
+        : request.pickup_location;
+      
+      // Use delivery_time instead of delivery_time_window if it doesn't exist
+      const deliveryWindow = request.delivery_time_window || request.delivery_time || 'Standard delivery';
+      
+      const slackMessage = `New delivery assigned to driver ${driverId}:\n` +
+                           `Pickup: ${pickupAddress}\n` +
+                           `Delivery: ${request.delivery_location}\n` +
+                           `Priority: ${request.priority}\n` +
+                           `Delivery Time: ${deliveryWindow}`;
+      
+      const { data, error } = await supabase
+        .from('delivery_requests')
+        .update({ assigned_driver: driverId })
+        .eq('id', request.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Send Slack notification
+      const { error: slackError } = await supabase.functions.invoke('send-slack-notification', {
+        body: {
+          message: slackMessage,
+          delivery: {
+            id: request.id,
+            pickup_location: request.pickup_location,
+            delivery_location: request.delivery_location,
+            status: request.status,
+            priority: request.priority,
+            packageType: request.packageType,
+            distance: 2.5,
+            trackingId: request.trackingId || request.id
+          }
+        }
+      });
+      
+      if (slackError) {
+        console.error('Slack notification error:', slackError);
+        toast.error('Failed to send Slack notification');
+      }
+      
+      toast.success('Driver assigned successfully');
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error('Error assigning driver:', error);
+      setError(error.message || 'Failed to assign driver');
+      toast.error('Failed to assign driver');
+    } finally {
+      setIsAssigning(null);
+    }
   };
-
-  const bestMatch = getBestMatch();
-
+  
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Driver Assignment</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Driver
-              </label>
-              <Select
-                value={selectedDriverId}
-                onValueChange={onDriverSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a driver" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(filter === 'available' ? availableDrivers : drivers).map((driver) => {
-                    // Check if the driver has a completed delivery
-                    const hasCompletedDelivery = driver.current_delivery && 
-                      requests.find(r => r.id === driver.current_delivery)?.status === 'completed';
-                    
-                    return (
-                      <SelectItem key={driver.id} value={driver.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{driver.name}</span>
-                          {driver.status === 'active' && !driver.current_delivery && (
-                            <Badge variant="secondary">Available</Badge>
-                          )}
-                          {driver.status === 'active' && hasCompletedDelivery && (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              Completed Delivery
-                            </Badge>
-                          )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Assign Driver</DialogTitle>
+        </DialogHeader>
+        
+        {request ? (
+          <div className="py-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Request Information</CardTitle>
+                <CardDescription>Details of the delivery request</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4 pt-0">
+                <div>
+                  <p className="text-sm font-medium">Pickup Location:</p>
+                  <p className="text-sm">{request.pickup_location}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Delivery Location:</p>
+                  <p className="text-sm">{request.delivery_location}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Priority:</p>
+                  <Badge variant={request.priority === 'urgent' ? 'destructive' : 'outline'}>
+                    {request.priority || 'normal'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Package Type:</p>
+                  <p className="text-sm">{request.packageType || 'Not specified'}</p>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Separator className="my-4" />
+            
+            <h3 className="text-lg font-medium mb-2">Available Drivers</h3>
+            
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-6 h-6 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+              </div>
+            ) : error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : availableDrivers.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No Drivers Available</AlertTitle>
+                <AlertDescription>
+                  There are currently no active drivers available to assign.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="grid gap-4">
+                {availableDrivers.map(driver => (
+                  <Card key={driver.id} className="border">
+                    <CardContent className="flex items-center justify-between p-3">
+                      <div className="flex items-center space-x-4">
+                        <Avatar>
+                          <AvatarImage src={driver.photo} alt={driver.name} />
+                          <AvatarFallback>{driver.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <CardTitle className="text-sm font-medium">{driver.name}</CardTitle>
+                          <CardDescription className="text-xs text-gray-500">
+                            {driver.vehicle_type} - {driver.vehicle_number || 'Not specified'}
+                          </CardDescription>
                         </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedDriver && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Current Location: {selectedDriver.current_location.address}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Avg. Response Time: {selectedDriver.average_response_time?.toFixed(1)} min
-                  </span>
-                </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAssignDriver(driver.id)}
+                        disabled={isAssigning === driver.id}
+                      >
+                        {isAssigning === driver.id ? 'Assigning...' : 'Assign'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Delivery Request
-              </label>
-              <Select
-                value={selectedRequestId}
-                onValueChange={onRequestSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a request" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pendingRequests.length === 0 ? (
-                    <SelectItem value="no-requests" disabled>
-                      No pending requests available
-                    </SelectItem>
-                  ) : (
-                    pendingRequests.map((request) => (
-                      <SelectItem key={request.id} value={request.id}>
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4" />
-                          <span>Request #{request.id}</span>
-                          <Badge variant="outline">
-                            {request.priority} Priority
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedRequest && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Delivery Location: {selectedRequest.delivery_location.address}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Time Window: {selectedRequest.delivery_time_window}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {pendingRequests.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
-            <div className="mb-2 text-orange-400">
-              <AlertCircle size={24} />
-            </div>
-            <p>No unassigned delivery requests available.</p>
-            <p className="text-xs mt-1">Create a delivery request or check for requests with 'in_progress' status but no driver.</p>
-          </div>
+        ) : (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              No delivery request was provided.
+            </AlertDescription>
+          </Alert>
         )}
-
-        {bestMatch && selectedDriver && !selectedRequestId && (
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              Recommended assignment based on proximity:
-            </p>
-            <div className="mt-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                <span>Request #{bestMatch.id}</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRequestSelect(bestMatch.id)}
-              >
-                Assign
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="mt-6 flex justify-end">
-          <Button
-            onClick={onAssignDriver}
-            disabled={!selectedDriverId || !selectedRequestId || pendingRequests.length === 0 || availableDrivers.length === 0}
-          >
-            Assign Driver to Delivery
+        
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            Close
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
