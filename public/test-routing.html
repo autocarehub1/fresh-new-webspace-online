@@ -1,0 +1,30 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Routing Test</title>
+</head>
+<body>
+    <h1>Routing Test Page</h1>
+    <p>If you can see this page at /test-routing, then static file serving is working.</p>
+    <p>The issue is likely with SPA routing configuration.</p>
+    
+    <h2>Test Links:</h2>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/driver-auth">Driver Auth</a></li>
+        <li><a href="/tracking">Tracking</a></li>
+    </ul>
+    
+    <h2>Debug Info:</h2>
+    <p>Current URL: <span id="current-url"></span></p>
+    <p>User Agent: <span id="user-agent"></span></p>
+    
+    <script>
+        document.getElementById('current-url').textContent = window.location.href;
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+    </script>
+</body>
+</html>
