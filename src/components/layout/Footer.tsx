@@ -7,11 +7,12 @@ export const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div>
-            <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-              <div className="w-8 h-8 rounded-md bg-white grid place-items-center">
-                <span className="text-medical-blue text-xs font-bold">CNL</span>
-              </div>
-              <span>Catalyst<span className="text-medical-blue-light">Network</span></span>
+            <Link to="/" className="flex items-center gap-2 mb-4">
+              <img 
+                src="/lovable-uploads/49b6466e-7267-4a9d-a03c-5b25317f80a4.png" 
+                alt="Catalyst Network Logistics" 
+                className="h-12 w-auto filter brightness-0 invert"
+              />
             </Link>
             <p className="mt-4 text-sm text-gray-300">
               Providing professional logistics services with unmatched reliability, speed, and compliance throughout San Antonio.

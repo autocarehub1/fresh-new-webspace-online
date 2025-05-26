@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,12 @@ export const Navbar = () => {
   return (
     <header className="border-b bg-white sticky top-0 z-40">
       <div className="container mx-auto px-4 sm:px-6 flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl text-medical-blue">
-          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-medical-blue to-medical-teal grid place-items-center">
-            <span className="text-white text-xs font-bold">CNL</span>
-          </div>
-          <span>Catalyst<span className="text-medical-teal">Network</span></span>
+        <Link to="/" className="flex items-center gap-2">
+          <img 
+            src="/lovable-uploads/49b6466e-7267-4a9d-a03c-5b25317f80a4.png" 
+            alt="Catalyst Network Logistics" 
+            className="h-10 w-auto"
+          />
         </Link>
 
         {/* Desktop Menu */}
