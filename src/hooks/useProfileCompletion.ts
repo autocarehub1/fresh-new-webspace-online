@@ -43,7 +43,9 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
     setIsLoading(true);
 
     try {
-      console.log('Updating driver profile with additional information for user:', user.id);
+      console.log('=== DEBUG: Starting profile completion ===');
+      console.log('User:', user);
+      console.log('Profile data:', profileData);
       
       if (!user?.id) {
         throw new Error('User ID is required for profile update');
@@ -53,32 +55,36 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
         throw new Error('User email is required for profile update');
       }
 
-      // First, try to refresh the schema cache
-      console.log('Refreshing schema cache...');
-      const schemaRefreshed = await refreshDriversSchema();
-      
-      if (!schemaRefreshed) {
-        console.warn('Schema refresh failed, but continuing...');
-      }
-
       // Check if the driver record exists first
-      console.log('Checking if driver record exists...');
+      console.log('=== DEBUG: Checking if driver record exists ===');
       const { data: existingDriver, error: checkError } = await supabase
         .from('drivers')
         .select('id, name, email, phone, vehicle_type')
         .eq('id', user.id)
         .maybeSingle();
 
+      console.log('Existing driver check:', { existingDriver, checkError });
+
       if (checkError) {
         console.error('Error checking existing driver:', checkError);
+        
+        if (checkError.message.includes('relation "drivers" does not exist')) {
+          throw new Error('The drivers table does not exist. Please run the database migration first.');
+        }
+        
+        if (checkError.message.includes('column') && checkError.message.includes('does not exist')) {
+          throw new Error('The drivers table is missing required columns. Please run the latest migration.');
+        }
+        
         throw new Error(`Failed to check existing driver: ${checkError.message}`);
       }
 
       if (!existingDriver) {
-        throw new Error('Driver profile not found. Please complete the initial profile setup first.');
+        console.error('No driver profile found for user:', user.id);
+        throw new Error('Driver profile not found. Please complete the initial profile setup first by going to /driver-profile-setup');
       }
 
-      console.log('Existing driver found:', existingDriver);
+      console.log('=== DEBUG: Existing driver found, updating profile ===');
 
       // Update the existing driver record with additional profile information
       const updateData = {
@@ -97,7 +103,7 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
         updated_at: new Date().toISOString()
       };
 
-      console.log('Updating driver with data:', updateData);
+      console.log('=== DEBUG: Updating driver with data ===', updateData);
 
       const { data: updatedDriver, error: updateError } = await supabase
         .from('drivers')
@@ -106,18 +112,19 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
         .select()
         .single();
 
+      console.log('Update result:', { updatedDriver, updateError });
+
       if (updateError) {
         console.error('Profile update error:', updateError);
         
-        // Provide more specific error messages based on the error
         if (updateError.message.includes('column') && updateError.message.includes('does not exist')) {
-          throw new Error('Database schema is not up to date. Please run the latest migration in Supabase.');
+          throw new Error('Database schema is missing required columns. Please run the migration: supabase/migrations/20250526_fix_drivers_table.sql');
         }
         
         throw new Error(`Failed to update profile: ${updateError.message}`);
       }
 
-      console.log('Profile updated successfully:', updatedDriver);
+      console.log('=== DEBUG: Profile updated successfully ===', updatedDriver);
 
       // Update user metadata
       const { error: metadataError } = await supabase.auth.updateUser({
@@ -129,15 +136,14 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
 
       if (metadataError) {
         console.warn('Metadata update warning:', metadataError.message);
-        // Don't fail the whole process for metadata issues
       }
 
-      console.log('Profile completion successful');
+      console.log('=== DEBUG: Profile completion successful ===');
       toast.success('Profile completed successfully');
       onComplete();
 
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      console.error('=== DEBUG: Error updating profile ===', error);
       let errorMessage = 'Failed to update profile';
       
       if (error?.message) {

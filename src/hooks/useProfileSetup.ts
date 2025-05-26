@@ -37,7 +37,10 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
     setLoading(true);
     setError(null);
     
-    console.log('Starting profile setup for user:', userId);
+    console.log('=== DEBUG: Starting profile setup ===');
+    console.log('User ID:', userId);
+    console.log('User Email:', userEmail);
+    console.log('Profile Data:', profileData);
     
     if (!validateForm(profileData)) {
       setLoading(false);
@@ -53,14 +56,46 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         throw new Error("User email is required");
       }
       
-      // First, try to refresh the schema cache
-      console.log('Refreshing schema cache...');
-      await refreshDriversSchema();
+      // First, check if the drivers table exists and what columns it has
+      console.log('=== DEBUG: Checking drivers table schema ===');
+      const { data: schemaCheck, error: schemaError } = await supabase
+        .from('drivers')
+        .select('*')
+        .limit(1);
+        
+      console.log('Schema check result:', { schemaCheck, schemaError });
       
-      // 1. Upload photo if provided
+      if (schemaError) {
+        console.error('Schema error details:', schemaError);
+        if (schemaError.message.includes('relation "drivers" does not exist')) {
+          throw new Error('The drivers table does not exist. Please run the database migration first.');
+        }
+        if (schemaError.message.includes('column') && schemaError.message.includes('does not exist')) {
+          throw new Error('The drivers table is missing required columns. Please run the latest migration.');
+        }
+      }
+      
+      // Check if driver already exists
+      console.log('=== DEBUG: Checking for existing driver ===');
+      const { data: existingDriver, error: checkError } = await supabase
+        .from('drivers')
+        .select('id, name, email')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      console.log('Existing driver check:', { existingDriver, checkError });
+      
+      if (existingDriver) {
+        console.log('Driver already exists, redirecting to dashboard');
+        toast.info("Your profile is already set up");
+        navigate(`/driver/${userId}`);
+        return;
+      }
+      
+      // Upload photo if provided
       let photoUrl = '';
       if (profileData.photo) {
-        console.log('Uploading photo...');
+        console.log('=== DEBUG: Uploading photo ===');
         const fileExt = profileData.photo.name.split('.').pop();
         const fileName = `${userId}/${Date.now()}.${fileExt}`;
         
@@ -70,7 +105,6 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
           
         if (uploadError) {
           console.error('Photo upload error:', uploadError);
-          // Don't fail the whole process for photo upload issues
           console.warn('Continuing without photo');
         } else {
           const { data: publicUrlData } = supabase.storage
@@ -82,17 +116,16 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         }
       }
       
-      // 2. Create driver profile in drivers table with email field
-      console.log('Creating driver profile...');
+      // Create driver profile
+      console.log('=== DEBUG: Creating driver profile ===');
       const driverData = {
         id: userId,
         name: profileData.name.trim(),
-        email: userEmail, // Make sure to include email
+        email: userEmail,
         phone: profileData.phone.trim(),
         vehicle_type: profileData.vehicle_type,
         photo: photoUrl,
         status: 'active',
-        current_location: { lat: 0, lng: 0 }, // Default location
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -105,20 +138,27 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         .select()
         .single();
         
+      console.log('Insert result:', { insertedDriver, profileError });
+        
       if (profileError) {
         console.error('Driver profile creation error:', profileError);
         
         if (profileError.message.includes('column') && profileError.message.includes('does not exist')) {
-          throw new Error('Database schema is not up to date. Please run the latest migration in Supabase.');
+          throw new Error('Database schema is missing required columns. Please run the migration: supabase/migrations/20250526_fix_drivers_table.sql');
+        }
+        
+        if (profileError.message.includes('duplicate key value')) {
+          throw new Error('A driver profile with this ID already exists.');
         }
         
         throw new Error(`Failed to create driver profile: ${profileError.message}`);
       }
       
-      console.log('Driver profile created successfully:', insertedDriver);
+      console.log('=== DEBUG: Driver profile created successfully ===');
+      console.log('Inserted driver:', insertedDriver);
       
-      // 3. Update user metadata
-      console.log('Updating user metadata...');
+      // Update user metadata
+      console.log('=== DEBUG: Updating user metadata ===');
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
           name: profileData.name.trim(),
@@ -132,24 +172,25 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
       
       if (updateError) {
         console.error('User metadata update error:', updateError);
-        // Don't fail the whole process for metadata update issues
         console.warn('Continuing despite metadata update error');
+      } else {
+        console.log('User metadata updated successfully');
       }
       
-      console.log('Profile setup completed successfully');
+      console.log('=== DEBUG: Profile setup completed successfully ===');
       toast.success("Profile setup complete! Welcome to the driver portal.");
       navigate(`/driver/${userId}`);
       
     } catch (err: any) {
-      console.error('Profile setup error:', err);
+      console.error('=== DEBUG: Profile setup error ===', err);
       let errorMessage = 'Failed to set up profile';
       
       if (err?.message) {
-        errorMessage = `Failed to set up profile: ${err.message}`;
+        errorMessage = err.message;
       } else if (err?.error?.message) {
-        errorMessage = `Failed to set up profile: ${err.error.message}`;
+        errorMessage = err.error.message;
       } else if (typeof err === 'string') {
-        errorMessage = `Failed to set up profile: ${err}`;
+        errorMessage = err;
       }
       
       setError(errorMessage);
