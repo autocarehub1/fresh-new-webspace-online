@@ -29,6 +29,7 @@ import DriverOnboarding from "./pages/DriverOnboarding";
 import AuthCallback from "./pages/auth/callback";
 import DriverProfileSetup from "./pages/DriverProfileSetup";
 import DebugSupabase from "./pages/DebugSupabase";
+import AppHealthCheck from "./components/debug/AppHealthCheck";
 import { ProtectedRoute, CustomerRoute } from "./components/auth/ProtectedRoutes";
 
 // Redirect component for legacy URLs
@@ -117,6 +118,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <AutoDispatchIndicator />
+            <AppHealthCheck />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
