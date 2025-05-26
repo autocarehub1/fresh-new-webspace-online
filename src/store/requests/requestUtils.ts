@@ -1,6 +1,7 @@
 import { DeliveryRequest, DeliveryStatus, TrackingUpdate, Coordinates } from '@/types/delivery';
 import { generateTrackingId } from '@/utils/deliveryUtils';
 import { useDriverStore } from '@/store/driverStore';
+import { reverseGeocode } from '@/utils/geocode';
 
 export const createStatusUpdate = (status: DeliveryStatus, location: string = 'Admin Dashboard'): TrackingUpdate => ({
   status: status === 'in_progress' ? 'Driver Assigned' : status.charAt(0).toUpperCase() + status.slice(1),
@@ -105,17 +106,31 @@ export const generateDetailedStatus = (
   }
 };
 
-// Create a detailed tracking update with location information
+// Create a detailed tracking update with location information (async, with geocoding)
+export const createDetailedTrackingUpdateAsync = async (
+  request: DeliveryRequest,
+  status: string,
+  coordinates: Coordinates,
+  note?: string
+): Promise<TrackingUpdate> => {
+  const locationDescription = await reverseGeocode(coordinates.lat, coordinates.lng);
+  return {
+    status: status,
+    timestamp: new Date().toISOString(),
+    location: locationDescription,
+    note: note || `Courier is ${status.toLowerCase()}`,
+    coordinates: coordinates
+  };
+};
+
+// Keep the original sync version for legacy use
 export const createDetailedTrackingUpdate = (
   request: DeliveryRequest,
   status: string,
   coordinates: Coordinates,
   note?: string
 ): TrackingUpdate => {
-  // Generate a location description based on coordinates
-  // In a real application, you'd use reverse geocoding to get the actual address
   const locationDescription = `Near ${coordinates.lat.toFixed(3)}, ${coordinates.lng.toFixed(3)}`;
-  
   return {
     status: status,
     timestamp: new Date().toISOString(),

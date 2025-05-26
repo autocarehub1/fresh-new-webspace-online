@@ -1,14 +1,25 @@
 # Enable rewriting
 RewriteEngine On
 
-# If the request is not for a real file or directory, 
+# Force HTTPS (uncomment if you have SSL)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# If the request is not for a real file or directory,
 # rewrite to index.html to support SPA routing
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+
+# Specific rule for tracking with query parameters
+RewriteCond %{REQUEST_URI} ^/tracking [OR]
+RewriteCond %{QUERY_STRING} ^id=
 RewriteRule ^ index.html [L]
 
+# General rule for all other routes in the SPA
+RewriteRule ^ index.html [QSA,L]
+
 # Set cache control for static assets
-<FilesMatch "\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$">
+<FilesMatch "\.(css|js|jpg|jpeg|png|gif|ico|svg)$">
     Header set Cache-Control "max-age=31536000, public"
 </FilesMatch>
 
@@ -21,4 +32,14 @@ AddDefaultCharset UTF-8
 # Compress text, HTML, JavaScript, CSS, XML
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json
+</IfModule>
+
+# Ensure proper handling of hash-based routing
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
 </IfModule> 

@@ -12,7 +12,8 @@ export const useDeliveryData = () => {
   const { 
     data: deliveries, 
     isLoading, 
-    error 
+    error,
+    refetch: queryRefetch
   } = useQuery({
     queryKey: ['deliveryRequests'],
     queryFn: async () => {
@@ -34,8 +35,25 @@ export const useDeliveryData = () => {
         throw error;
       }
 
-      // Log the fetched data
+      // Log the fetched data with status breakdown
       console.log('Fetched delivery requests:', supabaseData?.length || 0);
+      
+      // Log status breakdown for debugging
+      if (supabaseData) {
+        const statusBreakdown = supabaseData.reduce((acc, req) => {
+          acc[req.status] = (acc[req.status] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        console.log('Delivery requests status breakdown:', statusBreakdown);
+        
+        // Log pending requests with no assigned driver
+        const pendingUnassigned = supabaseData.filter(req => 
+          req.status === 'pending' && !req.assigned_driver
+        );
+        console.log('Pending unassigned requests:', pendingUnassigned.length);
+        console.log('Pending unassigned request IDs:', pendingUnassigned.map(req => req.id));
+      }
       
       // Always return fresh data from Supabase
       if (supabaseData && supabaseData.length > 0) {
@@ -58,6 +76,9 @@ export const useDeliveryData = () => {
           estimatedDelivery: item.estimated_delivery,
           temperature: item.temperature,
           tracking_updates: item.tracking_updates || [],
+          // Additional fields
+          company_name: item.company_name,
+          requester_name: item.requester_name,
           // Extract email from users join
           email: item.users?.email || "catalystlogistics2025@gmail.com"
         }));
@@ -70,22 +91,38 @@ export const useDeliveryData = () => {
 
   // Update delivery request status in Supabase and keep frontend up to date
   const updateDeliveryRequest = useMutation({
-    mutationFn: async ({ id, status }: { id: string, status: 'pending' | 'in_progress' | 'completed' | 'declined' }) => {
+    mutationFn: async (updateData: { id: string, status?: 'pending' | 'in_progress' | 'completed' | 'declined', [key: string]: any }) => {
+      const { id, ...fields } = updateData;
+      
       // Guarantee tracking_id if moving to in_progress
-      let updatedFields: any = { status };
-      if (status === 'in_progress') {
+      let updatedFields: any = { ...fields };
+      
+      if (fields.status === 'in_progress') {
         const req = deliveries?.find(d => d.id === id);
         if (!req?.trackingId) {
           updatedFields.tracking_id = `MED-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         }
       }
+      
+      // For requests changing to pending, ensure they don't have an assigned driver
+      if (fields.status === 'pending') {
+        updatedFields.assigned_driver = null;
+      }
+      
+      console.log(`Updating delivery request ${id} with fields:`, updatedFields);
+      
       const { error } = await supabase
         .from('delivery_requests')
         .update(updatedFields)
         .eq('id', id);
 
-      if (error) throw error;
-      return { id, status };
+      if (error) {
+        console.error(`Error updating request ${id}:`, error);
+        throw error;
+      }
+      
+      console.log(`Successfully updated request ${id}`);
+      return { id, ...updatedFields };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
@@ -203,6 +240,20 @@ export const useDeliveryData = () => {
     updateDeliveryRequest,
     addTrackingUpdate,
     simulateMovement,
+    // Add a dedicated refetch function with better error handling
+    refetch: async () => {
+      try {
+        console.log('🔄 Manually refetching delivery requests...');
+        const result = await queryRefetch();
+        console.log(`✅ Successfully refetched ${result.data?.length || 0} delivery requests`);
+        return result;
+      } catch (error) {
+        console.error('❌ Error manually refetching delivery requests:', error);
+        toast.error('Failed to refresh delivery data');
+        // Return current data to prevent errors
+        return { data: deliveries };
+      }
+    },
     deleteDeliveryRequest: useMutation({
       mutationFn: async (id: string) => {
         // First, delete any associated tracking updates
@@ -223,16 +274,31 @@ export const useDeliveryData = () => {
           .eq('id', id);
         
         if (error) {
+          console.error('Error deleting delivery request:', error);
           throw error;
         }
         
-        return { success: true };
+        return { success: true, deletedId: id };
       },
-      onSuccess: () => {
+      onSuccess: (result) => {
+        console.log('Delivery request deleted successfully:', result.deletedId);
+        
+        // First remove the item from any existing cached data to prevent UI flicker
+        queryClient.setQueryData(['deliveryRequests'], (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.filter((item: any) => item.id !== result.deletedId);
+        });
+        
+        // Then invalidate the query to fetch fresh data
         queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+        
+        // Also invalidate related queries that might need refresh
+        queryClient.invalidateQueries({ queryKey: ['drivers'] });
+        
         toast.success('Delivery request deleted successfully');
       },
       onError: (error: any) => {
+        console.error('Error in deleteDeliveryRequest mutation:', error);
         toast.error(`Error deleting request: ${error.message}`);
       }
     })

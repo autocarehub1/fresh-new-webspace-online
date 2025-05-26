@@ -1,0 +1,47 @@
+groups:
+  - name: auth_alerts
+    rules:
+      - alert: HighLoginFailureRate
+        expr: rate(auth_login_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High login failure rate detected
+          description: "Login failure rate is {{ $value }} per second over the last 5 minutes"
+
+      - alert: SuspiciousRiskScore
+        expr: rate(auth_risk_score_sum[5m]) / rate(auth_risk_score_count[5m]) > 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Suspicious risk score detected
+          description: "Average risk score is {{ $value }} over the last 5 minutes"
+
+      - alert: KYCProcessingDelay
+        expr: rate(auth_kyc_documents_processed_total[5m]) < 0.1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: KYC document processing delay
+          description: "KYC document processing rate is {{ $value }} per second over the last 15 minutes"
+
+      - alert: HighLoginAttempts
+        expr: rate(auth_login_attempts_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High number of login attempts
+          description: "Login attempt rate is {{ $value }} per second over the last 5 minutes"
+
+      - alert: FailedWebAuthnRegistrations
+        expr: rate(auth_webauthn_registration_failures_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High WebAuthn registration failure rate
+          description: "WebAuthn registration failure rate is {{ $value }} per second over the last 5 minutes" 

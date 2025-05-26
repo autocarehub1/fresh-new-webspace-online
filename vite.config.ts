@@ -8,10 +8,18 @@ export default defineConfig(({ mode }) => ({
   base: "/",
   server: {
     host: "::",
-    port: 8080,
+    port: 5174,
     strictPort: true,
     watch: {
       ignored: ['**/.env*', '**/node_modules/**']
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path
+      }
     }
   },
   plugins: [

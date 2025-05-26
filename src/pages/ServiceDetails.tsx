@@ -1,21 +1,12 @@
-
 import { useParams } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 
 const serviceData = {
+  // Medical Services
   'urgent': {
     title: 'Urgent Medical Delivery',
     description: 'Our urgent medical delivery service ensures critical medical supplies reach their destination within 1-2 hours of your request.',
-    pricing: {
-      baseRate: '$75 per delivery',
-      mileageRate: '$3.50 per mile',
-      additionalFees: [
-        'After-hours surcharge: $25',
-        'Holiday surcharge: $50',
-        'Hazardous materials handling: $35'
-      ]
-    },
     features: [
       'Priority routing and dispatch',
       'Real-time GPS tracking',
@@ -28,15 +19,6 @@ const serviceData = {
   'same-day': {
     title: 'Same-Day Medical Delivery',
     description: 'Reliable same-day delivery for non-urgent but time-sensitive medical supplies and specimens.',
-    pricing: {
-      baseRate: '$35 per delivery',
-      mileageRate: '$2.50 per mile',
-      additionalFees: [
-        'Multi-stop discount available',
-        'Weekend service: $15 surcharge',
-        'Waiting time: $15 per 15 minutes'
-      ]
-    },
     features: [
       'Multiple pickups consolidated into single delivery',
       'Scheduled delivery windows',
@@ -49,15 +31,6 @@ const serviceData = {
   'scheduled': {
     title: 'Scheduled Route Medical Delivery',
     description: 'Pre-planned, recurring delivery routes for regular medical supply and specimen transport needs.',
-    pricing: {
-      baseRate: '$250 per week',
-      mileageRate: 'Included in base rate',
-      additionalFees: [
-        'Extra stops: $10 each',
-        'Route modification: $25',
-        'Volume discounts available'
-      ]
-    },
     features: [
       'Weekly, daily, or custom recurring schedules',
       'Consistent driver assignments',
@@ -70,15 +43,6 @@ const serviceData = {
   'temperature-controlled': {
     title: 'Temperature-Controlled Medical Delivery',
     description: 'Specialized delivery service maintaining precise temperature requirements for sensitive medical items.',
-    pricing: {
-      baseRate: '$45 per delivery',
-      mileageRate: '$3.00 per mile',
-      additionalFees: [
-        'Temperature monitoring: $15',
-        'Specialized packaging: $25-45',
-        'Temperature documentation: $10'
-      ]
-    },
     features: [
       'Validated temperature-controlled vehicles',
       'Temperature monitoring throughout transit',
@@ -91,15 +55,6 @@ const serviceData = {
   'specimen': {
     title: 'Specimen Transport',
     description: 'Dedicated specimen transport with strict adherence to handling protocols and chain of custody requirements.',
-    pricing: {
-      baseRate: '$40 per delivery',
-      mileageRate: '$2.75 per mile',
-      additionalFees: [
-        'Biohazard handling: $20',
-        'Rush processing: $30',
-        'Chain of custody documentation: $15'
-      ]
-    },
     features: [
       'Specialized training for biohazard handling',
       'Proper specimen packaging verification',
@@ -107,6 +62,84 @@ const serviceData = {
       'Chain of custody documentation',
       'Lab-direct delivery capabilities',
       'Compliance with all regulatory requirements'
+    ]
+  },
+
+  // Baggage Services
+  'airport-baggage': {
+    title: 'Airport Baggage Delivery',
+    description: 'Reliable delivery of luggage and personal items from airports to your destination.',
+    features: [
+      'Airport pickup coordination',
+      'Real-time tracking',
+      'Secure handling of luggage',
+      'Flexible delivery scheduling',
+      'Insurance coverage available',
+      '24/7 customer support'
+    ]
+  },
+  'luggage-storage': {
+    title: 'Luggage Storage & Delivery',
+    description: 'Secure storage and delivery of luggage with flexible timing options.',
+    features: [
+      'Secure storage facilities',
+      'Short-term and long-term options',
+      'Flexible pickup and delivery times',
+      'Climate-controlled storage',
+      'Insurance coverage',
+      '24/7 facility monitoring'
+    ]
+  },
+
+  // Pet Services
+  'pet-transportation': {
+    title: 'Pet Transportation',
+    description: 'Safe and comfortable transportation for your pets with specialized care.',
+    features: [
+      'Climate-controlled vehicles',
+      'Regular comfort breaks',
+      'Experienced pet handlers',
+      'Real-time journey updates',
+      'Secure pet carriers provided',
+      'Emergency vet contact available'
+    ]
+  },
+  'veterinary-transport': {
+    title: 'Veterinary Transport',
+    description: 'Reliable transportation to and from veterinary appointments.',
+    features: [
+      'Door-to-door service',
+      'Careful handling of pets',
+      'Veterinary clinic coordination',
+      'Comfortable transport vehicles',
+      'Emergency response capability',
+      'Trained pet handlers'
+    ]
+  },
+
+  // Home Services
+  'furniture-delivery': {
+    title: 'Furniture Delivery',
+    description: 'Professional delivery and setup of furniture and home goods.',
+    features: [
+      'Careful handling and assembly',
+      'White glove delivery service',
+      'Furniture placement assistance',
+      'Packaging removal and disposal',
+      'Damage protection coverage',
+      'Scheduled delivery windows'
+    ]
+  },
+  'home-improvement': {
+    title: 'Home Improvement Materials',
+    description: 'Delivery of construction materials and home improvement supplies.',
+    features: [
+      'Heavy material handling',
+      'Equipment for safe unloading',
+      'Placement assistance',
+      'Scheduled delivery times',
+      'Material protection during transit',
+      'Professional handling team'
     ]
   }
 };
@@ -140,27 +173,6 @@ const ServiceDetails = () => {
           <div className="bg-white rounded-lg shadow-md p-6 mb-8">
             <p className="text-lg mb-6">{service.description}</p>
             
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-medical-blue mb-4">Pricing Information</h2>
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div>
-                    <h3 className="font-semibold mb-2">Base Rates</h3>
-                    <p className="text-lg text-medical-blue font-bold mb-1">{service.pricing.baseRate}</p>
-                    <p className="text-sm text-gray-600">{service.pricing.mileageRate}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-2">Additional Fees</h3>
-                    <ul className="space-y-1 text-sm text-gray-600">
-                      {service.pricing.additionalFees.map((fee, index) => (
-                        <li key={index}>{fee}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
             <h2 className="text-xl font-semibold text-medical-blue mb-4">Service Features</h2>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {service.features.map((feature, index) => (
@@ -178,7 +190,7 @@ const ServiceDetails = () => {
           
           <div className="bg-medical-blue-light/10 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-medical-blue mb-4">Request This Service</h2>
-            <p className="mb-4">Need this service for your medical facility? Contact us to discuss your specific requirements or schedule a pickup.</p>
+            <p className="mb-4">Ready to use this service? Contact us to discuss your specific requirements or schedule a pickup.</p>
             <div className="flex flex-col sm:flex-row gap-4">
               <a href="/request-pickup" className="bg-medical-blue text-white py-2 px-4 rounded hover:bg-medical-blue-dark transition-colors text-center">
                 Request Pickup

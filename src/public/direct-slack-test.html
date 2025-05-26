@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Slack Webhook Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4A5568;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2D3748;
+        }
+        pre {
+            background-color: #f1f1f1;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #C6F6D5;
+            border: 1px solid #68D391;
+        }
+        .error {
+            background-color: #FED7D7;
+            border: 1px solid #FC8181;
+        }
+    </style>
+</head>
+<body>
+    <h1>Direct Slack Webhook Test</h1>
+    <p>This page sends a test message directly to Slack, bypassing any application logic to isolate if there's an issue with the webhook.</p>
+    
+    <div>
+        <h2>Webhook Configuration</h2>
+        <p>Current webhook URL: <code>https://hooks.slack.com/services/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</code></p>
+        <p>Channel ID: <code>C08S18NP5JA</code></p>
+    </div>
+
+    <div>
+        <label for="messageInput">Test Message:</label>
+        <input type="text" id="messageInput" value="Test message from direct HTML form" style="width: 100%; padding: 8px; margin-top: 5px;">
+    </div>
+
+    <button id="testButton">Send Test Message to Slack</button>
+    <div id="result" style="display: none;"></div>
+    
+    <h2>Raw Request Details:</h2>
+    <pre id="requestDetails"></pre>
+
+    <script>
+        document.getElementById('testButton').addEventListener('click', async function() {
+            const resultDiv = document.getElementById('result');
+            const requestDetailsDiv = document.getElementById('requestDetails');
+            const messageInput = document.getElementById('messageInput');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'Sending message to Slack...';
+            resultDiv.className = '';
+            
+            const webhookUrl = 'https://hooks.slack.com/services/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';
+            const channelId = 'C08S18NP5JA';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const payload = {
+                text: `🧪 ${messageInput.value} (${timestamp})`,
+                channel: channelId,
+                blocks: [
+                    {
+                        type: "header",
+                        text: {
+                            type: "plain_text",
+                            text: "🧪 Direct HTML Test",
+                            emoji: true
+                        }
+                    },
+                    {
+                        type: "section",
+                        text: {
+                            type: "mrkdwn",
+                            text: `*Message:* ${messageInput.value}\n\nThis is a direct test from a standalone HTML page. If you're seeing this, the webhook is working correctly!`
+                        }
+                    },
+                    {
+                        type: "context",
+                        elements: [
+                            {
+                                type: "mrkdwn",
+                                text: "Sent: " + new Date().toLocaleString()
+                            }
+                        ]
+                    }
+                ]
+            };
+            
+            // Display the raw request details
+            requestDetailsDiv.textContent = JSON.stringify(payload, null, 2);
+            
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    mode: 'no-cors' // Bypass CORS restrictions
+                });
+                
+                // With no-cors mode, we can't read the response, but we can tell if the request was sent
+                resultDiv.innerHTML = '✅ Message sent to Slack! (Note: no-cors mode prevents reading the response)';
+                resultDiv.className = 'success';
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Error sending message to Slack: ${error.message}`;
+                resultDiv.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html> 

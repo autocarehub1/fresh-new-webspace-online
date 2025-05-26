@@ -1,8 +1,9 @@
 import { useDriverQueries } from './drivers/use-driver-queries';
 import { useDriverMutations } from './drivers/use-driver-mutations';
+import { toast } from 'sonner';
 
 export const useDriverData = () => {
-  const { drivers, isLoading, error } = useDriverQueries();
+  const { drivers, isLoading, error, refetch: queryRefetch } = useDriverQueries();
   const { updateDriver, assignDriver, unassignDriver, addDriver, deleteDriver } = useDriverMutations();
 
   console.log('useDriverData - Current drivers:', drivers?.map(d => ({
@@ -21,6 +22,21 @@ export const useDriverData = () => {
     // Since it's not fully implemented in the mutations yet, we're providing a stub
   };
 
+  // Add a dedicated refetch function with better error handling
+  const refetch = async () => {
+    try {
+      console.log('🔄 Manually refetching drivers...');
+      const result = await queryRefetch();
+      console.log(`✅ Successfully refetched ${result.data?.length || 0} drivers`);
+      return result;
+    } catch (error) {
+      console.error('❌ Error manually refetching drivers:', error);
+      toast.error('Failed to refresh driver data');
+      // Return current data to prevent errors
+      return { data: drivers };
+    }
+  };
+
   return {
     drivers,
     isLoading,
@@ -30,6 +46,7 @@ export const useDriverData = () => {
     unassignDriver,
     addDriver,
     deleteDriver,
-    updateDriverLocation
+    updateDriverLocation,
+    refetch
   };
 };

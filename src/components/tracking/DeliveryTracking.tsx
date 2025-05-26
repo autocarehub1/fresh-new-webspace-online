@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import { useQueryClient } from '@tanstack/react-query';
+import { Progress } from '@/components/ui/progress';
 
 const generatePDF = (delivery: DeliveryRequest) => {
   const doc = new jsPDF();
@@ -88,6 +89,9 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
   const [eta, setEta] = useState<{ distance: string; eta: number } | null>(null);
   const [trafficCondition, setTrafficCondition] = useState<'good' | 'moderate' | 'heavy'>('good');
   const [detailedStatus, setDetailedStatus] = useState<string>('');
+  const [etaStart, setEtaStart] = useState<number | null>(null);
+  const [etaEnd, setEtaEnd] = useState<number | null>(null);
+  const [etaCountdown, setEtaCountdown] = useState<number | null>(null);
   
   // Fetch delivery and assigned driver info
   const fetchDeliveryData = useCallback(async () => {
@@ -514,6 +518,42 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
     };
   }, [delivery, startLiveTracking, isLiveTracking, simulationSpeed]);
 
+  // When ETA is set, initialize start and end times
+  useEffect(() => {
+    if (delivery?.status === 'in_progress' && eta) {
+      if (!etaStart) {
+        setEtaStart(Date.now());
+        setEtaEnd(Date.now() + eta.eta * 60 * 1000);
+        setEtaCountdown(eta.eta * 60);
+      }
+    } else {
+      setEtaStart(null);
+      setEtaEnd(null);
+      setEtaCountdown(null);
+    }
+    // eslint-disable-next-line
+  }, [delivery?.status, eta?.eta]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (etaEnd && delivery?.status === 'in_progress') {
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const secondsLeft = Math.max(0, Math.round((etaEnd - now) / 1000));
+        setEtaCountdown(secondsLeft);
+        if (secondsLeft <= 0) {
+          clearInterval(interval);
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [etaEnd, delivery?.status]);
+
+  // Calculate progress percentage
+  const etaProgress = etaStart && etaEnd && delivery?.status === 'in_progress'
+    ? Math.min(100, Math.max(0, ((Date.now() - etaStart) / (etaEnd - etaStart)) * 100))
+    : 0;
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -748,6 +788,24 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
                 </div>
               )}
               
+              {/* Progress Bar and Countdown */}
+              <div className="mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Progress value={etaProgress} className="h-2 bg-gray-200" />
+                  </div>
+                  <div className="w-32 text-right text-xs text-gray-600">
+                    {etaCountdown !== null && etaCountdown > 0 ? (
+                      <span>
+                        {Math.floor(etaCountdown / 60)}:{(etaCountdown % 60).toString().padStart(2, '0')} min left
+                      </span>
+                    ) : (
+                      <span>Arriving soon</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
               <div className="flex justify-between text-xs text-gray-500 mb-4">
                 <div>{delivery?.pickup_location}</div>
                 <div className="border-t border-dashed border-gray-300 grow mx-2 mt-2"></div>
@@ -767,6 +825,24 @@ export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
           </CardContent>
         </Card>
       </div>
+      
+      {delivery?.status === 'completed' && delivery.proofOfDeliveryPhoto && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg">Proof of Delivery</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center">
+              <img
+                src={delivery.proofOfDeliveryPhoto}
+                alt="Proof of Delivery"
+                className="rounded shadow-md max-w-xs max-h-80 border"
+              />
+              <span className="text-xs text-gray-500 mt-2">Photo provided by driver at delivery completion</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <Card className="mb-8">
         <CardHeader>

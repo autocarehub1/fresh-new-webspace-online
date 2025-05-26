@@ -15,19 +15,46 @@ const Contact = () => {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      const projectId = 'joziqntfciyflfsgvsqz'; // Supabase project ID
+      const baseUrl = `https://${projectId}.supabase.co`;
+
+      const response = await fetch(`${baseUrl}/functions/v1/send-contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          message,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Server response:', data);
+        throw new Error(data.error || 'Failed to send message');
+      }
+
       toast.success('Message sent successfully! We will contact you shortly.');
       setName('');
       setEmail('');
       setPhone('');
       setMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error(error.message || 'Failed to send message. Please try again later.');
+    } finally {
       setSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (

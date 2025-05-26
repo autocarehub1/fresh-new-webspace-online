@@ -44,12 +44,69 @@ export const useDriverMutations = () => {
   const assignDriver = useMutation({
     mutationFn: async ({ driverId, deliveryId }: { driverId: string, deliveryId: string }) => {
       try {
+        console.log(`Starting driver assignment: Driver ${driverId} to Delivery ${deliveryId}`);
+        
+        // Check if driver is truly available first to prevent conflicts
+        const { data: driverData, error: driverCheckError } = await supabase
+          .from('drivers')
+          .select('id, status, current_delivery')
+          .eq('id', driverId)
+          .single();
+          
+        if (driverCheckError) {
+          console.error(`Error checking driver ${driverId} availability:`, driverCheckError);
+          throw new Error(`Failed to check driver availability: ${driverCheckError.message}`);
+        }
+        
+        // Verify driver is active and not already assigned
+        if (!driverData || driverData.status !== 'active') {
+          console.error(`Driver ${driverId} is not active`);
+          throw new Error(`Driver is not active and cannot be assigned`);
+        }
+        
+        if (driverData.current_delivery) {
+          console.error(`Driver ${driverId} already has delivery assignment: ${driverData.current_delivery}`);
+          throw new Error(`Driver already has an active delivery assignment`);
+        }
+        
+        // Check if delivery is available for assignment
+        const { data: deliveryData, error: deliveryCheckError } = await supabase
+          .from('delivery_requests')
+          .select('id, status, assigned_driver')
+          .eq('id', deliveryId)
+          .single();
+          
+        if (deliveryCheckError) {
+          console.error(`Error checking delivery ${deliveryId}:`, deliveryCheckError);
+          throw new Error(`Failed to check delivery status: ${deliveryCheckError.message}`);
+        }
+        
+        // Verify delivery is not already assigned
+        if (!deliveryData || deliveryData.status !== 'pending') {
+          console.error(`Delivery ${deliveryId} is not in pending status: ${deliveryData?.status}`);
+          throw new Error(`Delivery is not available for assignment`);
+        }
+        
+        if (deliveryData.assigned_driver) {
+          console.error(`Delivery ${deliveryId} already assigned to driver: ${deliveryData.assigned_driver}`);
+          throw new Error(`Delivery already assigned to another driver`);
+        }
+        
+        // Now proceed with the actual assignment
+        console.log(`Verified both driver and delivery are available for assignment`);
+        
+        // 1. Update driver first
         const { error: driverError } = await supabase
           .from('drivers')
           .update({ current_delivery: deliveryId })
           .eq('id', driverId);
-        if (driverError) throw driverError;
+          
+        if (driverError) {
+          console.error(`Error updating driver ${driverId}:`, driverError);
+          throw driverError;
+        }
         
+        // 2. Then update delivery
         const { error: deliveryError } = await supabase
           .from('delivery_requests')
           .update({ 
@@ -57,8 +114,25 @@ export const useDriverMutations = () => {
             status: 'in_progress'
           })
           .eq('id', deliveryId);
-        if (deliveryError) throw deliveryError;
+          
+        if (deliveryError) {
+          console.error(`Error updating delivery ${deliveryId}:`, deliveryError);
+          
+          // Attempt to rollback driver assignment if delivery update fails
+          try {
+            await supabase
+              .from('drivers')
+              .update({ current_delivery: null })
+              .eq('id', driverId);
+            console.log(`Rolled back driver assignment due to delivery update failure`);
+          } catch (rollbackError) {
+            console.error(`Failed to rollback driver assignment:`, rollbackError);
+          }
+          
+          throw deliveryError;
+        }
 
+        // 3. Finally add tracking update
         const { error: trackingError } = await supabase
           .from('tracking_updates')
           .insert({
@@ -66,25 +140,32 @@ export const useDriverMutations = () => {
             status: 'Driver Assigned',
             timestamp: new Date().toISOString(),
             location: 'Driver location',
-            note: `Driver assigned to delivery`
+            note: `Driver assigned to delivery and request status changed to in_progress`
           });
-        if (trackingError) throw trackingError;
+          
+        if (trackingError) {
+          console.warn(`Warning: Tracking update failed, but assignment completed:`, trackingError);
+          // We don't throw here since assignment was successful
+        }
         
+        console.log(`✅ Successfully assigned driver ${driverId} to delivery ${deliveryId}`);
+        
+        // Update local state
         updateLocalDriverDelivery(driverId, deliveryId);
-        return { success: true };
+        return { success: true, driverId, deliveryId };
       } catch (err) {
-        console.error('Exception when assigning driver:', err);
-        updateLocalDriverDelivery(driverId, deliveryId);
+        console.error('Exception during driver assignment:', err);
+        // Don't update local state on error
         throw err;
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['drivers'] });
       queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
       toast.success('Driver assigned successfully');
     },
     onError: (error: any) => {
-      toast.error(`Error assigning driver: ${error.message}`);
+      toast.error(`Assignment failed: ${error.message}`);
     }
   });
 

@@ -24,55 +24,77 @@ const Map = ({
   const [mapUrl, setMapUrl] = useState('');
 
   useEffect(() => {
-    // Create Google Maps URL with markers for driver, pickup, and delivery locations
+    // Default San Antonio map if no locations provided
     if (!driverLocation && !deliveryLocation && !pickupLocation) {
       setMapUrl('https://maps.google.com/maps?q=San+Antonio,TX&t=&z=13&ie=UTF8&iwloc=&output=embed');
       return;
     }
 
-    let baseUrl = 'https://www.google.com/maps/embed/v1/directions';
-    
-    // Add API key parameter - this will be a mock for demo purposes
-    // In production, you would use a real Google Maps API key
-    baseUrl += '?key=YOUR_GOOGLE_MAPS_API_KEY_HERE';
-    
-    // Define origin (either the driver's current location or the pickup location)
-    const origin = driverLocation 
-      ? `${driverLocation.lat},${driverLocation.lng}` 
-      : pickupLocation 
-        ? `${pickupLocation.lat},${pickupLocation.lng}`
-        : '';
-        
-    if (origin) {
-      baseUrl += `&origin=${origin}`;
-    }
-    
-    // Define destination (delivery location)
+    // If we have a delivery location, we can use directions mode
     if (deliveryLocation) {
-      baseUrl += `&destination=${deliveryLocation.lat},${deliveryLocation.lng}`;
-    }
-    
-    // Add waypoints if needed (pickup location if driver location is present)
-    if (driverLocation && pickupLocation && !pickupLocation.lat.toFixed(3).includes(driverLocation.lat.toFixed(3))) {
-      baseUrl += `&waypoints=${pickupLocation.lat},${pickupLocation.lng}`;
-    }
-    
-    // Add travel mode (driving for courier services)
-    baseUrl += '&mode=driving';
-    
-    // Add traffic layer if enabled
-    if (showTraffic) {
-      baseUrl += '&traffic_model=best_guess';
+      let baseUrl = 'https://www.google.com/maps/embed/v1/directions';
       
-      // Add departure time (current time for real-time traffic)
-      const now = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
-      baseUrl += `&departure_time=${now}`;
+      // Add API key parameter
+      baseUrl += '?key=YOUR_GOOGLE_MAPS_API_KEY_HERE';
+      
+      // Define origin (either the driver's current location or the pickup location)
+      const origin = driverLocation 
+        ? `${driverLocation.lat},${driverLocation.lng}` 
+        : pickupLocation 
+          ? `${pickupLocation.lat},${pickupLocation.lng}`
+          : '';
+          
+      // If we don't have an origin, default to San Antonio
+      if (origin) {
+        baseUrl += `&origin=${origin}`;
+      } else {
+        baseUrl += `&origin=San+Antonio,TX`;
+      }
+      
+      // Add the destination parameter (required for directions)
+      baseUrl += `&destination=${deliveryLocation.lat},${deliveryLocation.lng}`;
+      
+      // Add waypoints if needed (pickup location if driver location is present)
+      if (driverLocation && pickupLocation && !pickupLocation.lat.toFixed(3).includes(driverLocation.lat.toFixed(3))) {
+        baseUrl += `&waypoints=${pickupLocation.lat},${pickupLocation.lng}`;
+      }
+      
+      // Add travel mode (driving for courier services)
+      baseUrl += '&mode=driving';
+      
+      // Add traffic layer if enabled
+      if (showTraffic) {
+        baseUrl += '&traffic_model=best_guess';
+        
+        // Add departure time (current time for real-time traffic)
+        const now = Math.floor(Date.now() / 1000); // Current time in Unix timestamp
+        baseUrl += `&departure_time=${now}`;
+      }
+      
+      // Add map styling
+      baseUrl += '&maptype=roadmap';
+      
+      setMapUrl(baseUrl);
+    } 
+    // If we don't have delivery location but have another location, use place mode
+    else if (driverLocation || pickupLocation) {
+      let baseUrl = 'https://www.google.com/maps/embed/v1/place';
+      
+      // Add API key parameter
+      baseUrl += '?key=YOUR_GOOGLE_MAPS_API_KEY_HERE';
+      
+      // Use either driver or pickup location for the center
+      const location = driverLocation || pickupLocation;
+      baseUrl += `&q=${location!.lat},${location!.lng}`;
+      
+      // Add zoom level
+      baseUrl += '&zoom=15';
+      
+      // Add map styling
+      baseUrl += '&maptype=roadmap';
+      
+      setMapUrl(baseUrl);
     }
-    
-    // Add map styling
-    baseUrl += '&maptype=roadmap';
-    
-    setMapUrl(baseUrl);
   }, [driverLocation, deliveryLocation, pickupLocation, showTraffic]);
 
   return (

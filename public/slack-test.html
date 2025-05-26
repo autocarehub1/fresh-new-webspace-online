@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Slack Integration Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 10px 5px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .result {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Slack Integration Test</h1>
+  <p>Use the buttons below to test different Slack notification methods.</p>
+  
+  <div>
+    <button onclick="testDirectWebhook()">Test Direct Webhook Call</button>
+    <button onclick="testApiRoute()">Test API Route</button>
+    <button onclick="testAlternativeApiRoute()">Test Alternative API Route</button>
+  </div>
+  
+  <div class="result">
+    <h3>Result:</h3>
+    <div id="result">No test run yet</div>
+  </div>
+  
+  <script>
+    const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+    const resultElement = document.getElementById('result');
+    
+    function logResult(message) {
+      resultElement.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+    }
+    
+    async function testDirectWebhook() {
+      resultElement.innerHTML = '<p>Testing direct webhook call...</p>';
+      
+      try {
+        const payload = {
+          text: `🧪 TEST: Direct webhook call from ${window.location.hostname}`,
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "🧪 Slack Test",
+                emoji: true
+              }
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Test message from domain: *${window.location.hostname}*\nSent at: ${new Date().toLocaleString()}`
+              }
+            }
+          ]
+        };
+        
+        logResult('Sending payload...');
+        
+        const response = await fetch(SLACK_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          mode: 'no-cors' // Important: Use no-cors mode to avoid CORS issues
+        });
+        
+        logResult('Request sent in no-cors mode. Cannot read response due to CORS restrictions, but request was sent.');
+        logResult('Check your Slack channel for the message.');
+      } catch (error) {
+        logResult(`Error: ${error.message}`);
+        console.error('Test error:', error);
+      }
+    }
+    
+    async function testApiRoute() {
+      resultElement.innerHTML = '<p>Testing API route...</p>';
+      
+      try {
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/api/slack/send`;
+        
+        const payload = {
+          text: `🧪 TEST: API route from ${window.location.hostname}`,
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "🧪 API Route Test",
+                emoji: true
+              }
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Test message via API route: *${apiUrl}*\nSent at: ${new Date().toLocaleString()}`
+              }
+            }
+          ]
+        };
+        
+        logResult(`Sending to API route: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const responseText = await response.text();
+        logResult(`Response status: ${response.status}`);
+        logResult(`Response text: ${responseText}`);
+      } catch (error) {
+        logResult(`Error: ${error.message}`);
+        console.error('Test error:', error);
+      }
+    }
+    
+    async function testAlternativeApiRoute() {
+      resultElement.innerHTML = '<p>Testing alternative API route...</p>';
+      
+      try {
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/slack/send`;
+        
+        const payload = {
+          text: `🧪 TEST: Alternative API route from ${window.location.hostname}`,
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "🧪 Alternative API Route Test",
+                emoji: true
+              }
+            },
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `Test message via alternative API route: *${apiUrl}*\nSent at: ${new Date().toLocaleString()}`
+              }
+            }
+          ]
+        };
+        
+        logResult(`Sending to alternative API route: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const responseText = await response.text();
+        logResult(`Response status: ${response.status}`);
+        logResult(`Response text: ${responseText}`);
+      } catch (error) {
+        logResult(`Error: ${error.message}`);
+        console.error('Test error:', error);
+      }
+    }
+  </script>
+</body>
+</html> 

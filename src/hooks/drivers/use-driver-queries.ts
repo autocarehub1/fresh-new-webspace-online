@@ -7,7 +7,7 @@ import { useDriverStore } from '@/store/driverStore';
 export const useDriverQueries = () => {
   const localDrivers = useDriverStore((state) => state.drivers);
 
-  const { data: drivers, isLoading, error } = useQuery({
+  const { data: drivers, isLoading, error, refetch } = useQuery({
     queryKey: ['drivers'],
     queryFn: async () => {
       try {
@@ -35,11 +35,13 @@ export const useDriverQueries = () => {
         return localDrivers;
       }
     },
+    refetchInterval: 10000,
   });
 
   return {
     drivers: drivers || localDrivers,
     isLoading,
-    error
+    error,
+    refetch
   };
 };

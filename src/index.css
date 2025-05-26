@@ -101,3 +101,165 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for enhanced driver login page */
+@layer components {
+  /* Smooth fade-in animation for form elements */
+  .auth-form-enter {
+    animation: fadeSlideIn 0.4s ease-out forwards;
+  }
+
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Enhanced input focus states */
+  .enhanced-input:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(10, 36, 99, 0.15);
+  }
+
+  /* Gradient button effects */
+  .gradient-button {
+    background: linear-gradient(135deg, #0A2463, #247BA0);
+    transition: all 0.3s ease;
+  }
+
+  .gradient-button:hover {
+    background: linear-gradient(135deg, #083355, #1f6b8a);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(10, 36, 99, 0.25);
+  }
+
+  /* Card hover effects */
+  .auth-card {
+    transition: all 0.3s ease;
+  }
+
+  .auth-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Icon pulse animation */
+  .icon-pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+
+  /* Progress bar animations */
+  .progress-bar {
+    transition: width 0.5s ease-in-out;
+  }
+
+  /* File upload drag effects */
+  .file-drop-active {
+    background: linear-gradient(135deg, rgba(10, 36, 99, 0.05), rgba(36, 123, 160, 0.05));
+    border-color: #0A2463;
+    animation: borderPulse 1.5s infinite;
+  }
+
+  @keyframes borderPulse {
+    0%, 100% {
+      border-color: #0A2463;
+    }
+    50% {
+      border-color: #247BA0;
+    }
+  }
+
+  /* Enhanced social button hover effects */
+  .social-button {
+    transition: all 0.2s ease;
+  }
+
+  .social-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Loading spinner with medical theme colors */
+  .medical-spinner {
+    border-top-color: #0A2463;
+    border-right-color: #247BA0;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Enhanced notification banners */
+  .notification-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Tab switching smooth transitions */
+  .tab-transition {
+    transition: all 0.2s ease-in-out;
+  }
+
+  /* Enhanced form validation states */
+  .input-success {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+
+  .input-error {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+
+  /* Backdrop blur for modals */
+  .modal-backdrop {
+    backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Enhanced password strength indicator */
+  .password-strength-weak {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+  }
+
+  .password-strength-fair {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  }
+
+  .password-strength-good {
+    background: linear-gradient(90deg, #06b6d4, #0891b2);
+  }
+
+  .password-strength-strong {
+    background: linear-gradient(90deg, #10b981, #059669);
+  }
+}

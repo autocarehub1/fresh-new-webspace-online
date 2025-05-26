@@ -1,4 +1,3 @@
-
 export type DeliveryStatus = 'pending' | 'in_progress' | 'completed' | 'declined';
 
 export interface TrackingUpdate {
@@ -35,6 +34,13 @@ export interface DeliveryRequest {
   created_at: string;
   tracking_updates?: TrackingUpdate[];
   
+  // Database fields
+  email?: string; // Email field from the database
+  tracking_id?: string; // Database version of tracking ID
+  package_type?: string; // Database version of package type
+  requester_name?: string; // Name of the person requesting the delivery
+  company_name?: string; // Optional company name
+  
   // Additional fields needed for the tracking UI
   priority?: 'normal' | 'urgent';
   estimatedDelivery?: string;
@@ -61,10 +67,17 @@ export interface DeliveryRequest {
   trackingId?: string;
   estimatedCost?: number;
   distance?: number;
+  notes?: string;
+  
+  // Client information for UI/presentation purposes (not in database)
+  clientName?: string;
   
   // Real-time tracking fields
   pickup_coordinates?: Coordinates;
   delivery_coordinates?: Coordinates;
   current_coordinates?: Coordinates;
   assigned_driver?: string;
+
+  // Proof of delivery photo URL
+  proofOfDeliveryPhoto?: string;
 }

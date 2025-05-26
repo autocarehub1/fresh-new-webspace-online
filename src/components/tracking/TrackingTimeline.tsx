@@ -38,9 +38,35 @@ const getStatusIcon = (status: string, index: number, isLast: boolean) => {
 };
 
 const TrackingTimeline = ({ delivery }: TrackingTimelineProps) => {
-  const updates = delivery?.tracking_updates || [];
+  // Sort updates to match the order in the screenshot and RequestDetailsDialog
+  const sortedUpdates = React.useMemo(() => {
+    const updates = delivery?.tracking_updates || [];
+    return [...updates].sort((a, b) => {
+      // Define the exact status order based on the screenshot
+      const statusPriority = {
+        'Delivered': 1,
+        'In Transit': 2,
+        'Picked Up': 3,
+        'Driver Assigned': 4,
+        'Request Approved': 5,
+        'Request Submitted': 6
+      };
+      
+      // Get the priority for each status
+      const priorityA = statusPriority[a.status] || 999;
+      const priorityB = statusPriority[b.status] || 999;
+      
+      // First sort by priority
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      // If same status type, sort by timestamp (newest first)
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [delivery?.tracking_updates]);
   
-  if (updates.length === 0) {
+  if (sortedUpdates.length === 0) {
     return (
       <div className="text-center py-4 text-gray-500">
         No tracking updates available yet.
@@ -50,8 +76,8 @@ const TrackingTimeline = ({ delivery }: TrackingTimelineProps) => {
   
   return (
     <div className="space-y-6">
-      {updates.map((update, index) => {
-        const isLast = index === updates.length - 1;
+      {sortedUpdates.map((update, index) => {
+        const isLast = index === sortedUpdates.length - 1;
         const icon = getStatusIcon(update.status, index, isLast);
         
         // Determine status color
@@ -75,7 +101,7 @@ const TrackingTimeline = ({ delivery }: TrackingTimelineProps) => {
               <div className={`w-8 h-8 rounded-full ${bgColor} ${statusColor} flex items-center justify-center`}>
                 {icon}
               </div>
-              {index < updates.length - 1 && (
+              {index < sortedUpdates.length - 1 && (
                 <div className="w-0.5 bg-gray-200 h-full absolute top-8"></div>
               )}
             </div>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catalyst Network Logistics | Medical Courier Service</title>
+
+    <!-- SEO & Social tags -->
+    <meta name="description" content="Catalyst Network Logistics - Professional Medical Courier Services in San Antonio, TX. Secure, on-time delivery of specimens, medications, and equipment." />
+    <meta name="author" content="Catalyst Network Logistics" />
+
+    <meta property="og:title" content="Catalyst Network Logistics | Medical Courier Service" />
+    <meta property="og:description" content="Fast, secure medical courier services for healthcare providers in San Antonio and surrounding areas." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://catnetlogistics.com" />
+    <meta property="og:image" content="https://catnetlogistics.com/placeholder.svg" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Catalyst Network Logistics" />
+    <meta name="twitter:description" content="Fast, secure medical courier services" />
+    <meta name="twitter:image" content="https://catnetlogistics.com/placeholder.svg" />
+
+    <!-- Query param and route handling script -->
+    <script>
+      (function() {
+        // Special handling for direct access to routes with query params
+        const path = window.location.pathname;
+        const search = window.location.search;
+        const trackingMatch = search.match(/[?&]id=([^&]+)/);
+        
+        // If this is a direct access to a tracking URL, save the info
+        if (path === '/tracking' && trackingMatch) {
+          const trackingId = trackingMatch[1];
+          console.log('Direct access to tracking with ID:', trackingId);
+          sessionStorage.setItem('activeTrackingId', trackingId);
+        }
+        
+        // If we've been redirected from a 404 to the root, but had a tracking ID
+        if (path === '/' && trackingMatch) {
+          console.log('Redirected to root with tracking ID, will redirect to /tracking');
+          // The React app will handle the redirect when it loads
+          sessionStorage.setItem('redirectToTracking', trackingMatch[1]);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="padding: 2rem; text-align: center; font-family: sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>Please enable JavaScript to use this application.</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 

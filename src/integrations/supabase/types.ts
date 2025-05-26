@@ -28,6 +28,8 @@ export type Database = {
           status: string
           temperature: Json | null
           tracking_id: string | null
+          requester_name: string | null
+          company_name: string | null
         }
         Insert: {
           assigned_driver?: string | null
@@ -47,6 +49,8 @@ export type Database = {
           status?: string
           temperature?: Json | null
           tracking_id?: string | null
+          requester_name?: string | null
+          company_name?: string | null
         }
         Update: {
           assigned_driver?: string | null
@@ -66,6 +70,8 @@ export type Database = {
           status?: string
           temperature?: Json | null
           tracking_id?: string | null
+          requester_name?: string | null
+          company_name?: string | null
         }
         Relationships: [
           {

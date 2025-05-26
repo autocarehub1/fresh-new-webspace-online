@@ -1,12 +1,12 @@
-
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import { AlertTriangle, Calendar, ShieldCheck, ThermometerSnowflake, FileText, Clock, Package, Microscope, Pill } from 'lucide-react';
+import { AlertTriangle, Calendar, ShieldCheck, ThermometerSnowflake, FileText, Clock, Package, Microscope, Pill, Briefcase, Home, PawPrint, Truck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const services = [
+const medicalServices = [
   {
     icon: AlertTriangle,
     title: "Urgent Delivery",
@@ -57,6 +57,51 @@ const services = [
   }
 ];
 
+const baggageServices = [
+  {
+    icon: Briefcase,
+    title: "Airport Baggage Delivery",
+    description: "Reliable delivery of luggage and personal items from airports to your destination.",
+    details: "Our airport baggage delivery service ensures your luggage reaches your destination safely and on time. We offer both same-day and scheduled delivery options, with real-time tracking and secure handling of your belongings."
+  },
+  {
+    icon: Package,
+    title: "Luggage Storage & Delivery",
+    description: "Secure storage and delivery of luggage with flexible timing options.",
+    details: "Need to store your luggage temporarily? Our secure storage facilities and flexible delivery options make it easy to manage your belongings while you're away. We offer both short-term and long-term storage solutions."
+  }
+];
+
+const petServices = [
+  {
+    icon: PawPrint,
+    title: "Pet Transportation",
+    description: "Safe and comfortable transportation for your pets with specialized care.",
+    details: "Our pet transportation service ensures your furry friends travel in comfort and safety. We use climate-controlled vehicles and provide regular updates on your pet's journey. Our staff is trained in pet care and handling."
+  },
+  {
+    icon: Calendar,
+    title: "Veterinary Transport",
+    description: "Reliable transportation to and from veterinary appointments.",
+    details: "Need to get your pet to the vet? Our veterinary transport service provides door-to-door service with careful handling and attention to your pet's needs. We coordinate with veterinary clinics to ensure smooth transitions."
+  }
+];
+
+const homeServices = [
+  {
+    icon: Home,
+    title: "Furniture Delivery",
+    description: "Professional delivery and setup of furniture and home goods.",
+    details: "Our furniture delivery service includes careful handling, assembly, and placement of your items. We use specialized equipment to protect your furniture and ensure safe delivery to your home."
+  },
+  {
+    icon: Truck,
+    title: "Home Improvement Materials",
+    description: "Delivery of construction materials and home improvement supplies.",
+    details: "Need materials for your home improvement project? We deliver construction materials, tools, and supplies directly to your location. Our service includes careful handling and placement of heavy items."
+  }
+];
+
 const Services = () => {
   return (
     <div className="min-h-screen flex flex-col">
@@ -66,40 +111,129 @@ const Services = () => {
         <section className="bg-medical-blue py-16 md:py-24 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl">
-              <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Medical Courier Services</h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-6">Our Delivery Services</h1>
               <p className="text-xl">
-                Specialized transportation solutions designed for healthcare facilities with an emphasis on reliability, compliance, and speed.
+                Comprehensive delivery solutions for medical, baggage, pets, and home improvement needs with an emphasis on reliability, safety, and customer satisfaction.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Services Detailed List */}
+        {/* Services Tabs */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {services.map((service, index) => (
-                <Card key={index} className="border-gray-200 hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-medical-blue/10 flex items-center justify-center">
-                        <service.icon className="text-medical-blue h-6 w-6" />
-                      </div>
-                      <CardTitle className="text-2xl text-medical-blue">{service.title}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-500 mb-4">{service.description}</p>
-                    <p className="text-gray-700">{service.details}</p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button asChild variant="outline" className="text-medical-blue hover:bg-medical-blue/5">
-                      <Link to={`/request-pickup?service=${service.title}`}>Request This Service</Link>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
+            <Tabs defaultValue="medical" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-8">
+                <TabsTrigger value="medical">Medical Delivery</TabsTrigger>
+                <TabsTrigger value="baggage">Baggage Delivery</TabsTrigger>
+                <TabsTrigger value="pet">Pet Delivery</TabsTrigger>
+                <TabsTrigger value="home">Home Improvement</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="medical">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {medicalServices.map((service, index) => (
+                    <Card key={index} className="border-gray-200 hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                            <service.icon className="text-medical-blue h-6 w-6" />
+                          </div>
+                          <CardTitle className="text-2xl text-medical-blue">{service.title}</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-500 mb-4">{service.description}</p>
+                        <p className="text-gray-700">{service.details}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button asChild variant="outline" className="text-medical-blue hover:bg-medical-blue/5">
+                          <Link to={`/request-pickup?service=${service.title}`}>Request This Service</Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="baggage">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {baggageServices.map((service, index) => (
+                    <Card key={index} className="border-gray-200 hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                            <service.icon className="text-medical-blue h-6 w-6" />
+                          </div>
+                          <CardTitle className="text-2xl text-medical-blue">{service.title}</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-500 mb-4">{service.description}</p>
+                        <p className="text-gray-700">{service.details}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button asChild variant="outline" className="text-medical-blue hover:bg-medical-blue/5">
+                          <Link to={`/request-pickup?service=${service.title}`}>Request This Service</Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pet">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {petServices.map((service, index) => (
+                    <Card key={index} className="border-gray-200 hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                            <service.icon className="text-medical-blue h-6 w-6" />
+                          </div>
+                          <CardTitle className="text-2xl text-medical-blue">{service.title}</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-500 mb-4">{service.description}</p>
+                        <p className="text-gray-700">{service.details}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button asChild variant="outline" className="text-medical-blue hover:bg-medical-blue/5">
+                          <Link to={`/request-pickup?service=${service.title}`}>Request This Service</Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="home">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {homeServices.map((service, index) => (
+                    <Card key={index} className="border-gray-200 hover:shadow-lg transition-shadow">
+                      <CardHeader>
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-full bg-medical-blue/10 flex items-center justify-center">
+                            <service.icon className="text-medical-blue h-6 w-6" />
+                          </div>
+                          <CardTitle className="text-2xl text-medical-blue">{service.title}</CardTitle>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-500 mb-4">{service.description}</p>
+                        <p className="text-gray-700">{service.details}</p>
+                      </CardContent>
+                      <CardFooter>
+                        <Button asChild variant="outline" className="text-medical-blue hover:bg-medical-blue/5">
+                          <Link to={`/request-pickup?service=${service.title}`}>Request This Service</Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </section>
 
@@ -110,7 +244,7 @@ const Services = () => {
               <div className="mb-6 md:mb-0">
                 <h2 className="text-2xl md:text-3xl font-bold mb-2">Ready to experience our services?</h2>
                 <p className="text-white/80">
-                  Contact us today to discuss your medical courier needs
+                  Contact us today to discuss your delivery needs
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">

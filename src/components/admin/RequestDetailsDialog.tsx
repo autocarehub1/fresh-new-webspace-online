@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -74,6 +73,14 @@ const RequestDetailsDialog = ({
               <p>{request.delivery_location}</p>
             </div>
             <div>
+              <h3 className="font-medium">Requester</h3>
+              <p>{request.requester_name || 'Not specified'}</p>
+            </div>
+            <div>
+              <h3 className="font-medium">Company</h3>
+              <p>{request.company_name || 'Not specified'}</p>
+            </div>
+            <div>
               <h3 className="font-medium">Created At</h3>
               <p>{new Date(request.created_at).toLocaleString()}</p>
             </div>
@@ -84,16 +91,43 @@ const RequestDetailsDialog = ({
           </div>
           <h3 className="font-medium mb-2">Tracking Updates</h3>
           <div className="border rounded-md p-4 max-h-[200px] overflow-y-auto">
-            {request.tracking_updates?.map((update, index) => (
-              <div key={index} className="mb-3 pb-3 border-b last:border-0">
-                <div className="flex justify-between">
-                  <span className="font-medium">{update.status}</span>
-                  <span className="text-sm text-gray-600">{new Date(update.timestamp).toLocaleString()}</span>
+            {request.tracking_updates
+              ?.slice()
+              .sort((a, b) => {
+                // Define the exact status order based on the screenshot
+                const statusPriority = {
+                  'Delivered': 1,
+                  'In Transit': 2,
+                  'Picked Up': 3,
+                  'Driver Assigned': 4,
+                  'Request Approved': 5,
+                  'Request Submitted': 6
+                };
+                
+                // Get the priority for each status (use a high number if not in our predefined list)
+                const priorityA = statusPriority[a.status] || 999;
+                const priorityB = statusPriority[b.status] || 999;
+                
+                // First sort by priority (statuses in our defined order)
+                if (priorityA !== priorityB) {
+                  return priorityA - priorityB;
+                }
+                
+                // If same status type, sort by timestamp (newest first)
+                return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+              })
+              .map((update, index) => (
+                <div key={index} className="mb-3 pb-3 border-b last:border-0">
+                  <div className="flex justify-between">
+                    <span className="font-medium">{update.status}</span>
+                    <span className="text-sm text-gray-600">
+                      {new Date(update.timestamp).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-sm">{update.note}</p>
+                  <p className="text-xs text-gray-500">{update.location}</p>
                 </div>
-                <p className="text-sm">{update.note}</p>
-                <p className="text-xs text-gray-500">{update.location}</p>
-              </div>
-            ))}
+              ))}
             {!request.tracking_updates?.length && (
               <p className="text-gray-500 text-center">No tracking updates available</p>
             )}

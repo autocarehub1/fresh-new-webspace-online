@@ -33,10 +33,16 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     unassignDriver,
     updateDriverLocation,
     addDriver,
-    deleteDriver
+    deleteDriver,
+    refetch: refetchDrivers
   } = useDriverData();
   
-  const { deliveries: requests, isLoading: requestsLoading, simulateMovement } = useDeliveryData();
+  const { 
+    deliveries: requests, 
+    isLoading: requestsLoading, 
+    simulateMovement,
+    refetch: refetchDeliveries
+  } = useDeliveryData();
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
@@ -158,16 +164,69 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     }
 
     try {
+      console.log('Attempting to assign driver:', selectedDriverId, 'to request:', selectedRequestId);
+      
+      // Get the driver and request details to verify assignment is valid
+      const driver = drivers.find(d => d.id === selectedDriverId);
+      const request = requests.find(r => r.id === selectedRequestId);
+      
+      if (!driver) {
+        toast.error('Selected driver not found');
+        return;
+      }
+      
+      if (!request) {
+        toast.error('Selected request not found');
+        return;
+      }
+      
+      if (driver.status !== 'active') {
+        toast.error('Driver must be active to be assigned');
+        return;
+      }
+      
+      if (driver.current_delivery) {
+        toast.error('Driver already has an active delivery assignment');
+        return;
+      }
+      
+      if (request.status !== 'pending') {
+        toast.error('Only pending requests can be assigned to drivers');
+        return;
+      }
+      
+      if (request.assigned_driver) {
+        toast.error('Request already has an assigned driver');
+        return;
+      }
+      
+      console.log('Assignment validation passed, proceeding with assignment');
       await assignDriver.mutateAsync({ 
         driverId: selectedDriverId, 
         deliveryId: selectedRequestId 
       });
+      
+      console.log('Assignment successful');
+      toast.success(`Assigned driver ${driver.name} to request #${selectedRequestId}`);
       setSelectedDriverId('');
       setSelectedRequestId('');
+      
+      // Refresh data after assignment
+      await refreshData();
     } catch (error: any) {
       console.error('Failed to assign driver:', error);
       toast.error(`Failed to assign driver: ${error?.message || 'Unknown error'}`);
     }
+  };
+
+  // Add a refresh function to ensure data is up to date
+  const refreshData = async () => {
+    console.log('Refreshing drivers and deliveries data...');
+    await Promise.all([
+      refetchDrivers(),
+      refetchDeliveries()
+    ]);
+    console.log('Data refresh complete');
   };
 
   const handleToggleSimulation = () => {
@@ -201,7 +260,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
 
   const activeDrivers = drivers?.filter(d => d.status === 'active') || [];
   const availableRequests = requests?.filter(r => 
-    (r.status === 'pending' || r.status === 'in_progress') && !r.assigned_driver
+    r.status === 'pending' && !r.assigned_driver
   ) || [];
   
   return (

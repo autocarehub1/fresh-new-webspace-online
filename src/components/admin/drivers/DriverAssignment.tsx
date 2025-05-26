@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, MapPin, Package } from 'lucide-react';
+import { Clock, MapPin, Package, AlertCircle } from 'lucide-react';
 import type { Driver, Delivery } from '@/types/delivery';
 
 interface DriverAssignmentProps {
@@ -33,6 +33,14 @@ const DriverAssignment = ({
 }: DriverAssignmentProps) => {
   const [filter, setFilter] = useState<'all' | 'available'>('available');
 
+  // Add console logs to help with debugging
+  useEffect(() => {
+    console.log('DriverAssignment: Drivers count:', drivers.length);
+    console.log('DriverAssignment: Requests count:', requests.length);
+    console.log('DriverAssignment: Selected driver ID:', selectedDriverId);
+    console.log('DriverAssignment: Selected request ID:', selectedRequestId);
+  }, [drivers, requests, selectedDriverId, selectedRequestId]);
+
   const availableDrivers = drivers.filter(d => {
     // Active drivers with no delivery are always available
     if (d.status === 'active' && !d.current_delivery) {
@@ -52,8 +60,15 @@ const DriverAssignment = ({
   });
 
   const pendingRequests = requests.filter(r => 
-    r.status === 'pending' && !r.assigned_driver
+    (r.status === 'pending' || r.status === 'in_progress') && !r.assigned_driver
   );
+
+  // Log the filtered lists
+  useEffect(() => {
+    console.log('DriverAssignment: Available drivers:', availableDrivers.length);
+    console.log('DriverAssignment: Pending requests:', pendingRequests.length);
+    console.log('DriverAssignment: Pending request IDs:', pendingRequests.map(r => r.id));
+  }, [availableDrivers, pendingRequests]);
 
   const selectedDriver = drivers.find(d => d.id === selectedDriverId);
   const selectedRequest = requests.find(r => r.id === selectedRequestId);
@@ -153,17 +168,23 @@ const DriverAssignment = ({
                   <SelectValue placeholder="Choose a request" />
                 </SelectTrigger>
                 <SelectContent>
-                  {pendingRequests.map((request) => (
-                    <SelectItem key={request.id} value={request.id}>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        <span>Request #{request.id}</span>
-                        <Badge variant="outline">
-                          {request.priority} Priority
-                        </Badge>
-                      </div>
+                  {pendingRequests.length === 0 ? (
+                    <SelectItem value="no-requests" disabled>
+                      No pending requests available
                     </SelectItem>
-                  ))}
+                  ) : (
+                    pendingRequests.map((request) => (
+                      <SelectItem key={request.id} value={request.id}>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          <span>Request #{request.id}</span>
+                          <Badge variant="outline">
+                            {request.priority} Priority
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -186,6 +207,16 @@ const DriverAssignment = ({
             )}
           </div>
         </div>
+
+        {pendingRequests.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-4 text-muted-foreground text-sm">
+            <div className="mb-2 text-orange-400">
+              <AlertCircle size={24} />
+            </div>
+            <p>No unassigned delivery requests available.</p>
+            <p className="text-xs mt-1">Create a delivery request or check for requests with 'in_progress' status but no driver.</p>
+          </div>
+        )}
 
         {bestMatch && selectedDriver && !selectedRequestId && (
           <div className="mt-4 p-4 bg-muted rounded-lg">
@@ -211,7 +242,7 @@ const DriverAssignment = ({
         <div className="mt-6 flex justify-end">
           <Button
             onClick={onAssignDriver}
-            disabled={!selectedDriverId || !selectedRequestId}
+            disabled={!selectedDriverId || !selectedRequestId || pendingRequests.length === 0 || availableDrivers.length === 0}
           >
             Assign Driver to Delivery
           </Button>

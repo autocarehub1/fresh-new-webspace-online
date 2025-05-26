@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dual Environment Slack Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+      display: inline-block;
+      font-size: 16px;
+      margin: 10px 5px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button.secondary {
+      background-color: #555;
+    }
+    button.secondary:hover {
+      background-color: #333;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: #eee;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-bottom: none;
+    }
+    .tab.active {
+      background: #fff;
+      border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+      font-weight: bold;
+    }
+    .tab-content {
+      border: 1px solid #ccc;
+      padding: 20px;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .result {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+      background: #f9f9f9;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .env-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .domain-indicator {
+      font-size: 16px;
+      padding: 10px;
+      border-radius: 4px;
+      background: #f0f0f0;
+    }
+    .logs {
+      font-family: monospace;
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 10px;
+      background: #f5f5f5;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dual Environment Slack Integration Test</h1>
+  
+  <div class="env-header">
+    <p>This tool tests Slack integration in both local and www.catnetlogistics.com environments.</p>
+    <div class="domain-indicator">
+      Current domain: <strong id="current-domain"></strong>
+    </div>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="local">Local Environment</div>
+    <div class="tab" data-tab="simulation">Domain Simulation</div>
+    <div class="tab" data-tab="diagnostic">Diagnostic Tools</div>
+  </div>
+  
+  <div class="tab-content active" id="local">
+    <h2>Local Environment Test</h2>
+    <p>Test Slack notifications in your local environment:</p>
+    
+    <div>
+      <button onclick="testLocalDirectWebhook()">Test Direct Webhook</button>
+      <button onclick="testLocalApiRoute()">Test API Route</button>
+      <button onclick="testLocalAlternativeRoute()">Test Alternative Route</button>
+    </div>
+    
+    <div class="result">
+      <h3>Result:</h3>
+      <div id="local-result">No test run yet</div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="simulation">
+    <h2>www.catnetlogistics.com Simulation</h2>
+    <p>Simulate how your code would behave on your production domain:</p>
+    
+    <div>
+      <button onclick="testDomainDirectWebhook()">Test Direct Webhook</button>
+      <button onclick="testDomainApiRoute()">Test API Route</button>
+      <button onclick="testDomainAlternativeRoute()">Test Alternative Route</button>
+    </div>
+    
+    <div class="result">
+      <h3>Result:</h3>
+      <div id="domain-result">No test run yet</div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="diagnostic">
+    <h2>Diagnostic Tools</h2>
+    <p>Analyze your Slack integration and connections:</p>
+    
+    <div>
+      <button onclick="testSlackWebhookValidity()">Test Webhook Validity</button>
+      <button onclick="testServerConnection()">Test Backend Server</button>
+      <button onclick="clearLogs()" class="secondary">Clear Logs</button>
+    </div>
+    
+    <h3>Console Logs:</h3>
+    <div class="logs" id="console-logs"></div>
+    
+    <div class="result">
+      <h3>Result:</h3>
+      <div id="diagnostic-result">No test run yet</div>
+    </div>
+  </div>
+  
+  <script>
+    // Constants
+    const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+    const SLACK_CHANNEL_ID = 'C08S18NP5JA';
+    
+    // DOM elements
+    const localResultElement = document.getElementById('local-result');
+    const domainResultElement = document.getElementById('domain-result');
+    const diagnosticResultElement = document.getElementById('diagnostic-result');
+    const consoleLogsElement = document.getElementById('console-logs');
+    const currentDomainElement = document.getElementById('current-domain');
+    
+    // Set current domain
+    currentDomainElement.textContent = window.location.hostname;
+    
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and content
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+      });
+    });
+    
+    // Logging functions
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      console.log(`[${timestamp}] ${message}`);
+      
+      const logLine = document.createElement('div');
+      logLine.textContent = `[${timestamp}] ${message}`;
+      consoleLogsElement.appendChild(logLine);
+      consoleLogsElement.scrollTop = consoleLogsElement.scrollHeight;
+    }
+    
+    function logSuccess(message) {
+      const logLine = document.createElement('div');
+      logLine.className = 'success';
+      logLine.textContent = message;
+      return logLine;
+    }
+    
+    function logError(message) {
+      const logLine = document.createElement('div');
+      logLine.className = 'error';
+      logLine.textContent = message;
+      return logLine;
+    }
+    
+    function clearLogs() {
+      consoleLogsElement.innerHTML = '';
+    }
+    
+    function updateResult(element, content) {
+      if (typeof content === 'string') {
+        const p = document.createElement('p');
+        p.textContent = content;
+        element.innerHTML = '';
+        element.appendChild(p);
+      } else {
+        element.innerHTML = '';
+        element.appendChild(content);
+      }
+    }
+    
+    // Create payload for Slack
+    function createSlackPayload(message, additionalInfo = '') {
+      return {
+        text: message,
+        channel: SLACK_CHANNEL_ID,
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: "🧪 Slack Integration Test",
+              emoji: true
+            }
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `*Test message:* ${message}\n*Time:* ${new Date().toLocaleString()}\n${additionalInfo}`
+            }
+          }
+        ]
+      };
+    }
+    
+    // Local environment tests
+    async function testLocalDirectWebhook() {
+      log('Testing direct webhook from local environment');
+      localResultElement.innerHTML = '<p>Testing direct webhook call...</p>';
+      
+      try {
+        const payload = createSlackPayload(
+          `Direct webhook test from ${window.location.hostname}`, 
+          '*Mode:* Standard local environment'
+        );
+        
+        log('Sending direct webhook request...');
+        
+        const response = await fetch(SLACK_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const text = await response.text();
+        log(`Direct webhook response: ${response.status}, ${text}`);
+        
+        if (response.ok) {
+          updateResult(localResultElement, logSuccess('✅ Direct webhook call successful!'));
+        } else {
+          updateResult(localResultElement, logError(`❌ Direct webhook call failed: ${response.status} ${text}`));
+        }
+      } catch (error) {
+        log(`Error in direct webhook test: ${error.message}`);
+        updateResult(localResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    async function testLocalApiRoute() {
+      log('Testing API route from local environment');
+      localResultElement.innerHTML = '<p>Testing API route call...</p>';
+      
+      try {
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/api/slack/send`;
+        
+        const payload = createSlackPayload(
+          `API route test from ${window.location.hostname}`, 
+          `*Endpoint:* ${apiUrl}\n*Mode:* Standard local environment`
+        );
+        
+        log(`Sending request to API route: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        let responseText;
+        try {
+          responseText = await response.text();
+        } catch (e) {
+          responseText = 'Could not read response text';
+        }
+        
+        log(`API route response: ${response.status}, ${responseText}`);
+        
+        if (response.ok) {
+          updateResult(localResultElement, logSuccess(`✅ API route call successful! Response: ${responseText}`));
+        } else {
+          updateResult(localResultElement, logError(`❌ API route call failed: ${response.status} ${responseText}`));
+        }
+      } catch (error) {
+        log(`Error in API route test: ${error.message}`);
+        updateResult(localResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    async function testLocalAlternativeRoute() {
+      log('Testing alternative route from local environment');
+      localResultElement.innerHTML = '<p>Testing alternative route call...</p>';
+      
+      try {
+        const baseUrl = window.location.origin;
+        const apiUrl = `${baseUrl}/slack/send`;
+        
+        const payload = createSlackPayload(
+          `Alternative route test from ${window.location.hostname}`, 
+          `*Endpoint:* ${apiUrl}\n*Mode:* Standard local environment`
+        );
+        
+        log(`Sending request to alternative route: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        let responseText;
+        try {
+          responseText = await response.text();
+        } catch (e) {
+          responseText = 'Could not read response text';
+        }
+        
+        log(`Alternative route response: ${response.status}, ${responseText}`);
+        
+        if (response.ok) {
+          updateResult(localResultElement, logSuccess(`✅ Alternative route call successful! Response: ${responseText}`));
+        } else {
+          updateResult(localResultElement, logError(`❌ Alternative route call failed: ${response.status} ${responseText}`));
+        }
+      } catch (error) {
+        log(`Error in alternative route test: ${error.message}`);
+        updateResult(localResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    // Domain simulation tests
+    async function testDomainDirectWebhook() {
+      log('Testing direct webhook with domain simulation');
+      domainResultElement.innerHTML = '<p>Testing domain direct webhook call...</p>';
+      
+      try {
+        // Simulate the hostname being www.catnetlogistics.com
+        const simulatedHostname = 'www.catnetlogistics.com';
+        
+        const payload = createSlackPayload(
+          `Direct webhook test (domain simulation)`, 
+          `*Simulated domain:* ${simulatedHostname}\n*Mode:* no-cors`
+        );
+        
+        log('Sending direct webhook with no-cors mode...');
+        
+        const response = await fetch(SLACK_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          mode: 'no-cors' // This is what we do on the production domain
+        });
+        
+        log('Direct webhook request sent with no-cors mode');
+        updateResult(domainResultElement, logSuccess('✅ Direct webhook request sent with no-cors mode. Check Slack for the message.'));
+        
+      } catch (error) {
+        log(`Error in domain direct webhook test: ${error.message}`);
+        updateResult(domainResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    async function testDomainApiRoute() {
+      log('Testing API route with domain simulation');
+      domainResultElement.innerHTML = '<p>Testing domain API route call...</p>';
+      
+      try {
+        // Simulate the API URL on production
+        const simulatedBaseUrl = 'https://www.catnetlogistics.com';
+        const apiUrl = `${simulatedBaseUrl}/api/slack/send`;
+        
+        const payload = createSlackPayload(
+          `API route test (domain simulation)`, 
+          `*Simulated URL:* ${apiUrl}\n*Actual URL:* ${window.location.origin}/api/slack/send\n*Mode:* domain simulation`
+        );
+        
+        log(`Simulating request to domain API route: ${apiUrl}`);
+        log('Using local endpoint for actual request');
+        
+        // We're actually calling the local endpoint
+        const response = await fetch(`${window.location.origin}/api/slack/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        let responseText;
+        try {
+          responseText = await response.text();
+        } catch (e) {
+          responseText = 'Could not read response text';
+        }
+        
+        log(`Simulated API route response: ${response.status}, ${responseText}`);
+        
+        if (response.ok) {
+          updateResult(domainResultElement, logSuccess(`✅ Domain API route simulation successful! Response: ${responseText}`));
+        } else {
+          updateResult(domainResultElement, logError(`❌ Domain API route simulation failed: ${response.status} ${responseText}`));
+        }
+      } catch (error) {
+        log(`Error in domain API route test: ${error.message}`);
+        updateResult(domainResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    async function testDomainAlternativeRoute() {
+      log('Testing alternative route with domain simulation');
+      domainResultElement.innerHTML = '<p>Testing domain alternative route call...</p>';
+      
+      try {
+        // Simulate the API URL on production
+        const simulatedBaseUrl = 'https://www.catnetlogistics.com';
+        const apiUrl = `${simulatedBaseUrl}/slack/send`;
+        
+        const payload = createSlackPayload(
+          `Alternative route test (domain simulation)`, 
+          `*Simulated URL:* ${apiUrl}\n*Actual URL:* ${window.location.origin}/slack/send\n*Mode:* domain simulation`
+        );
+        
+        log(`Simulating request to domain alternative route: ${apiUrl}`);
+        log('Using local endpoint for actual request');
+        
+        // We're actually calling the local endpoint
+        const response = await fetch(`${window.location.origin}/slack/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        let responseText;
+        try {
+          responseText = await response.text();
+        } catch (e) {
+          responseText = 'Could not read response text';
+        }
+        
+        log(`Simulated alternative route response: ${response.status}, ${responseText}`);
+        
+        if (response.ok) {
+          updateResult(domainResultElement, logSuccess(`✅ Domain alternative route simulation successful! Response: ${responseText}`));
+        } else {
+          updateResult(domainResultElement, logError(`❌ Domain alternative route simulation failed: ${response.status} ${responseText}`));
+        }
+      } catch (error) {
+        log(`Error in domain alternative route test: ${error.message}`);
+        updateResult(domainResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    // Diagnostic tools
+    async function testSlackWebhookValidity() {
+      log('Testing Slack webhook validity');
+      diagnosticResultElement.innerHTML = '<p>Testing webhook validity...</p>';
+      
+      try {
+        const payload = {
+          text: `Webhook validation test at ${new Date().toLocaleString()}`,
+          channel: SLACK_CHANNEL_ID
+        };
+        
+        log(`Sending simple message to validate webhook: ${SLACK_WEBHOOK_URL}`);
+        
+        const response = await fetch(SLACK_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const text = await response.text();
+        log(`Webhook validation response: ${response.status}, ${text}`);
+        
+        if (response.ok) {
+          updateResult(diagnosticResultElement, logSuccess(`✅ Webhook is valid! Response: ${text}`));
+        } else {
+          updateResult(diagnosticResultElement, logError(`❌ Webhook validation failed: ${response.status} ${text}`));
+        }
+      } catch (error) {
+        log(`Error in webhook validation: ${error.message}`);
+        updateResult(diagnosticResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    async function testServerConnection() {
+      log('Testing backend server connection');
+      diagnosticResultElement.innerHTML = '<p>Testing server connection...</p>';
+      
+      const results = document.createElement('div');
+      
+      try {
+        log('Testing API server health endpoint...');
+        
+        // First try health endpoint
+        const healthUrl = `${window.location.origin}/health`;
+        try {
+          const healthResponse = await fetch(healthUrl);
+          let healthText;
+          try {
+            healthText = await healthResponse.text();
+          } catch (e) {
+            healthText = 'Could not read response text';
+          }
+          
+          log(`Health endpoint response: ${healthResponse.status}, ${healthText}`);
+          
+          if (healthResponse.ok) {
+            results.appendChild(logSuccess(`✅ Health endpoint OK: ${healthText}`));
+          } else {
+            results.appendChild(logError(`❌ Health endpoint error: ${healthResponse.status}`));
+          }
+        } catch (healthError) {
+          log(`Error contacting health endpoint: ${healthError.message}`);
+          results.appendChild(logError(`❌ Health endpoint error: ${healthError.message}`));
+        }
+        
+        // Test API endpoint with a simple request
+        log('Testing API route with a simple request...');
+        const apiUrl = `${window.location.origin}/api/slack/send`;
+        try {
+          const apiResponse = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              text: 'Server connection test'
+            })
+          });
+          
+          let apiText;
+          try {
+            apiText = await apiResponse.text();
+          } catch (e) {
+            apiText = 'Could not read response text';
+          }
+          
+          log(`API route response: ${apiResponse.status}, ${apiText}`);
+          
+          if (apiResponse.ok) {
+            results.appendChild(logSuccess(`✅ API route OK: ${apiText}`));
+          } else {
+            results.appendChild(logError(`❌ API route error: ${apiResponse.status} - ${apiText}`));
+          }
+        } catch (apiError) {
+          log(`Error contacting API route: ${apiError.message}`);
+          results.appendChild(logError(`❌ API route error: ${apiError.message}`));
+        }
+        
+        // Test alternative endpoint
+        log('Testing alternative route...');
+        const altUrl = `${window.location.origin}/slack/send`;
+        try {
+          const altResponse = await fetch(altUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              text: 'Server connection test (alternative route)'
+            })
+          });
+          
+          let altText;
+          try {
+            altText = await altResponse.text();
+          } catch (e) {
+            altText = 'Could not read response text';
+          }
+          
+          log(`Alternative route response: ${altResponse.status}, ${altText}`);
+          
+          if (altResponse.ok) {
+            results.appendChild(logSuccess(`✅ Alternative route OK: ${altText}`));
+          } else {
+            results.appendChild(logError(`❌ Alternative route error: ${altResponse.status} - ${altText}`));
+          }
+        } catch (altError) {
+          log(`Error contacting alternative route: ${altError.message}`);
+          results.appendChild(logError(`❌ Alternative route error: ${altError.message}`));
+        }
+        
+        updateResult(diagnosticResultElement, results);
+      } catch (error) {
+        log(`Error in server connection test: ${error.message}`);
+        updateResult(diagnosticResultElement, logError(`❌ Error: ${error.message}`));
+      }
+    }
+    
+    // Initialize
+    log('Test page initialized');
+    log(`Current domain: ${window.location.hostname}`);
+    log(`Current origin: ${window.location.origin}`);
+  </script>
+</body>
+</html> 

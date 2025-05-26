@@ -1,133 +1,177 @@
-# Deployment Guide for Express Med Dispatch
+# Deployment Guide for Catalyst Network Logistics Website
 
-This guide provides instructions for deploying the Express Med Dispatch application on a server with Nginx.
+This guide covers how to deploy the Catalyst Network Logistics website to various server environments.
 
-## Prerequisites
+## Build the Application
 
-- A server with Ubuntu/Debian or similar Linux distribution
-- Nginx installed
-- Domain name (optional)
-
-## Step 1: Prepare the Server
+First, build the application:
 
 ```bash
-# Update the system
+npm run build
+```
+
+This will create a `dist` directory with all the necessary files.
+
+## Deployment Options
+
+### Option 1: Nginx (Recommended)
+
+#### 1. Prepare the Server
+
+Install Nginx if not already installed:
+
+```bash
 sudo apt update
-sudo apt upgrade -y
-
-# Install Nginx if not already installed
-sudo apt install nginx -y
-
-# Start and enable Nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
+sudo apt install nginx
 ```
 
-## Step 2: Deploy the Application
+#### 2. Copy Files to Server
 
-1. Extract the `catalyst-network-logistics.zip` file on your server:
+Copy the `dist` directory and `nginx.conf` to your server:
 
 ```bash
-# Create a directory for the application
-sudo mkdir -p /var/www/catalyst-network-logistics
+# Using SCP
+scp -r dist/ nginx.conf user@your-server:/tmp/
 
-# Upload the zip file to this location using SFTP or similar
-
-# Extract the zip file
-sudo unzip catalyst-network-logistics.zip -d /var/www/catalyst-network-logistics
-
-# Set proper permissions
-sudo chown -R www-data:www-data /var/www/catalyst-network-logistics
+# On the server
+sudo mkdir -p /var/www/html/dist
+sudo cp -r /tmp/dist/* /var/www/html/dist/
+sudo cp /tmp/nginx.conf /etc/nginx/sites-available/catnetlogistics.com
 ```
 
-## Step 3: Configure Nginx
+#### 3. Configure Nginx
 
-Create a Nginx configuration file for the application:
+Set up the Nginx configuration:
 
 ```bash
-sudo nano /etc/nginx/sites-available/catalyst-network-logistics
-```
+# Create a symlink to enable the site
+sudo ln -s /etc/nginx/sites-available/catnetlogistics.com /etc/nginx/sites-enabled/
 
-Copy the following configuration, replacing `your-domain.com` with your actual domain:
+# Remove the default site if necessary
+sudo rm /etc/nginx/sites-enabled/default
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com; # Replace with your actual domain or use your server IP
-
-    # Document root where your files are located
-    root /var/www/catalyst-network-logistics;
-    index index.html;
-
-    # Compression settings
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
-
-    # Handle SPA routing - redirect all requests to index.html
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Error pages
-    error_page 404 /index.html;
-    error_page 500 502 503 504 /50x.html;
-}
-```
-
-Enable the site:
-
-```bash
-sudo ln -s /etc/nginx/sites-available/catalyst-network-logistics /etc/nginx/sites-enabled/
-sudo nginx -t  # Test the configuration
-sudo systemctl reload nginx  # Apply the configuration
-```
-
-## Step 4: Set Up SSL (Optional but Recommended)
-
-```bash
-# Install Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Obtain SSL certificate
-sudo certbot --nginx -d your-domain.com
-
-# Certbot will modify your Nginx configuration automatically
-# Test the configuration again
+# Test the configuration
 sudo nginx -t
+
+# If the test passes, reload Nginx
+sudo systemctl reload nginx
 ```
 
-## Step 5: Testing the Deployment
+**IMPORTANT:** Make sure the `dist` folder is in the correct location as specified in the nginx.conf file. The default is `/var/www/html/dist`.
 
-1. Open your domain or server IP in a browser
-2. Test functionality including:
-   - Login
-   - Viewing and managing delivery requests
-   - Tracking deliveries
-   - Driver assignment
+#### 4. Set Proper Permissions
+
+```bash
+sudo chown -R www-data:www-data /var/www/html/dist
+sudo chmod -R 755 /var/www/html/dist
+```
+
+### Option 2: Apache Server
+
+#### 1. Prepare the Server
+
+If you're using Apache, ensure that mod_rewrite is enabled:
+
+```bash
+sudo a2enmod rewrite
+sudo systemctl restart apache2
+```
+
+#### 2. Copy Files to Server
+
+Copy the `dist` directory and `.htaccess` file to your server:
+
+```bash
+# Using SCP
+scp -r dist/ .htaccess user@your-server:/tmp/
+
+# On the server
+sudo mkdir -p /var/www/html/
+sudo cp -r /tmp/dist/* /var/www/html/
+sudo cp /tmp/.htaccess /var/www/html/
+```
+
+#### 3. Configure Apache
+
+Make sure your Apache configuration allows .htaccess files:
+
+```apache
+<Directory /var/www/html>
+    AllowOverride All
+    Require all granted
+</Directory>
+```
+
+#### 4. Set Proper Permissions
+
+```bash
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
+```
+
+### Option 3: Shared Hosting
+
+For shared hosting environments:
+
+1. Upload the contents of the `dist` directory to your web root
+2. Upload the `.htaccess` file to your web root
+3. Upload the `404.html` file to your web root
 
 ## Troubleshooting
 
-### 404 Not Found When Accessing Routes Directly
+### 404 Errors on Direct URL Access
 
-If you see 404 errors when trying to access routes directly (like `/tracking`) or when refreshing on a page, ensure your Nginx configuration includes the `try_files $uri $uri/ /index.html;` directive in the location block.
+If you're experiencing 404 errors when directly accessing URLs like `/tracking?id=MED-123`:
 
-### API Connection Issues
+1. **Verify the server configuration**:
+   - For Nginx: Make sure the `try_files $uri $uri/ /index.html;` directive is correctly set
+   - For Apache: Ensure the `.htaccess` file is properly uploaded and mod_rewrite is enabled
 
-If the application can't connect to the backend API:
-1. Check that the API URL in your environment variables is correct
-2. Ensure there are no CORS restrictions
-3. Verify the API is running and accessible from the server
+2. **Check file permissions**:
+   ```bash
+   sudo ls -la /var/www/html/dist
+   ```
 
-### Permission Issues
+3. **Check server logs**:
+   ```bash
+   sudo tail -n 50 /var/log/nginx/error.log
+   # or for Apache
+   sudo tail -n 50 /var/log/apache2/error.log
+   ```
 
-If you encounter permission issues:
+4. **Test with curl**:
+   ```bash
+   curl -I https://catnetlogistics.com/tracking?id=MED-123
+   ```
+   
+5. **Check folder structure**:
+   The server configuration needs to match where your files are actually located. If you see 404 errors, verify that:
+   
+   - For Nginx: Ensure the `root` directive points to the correct folder
+   - For Apache: Make sure you've placed the files in the actual web root
+
+## SSL Configuration
+
+To enable HTTPS with Let's Encrypt:
+
 ```bash
-sudo chown -R www-data:www-data /var/www/catalyst-network-logistics
-sudo chmod -R 755 /var/www/catalyst-network-logistics
-``` 
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d catnetlogistics.com -d www.catnetlogistics.com
+```
+
+Follow the prompts to complete the SSL setup.
+
+## Important Files
+
+- `nginx.conf`: Nginx server configuration
+- `.htaccess`: Apache rewrite rules
+- `404.html`: Fallback for handling direct URL access
+- `index.html`: Entry point with client-side routing handling
+
+## Managing Updates
+
+For future updates:
+
+1. Build the new version locally
+2. Copy only the updated files to maintain any server-specific configurations
+3. If there are significant structural changes, consider a full redeployment 

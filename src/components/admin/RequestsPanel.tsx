@@ -39,6 +39,17 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
       console.log("No requests data available yet");
     }
   }, [requests]);
+  
+  useEffect(() => {
+    if (selectedRequest && requests) {
+      const requestStillExists = requests.some(req => req.id === selectedRequest.id);
+      if (!requestStillExists) {
+        console.log(`Selected request ${selectedRequest.id} no longer exists, clearing selection`);
+        setSelectedRequest(null);
+        setViewTrackingMap(false);
+      }
+    }
+  }, [requests, selectedRequest]);
 
   useInterval(() => {
     if (viewTrackingMap && selectedRequest && selectedRequest.id) {
@@ -55,6 +66,25 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   const handleViewTracking = (request: DeliveryRequest) => {
     setSelectedRequest(request);
     setViewTrackingMap(true);
+  };
+  
+  const onDeleteRequest = (id: string) => {
+    // Ask for confirmation before deletion
+    if (!window.confirm("Are you sure you want to delete this request?")) {
+      return;
+    }
+    
+    // Clear selection if the deleted request is currently selected
+    if (selectedRequest && selectedRequest.id === id) {
+      setSelectedRequest(null);
+      setViewTrackingMap(false);
+    }
+    
+    // Call the hook's delete function
+    handleDeleteRequest(id);
+    
+    // Ensure any open dialogs are closed
+    setViewTrackingMap(false);
   };
 
   if (isLoading || isLocalLoading) {
@@ -98,7 +128,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         onStatusUpdate={handleStatusUpdate}
         onViewDetails={setSelectedRequest}
         onViewTracking={handleViewTracking}
-        onDelete={handleDeleteRequest}
+        onDelete={onDeleteRequest}
       />
       <RequestDetailsDialog
         open={!!selectedRequest && !viewTrackingMap}

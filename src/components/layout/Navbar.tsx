@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Phone, User } from 'lucide-react';
+import { Menu, X, Phone, User, ChevronDown } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,9 +28,26 @@ export const Navbar = () => {
           <Link to="/" className="text-sm font-medium hover:text-medical-teal transition-colors">
             Home
           </Link>
-          <Link to="/services" className="text-sm font-medium hover:text-medical-teal transition-colors">
-            Services
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="text-sm font-medium hover:text-medical-teal transition-colors flex items-center gap-1">
+              Services
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem asChild>
+                <Link to="/services#medical">Medical Delivery</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/services#baggage">Baggage Delivery</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/services#pet">Pet Delivery</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/services#home">Home Improvement</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link to="/tracking" className="text-sm font-medium hover:text-medical-teal transition-colors">
             Track Delivery
           </Link>
@@ -33,6 +56,9 @@ export const Navbar = () => {
           </Link>
           <Link to="/contact" className="text-sm font-medium hover:text-medical-teal transition-colors">
             Contact
+          </Link>
+          <Link to="/driver-auth" className="text-sm font-medium hover:text-medical-teal transition-colors">
+            Driver Login
           </Link>
         </nav>
 
@@ -65,9 +91,23 @@ export const Navbar = () => {
               <Link to="/" className="text-lg font-medium hover:text-medical-teal transition-colors">
                 Home
               </Link>
-              <Link to="/services" className="text-lg font-medium hover:text-medical-teal transition-colors">
-                Services
-              </Link>
+              <div className="flex flex-col gap-2">
+                <span className="text-lg font-medium">Services</span>
+                <div className="pl-4 flex flex-col gap-2">
+                  <Link to="/services#medical" className="text-base hover:text-medical-teal transition-colors">
+                    Medical Delivery
+                  </Link>
+                  <Link to="/services#baggage" className="text-base hover:text-medical-teal transition-colors">
+                    Baggage Delivery
+                  </Link>
+                  <Link to="/services#pet" className="text-base hover:text-medical-teal transition-colors">
+                    Pet Delivery
+                  </Link>
+                  <Link to="/services#home" className="text-base hover:text-medical-teal transition-colors">
+                    Home Improvement
+                  </Link>
+                </div>
+              </div>
               <Link to="/tracking" className="text-lg font-medium hover:text-medical-teal transition-colors">
                 Track Delivery
               </Link>
@@ -76,6 +116,9 @@ export const Navbar = () => {
               </Link>
               <Link to="/contact" className="text-lg font-medium hover:text-medical-teal transition-colors">
                 Contact
+              </Link>
+              <Link to="/driver-auth" className="text-lg font-medium hover:text-medical-teal transition-colors">
+                Driver Login
               </Link>
               <Button asChild variant="default" className="mt-4">
                 <Link to="/request-pickup">Request Pickup</Link>
