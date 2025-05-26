@@ -1,11 +1,32 @@
-import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { MapPin, Clock, Package, User, Phone, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { MapPin, Clock, Package, User, Phone, Mail, FileText, CheckCircle2, ClipboardCheck, PlusCircle, AlertCircle } from 'lucide-react';
 import { DeliveryRequest } from '@/types/delivery';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+interface ChainOfCustodyRecord {
+  id: string;
+  request_id: string;
+  action: string;
+  timestamp: string;
+  user_name: string;
+  location: string;
+  notes?: string;
+  temperature?: string;
+  condition: string;
+}
 
 interface ChainOfCustodyDialogProps {
   open: boolean;

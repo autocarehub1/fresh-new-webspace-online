@@ -39,11 +39,11 @@ export interface DeliveryRequest {
   tracking_updates?: TrackingUpdate[];
   
   // Database fields
-  email?: string; // Email field from the database
-  tracking_id?: string; // Database version of tracking ID
-  package_type?: string; // Database version of package type
-  requester_name?: string; // Name of the person requesting the delivery
-  company_name?: string; // Optional company name
+  email?: string;
+  tracking_id?: string;
+  package_type?: string;
+  requester_name?: string;
+  company_name?: string;
   
   // Additional fields needed for the tracking UI
   priority?: 'normal' | 'urgent';
@@ -90,6 +90,7 @@ export interface DeliveryRequest {
   delivery_time?: string;
   pickup_address?: string;
   delivery_address?: string;
+  delivery_time_window?: string;
 }
 
 // Export Delivery as an alias for DeliveryRequest for compatibility
