@@ -118,8 +118,7 @@ export const createDetailedTrackingUpdateAsync = async (
     status: status,
     timestamp: new Date().toISOString(),
     location: locationDescription,
-    note: note || `Courier is ${status.toLowerCase()}`,
-    coordinates: coordinates
+    note: note || `Courier is ${status.toLowerCase()}`
   };
 };
 
@@ -135,7 +134,6 @@ export const createDetailedTrackingUpdate = (
     status: status,
     timestamp: new Date().toISOString(),
     location: locationDescription,
-    note: note || `Courier is ${status.toLowerCase()}`,
-    coordinates: coordinates
+    note: note || `Courier is ${status.toLowerCase()}`
   };
 };

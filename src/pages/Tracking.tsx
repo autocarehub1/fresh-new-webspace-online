@@ -5,6 +5,10 @@ import Footer from '@/components/layout/Footer';
 import TrackingSearch from '@/components/tracking/TrackingSearch';
 import DeliveryTracking from '@/components/tracking/DeliveryTracking';
 
+interface TrackingProps {
+  trackingId?: string;
+}
+
 const Tracking = () => {
   const [trackingId, setTrackingId] = useState<string | null>(null);
   
