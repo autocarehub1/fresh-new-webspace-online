@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, CalendarDays } from 'lucide-react';
+import { User } from 'lucide-react';
 import { toast } from 'sonner';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -108,17 +108,30 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ user, onComplete 
     try {
       console.log('Updating driver profile with additional information for user:', user.id);
       
-      // First try to update existing profile in driver_profiles table
+      if (!user?.id) {
+        throw new Error('User ID is required for profile update');
+      }
+
+      if (!user?.email) {
+        throw new Error('User email is required for profile update');
+      }
+
+      // Check if profile exists in driver_profiles table
       const { data: existingProfile, error: fetchError } = await supabase
         .from('driver_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking existing profile:', fetchError);
+        throw new Error(`Failed to check existing profile: ${fetchError.message}`);
+      }
 
       const profileUpdate = {
         user_id: user.id,
-        email: user.email!,
-        full_name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim(),
+        email: user.email,
+        full_name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.user_metadata?.name || 'Driver',
         phone: user.user_metadata?.phone || '',
         license_number: user.user_metadata?.license_number || '',
         preferences: {
@@ -145,25 +158,44 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ user, onComplete 
         }
       };
 
-      let error;
+      let updateError;
       if (existingProfile) {
-        // Update existing profile
-        const result = await supabase
+        console.log('Updating existing profile...');
+        const { error } = await supabase
           .from('driver_profiles')
           .update(profileUpdate)
           .eq('user_id', user.id);
-        error = result.error;
+        updateError = error;
       } else {
-        // Insert new profile
-        const result = await supabase
+        console.log('Creating new profile...');
+        const { error } = await supabase
           .from('driver_profiles')
           .insert(profileUpdate);
-        error = result.error;
+        updateError = error;
       }
 
-      if (error) {
-        console.error('Profile update error:', error);
-        throw new Error(`Failed to update profile: ${error.message}`);
+      if (updateError) {
+        console.error('Profile update/insert error:', updateError);
+        throw new Error(`Failed to save profile: ${updateError.message || 'Unknown database error'}`);
+      }
+
+      // Also try to update the drivers table if it exists
+      try {
+        const { error: driversUpdateError } = await supabase
+          .from('drivers')
+          .update({
+            name: profileUpdate.full_name,
+            phone: profileUpdate.phone,
+            status: 'active'
+          })
+          .eq('id', user.id);
+
+        if (driversUpdateError) {
+          console.warn('Could not update drivers table:', driversUpdateError.message);
+          // Don't fail the whole process if drivers table update fails
+        }
+      } catch (driversError) {
+        console.warn('Drivers table may not exist or is not accessible:', driversError);
       }
 
       console.log('Profile completed successfully');
@@ -172,7 +204,8 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ user, onComplete 
 
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error(error.message || 'Failed to update profile');
+      const errorMessage = error?.message || error?.error?.message || 'Failed to update profile - please try again';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

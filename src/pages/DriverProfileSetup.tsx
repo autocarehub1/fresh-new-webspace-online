@@ -80,7 +80,7 @@ const DriverProfileSetup = () => {
           .from('drivers')
           .select('*')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
           
         if (driverData && !driverError) {
           console.log('Driver profile exists, redirecting to dashboard');
@@ -94,7 +94,7 @@ const DriverProfileSetup = () => {
           .from('driver_profiles')
           .select('*')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (profileData && !profileError) {
           console.log('Driver profile exists in driver_profiles, redirecting to dashboard');
@@ -149,6 +149,10 @@ const DriverProfileSetup = () => {
       if (!userId) {
         throw new Error("User ID is required");
       }
+
+      if (!user?.email) {
+        throw new Error("User email is required");
+      }
       
       // 1. Upload photo if provided
       let photoUrl = '';
@@ -181,7 +185,7 @@ const DriverProfileSetup = () => {
         .insert({
           id: userId,
           name: profileData.name.trim(),
-          email: user?.email || '',
+          email: user.email,
           phone: profileData.phone.trim(),
           vehicle_type: profileData.vehicle_type,
           photo: photoUrl,
@@ -190,7 +194,7 @@ const DriverProfileSetup = () => {
         
       if (profileError) {
         console.error('Driver profile creation error:', profileError);
-        throw new Error(`Failed to create driver profile: ${profileError.message}`);
+        throw new Error(`Failed to create driver profile: ${profileError.message || 'Database error'}`);
       }
       
       // 3. Also create entry in driver_profiles table for compatibility
@@ -199,7 +203,7 @@ const DriverProfileSetup = () => {
         .from('driver_profiles')
         .insert({
           user_id: userId,
-          email: user?.email || '',
+          email: user.email,
           full_name: profileData.name.trim(),
           phone: profileData.phone.trim(),
           vehicle_type: profileData.vehicle_type,
@@ -240,8 +244,9 @@ const DriverProfileSetup = () => {
       
     } catch (err: any) {
       console.error('Profile setup error:', err);
-      setError(err.message || 'Failed to set up profile');
-      toast.error(err.message || 'Failed to set up profile');
+      const errorMessage = err?.message || err?.error?.message || 'Failed to set up profile - please try again';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
