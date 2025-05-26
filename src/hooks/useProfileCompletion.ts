@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ProfileData } from '@/components/driver/profile-completion/types';
 import { validateProfileForm } from '@/components/driver/profile-completion/validation';
-import { refreshSchemaCache } from '@/lib/supabase';
+import { refreshDriversSchema } from '@/lib/schema-helper';
 
 export const useProfileCompletion = (user: any, onComplete: () => void) => {
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -55,13 +55,17 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
 
       // First, try to refresh the schema cache
       console.log('Refreshing schema cache...');
-      await refreshSchemaCache();
+      const schemaRefreshed = await refreshDriversSchema();
+      
+      if (!schemaRefreshed) {
+        console.warn('Schema refresh failed, but continuing...');
+      }
 
       // Check if the driver record exists first
       console.log('Checking if driver record exists...');
       const { data: existingDriver, error: checkError } = await supabase
         .from('drivers')
-        .select('id, name, email')
+        .select('id, name, email, phone, vehicle_type')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -107,7 +111,7 @@ export const useProfileCompletion = (user: any, onComplete: () => void) => {
         
         // Provide more specific error messages based on the error
         if (updateError.message.includes('column') && updateError.message.includes('does not exist')) {
-          throw new Error('Database schema is not up to date. Please contact support or try refreshing the page.');
+          throw new Error('Database schema is not up to date. Please run the latest migration in Supabase.');
         }
         
         throw new Error(`Failed to update profile: ${updateError.message}`);

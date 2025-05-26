@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { ProfileFormData } from '@/components/driver/profile-setup/types';
+import { refreshDriversSchema } from '@/lib/schema-helper';
 
 export const useProfileSetup = (userId: string, userEmail: string) => {
   const navigate = useNavigate();
@@ -52,6 +53,10 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         throw new Error("User email is required");
       }
       
+      // First, try to refresh the schema cache
+      console.log('Refreshing schema cache...');
+      await refreshDriversSchema();
+      
       // 1. Upload photo if provided
       let photoUrl = '';
       if (profileData.photo) {
@@ -77,12 +82,12 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         }
       }
       
-      // 2. Create driver profile in drivers table
+      // 2. Create driver profile in drivers table with email field
       console.log('Creating driver profile...');
       const driverData = {
         id: userId,
         name: profileData.name.trim(),
-        email: userEmail,
+        email: userEmail, // Make sure to include email
         phone: profileData.phone.trim(),
         vehicle_type: profileData.vehicle_type,
         photo: photoUrl,
@@ -102,6 +107,11 @@ export const useProfileSetup = (userId: string, userEmail: string) => {
         
       if (profileError) {
         console.error('Driver profile creation error:', profileError);
+        
+        if (profileError.message.includes('column') && profileError.message.includes('does not exist')) {
+          throw new Error('Database schema is not up to date. Please run the latest migration in Supabase.');
+        }
+        
         throw new Error(`Failed to create driver profile: ${profileError.message}`);
       }
       

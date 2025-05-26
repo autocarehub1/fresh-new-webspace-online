@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Driver } from '@/types/delivery';
@@ -12,9 +13,11 @@ export const useDriverQueries = () => {
     queryFn: async () => {
       try {
         console.log('Fetching drivers from Supabase...');
+        
+        // Use a safer query that only selects columns we know exist
         const { data, error } = await supabase
           .from('drivers')
-          .select('*');
+          .select('id, name, phone, photo, status, vehicle_type, current_location, created_at');
           
         if (error) {
           console.error('Error fetching drivers:', error);
