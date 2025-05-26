@@ -3,47 +3,36 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
-
-const vehicleTypes = [
-  'Car', 'SUV', 'Van', 'Pickup Truck', 'Box Truck', 'Motorcycle', 'Bicycle', 'Other'
-];
+import LoadingState from '@/components/driver/profile-setup/LoadingState';
+import ErrorAlert from '@/components/driver/profile-setup/ErrorAlert';
+import ProfileSetupForm from '@/components/driver/profile-setup/ProfileSetupForm';
+import { useProfileSetup } from '@/hooks/useProfileSetup';
+import { ProfileFormData } from '@/components/driver/profile-setup/types';
 
 const DriverProfileSetup = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   // Show loading state while auth is initializing
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-medical-blue mx-auto mb-4"></div>
-          <h2 className="text-lg font-semibold text-gray-700">Loading...</h2>
-          <p className="text-gray-500">Initializing profile setup...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
-  const [profileData, setProfileData] = useState({
+  const [profileData, setProfileData] = useState<ProfileFormData>({
     name: '',
     phone: '',
     vehicle_type: '',
-    photo: null as File | null,
+    photo: null,
   });
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   
   // Get userId from location state or current user
   const userId = location.state?.userId || user?.id;
+  const userEmail = user?.email || '';
+  
+  const { loading, error, validationErrors, handleSubmit } = useProfileSetup(userId, userEmail);
   
   useEffect(() => {
     // Redirect if no user
@@ -98,247 +87,23 @@ const DriverProfileSetup = () => {
     checkProfile();
   }, [userId, user, navigate]);
   
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    
-    if (!profileData.name.trim()) {
-      errors.name = 'Name is required';
-    }
-    
-    if (!profileData.phone.trim()) {
-      errors.phone = 'Phone number is required';
-    } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(profileData.phone)) {
-      errors.phone = 'Please enter a valid phone number';
-    }
-    
-    if (!profileData.vehicle_type) {
-      errors.vehicle_type = 'Please select a vehicle type';
-    }
-    
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    
-    console.log('Starting profile setup for user:', userId);
-    
-    if (!validateForm()) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      if (!userId) {
-        throw new Error("User ID is required");
-      }
-
-      if (!user?.email) {
-        throw new Error("User email is required");
-      }
-      
-      // 1. Upload photo if provided
-      let photoUrl = '';
-      if (profileData.photo) {
-        console.log('Uploading photo...');
-        const fileExt = profileData.photo.name.split('.').pop();
-        const fileName = `driver_${userId}_${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('driver-photos')
-          .upload(fileName, profileData.photo, { upsert: true });
-          
-        if (uploadError) {
-          console.error('Photo upload error:', uploadError);
-          // Don't fail the whole process for photo upload issues
-          console.warn('Continuing without photo');
-        } else {
-          const { data: publicUrlData } = supabase.storage
-            .from('driver-photos')
-            .getPublicUrl(fileName);
-            
-          photoUrl = publicUrlData?.publicUrl || '';
-          console.log('Photo uploaded successfully:', photoUrl);
-        }
-      }
-      
-      // 2. Create driver profile in drivers table
-      console.log('Creating driver profile...');
-      const driverData = {
-        id: userId,
-        name: profileData.name.trim(),
-        email: user.email,
-        phone: profileData.phone.trim(),
-        vehicle_type: profileData.vehicle_type,
-        photo: photoUrl,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log('Driver data to insert:', driverData);
-      
-      const { data: insertedDriver, error: profileError } = await supabase
-        .from('drivers')
-        .insert(driverData)
-        .select()
-        .single();
-        
-      if (profileError) {
-        console.error('Driver profile creation error:', profileError);
-        throw new Error(`Failed to create driver profile: ${profileError.message}`);
-      }
-      
-      console.log('Driver profile created successfully:', insertedDriver);
-      
-      // 3. Update user metadata
-      console.log('Updating user metadata...');
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          name: profileData.name.trim(),
-          phone: profileData.phone.trim(),
-          vehicle_type: profileData.vehicle_type,
-          has_completed_profile: true,
-          onboarding_completed: true,
-          driver_id: userId
-        }
-      });
-      
-      if (updateError) {
-        console.error('User metadata update error:', updateError);
-        // Don't fail the whole process for metadata update issues
-        console.warn('Continuing despite metadata update error');
-      }
-      
-      console.log('Profile setup completed successfully');
-      toast.success("Profile setup complete! Welcome to the driver portal.");
-      navigate(`/driver/${userId}`);
-      
-    } catch (err: any) {
-      console.error('Profile setup error:', err);
-      let errorMessage = 'Failed to set up profile';
-      
-      if (err?.message) {
-        errorMessage = `Failed to set up profile: ${err.message}`;
-      } else if (err?.error?.message) {
-        errorMessage = `Failed to set up profile: ${err.error.message}`;
-      } else if (typeof err === 'string') {
-        errorMessage = `Failed to set up profile: ${err}`;
-      }
-      
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    handleSubmit(profileData);
   };
   
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 py-12 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Complete Your Driver Profile</CardTitle>
-          <CardDescription>
-            Please provide the following information to start accepting deliveries.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm flex items-center">
-              <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="name">Full Name</label>
-              <Input
-                id="name"
-                value={profileData.name}
-                onChange={e => setProfileData({ ...profileData, name: e.target.value })}
-                required
-                disabled={loading}
-                className={validationErrors.name ? 'border-red-500' : ''}
-                placeholder="Enter your full name"
-              />
-              {validationErrors.name && (
-                <p className="mt-1 text-sm text-red-500">{validationErrors.name}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="phone">Phone Number</label>
-              <Input
-                id="phone"
-                type="tel"
-                value={profileData.phone}
-                onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
-                required
-                disabled={loading}
-                className={validationErrors.phone ? 'border-red-500' : ''}
-                placeholder="+1 (555) 555-5555"
-              />
-              {validationErrors.phone && (
-                <p className="mt-1 text-sm text-red-500">{validationErrors.phone}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="vehicle">Vehicle Type</label>
-              <select
-                id="vehicle"
-                className={`w-full border rounded px-3 py-2 ${validationErrors.vehicle_type ? 'border-red-500' : 'border-gray-300'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                value={profileData.vehicle_type}
-                onChange={e => setProfileData({ ...profileData, vehicle_type: e.target.value })}
-                required
-                disabled={loading}
-              >
-                <option value="">Select your vehicle type</option>
-                {vehicleTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-              {validationErrors.vehicle_type && (
-                <p className="mt-1 text-sm text-red-500">{validationErrors.vehicle_type}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="photo">Profile Photo (Optional)</label>
-              <Input
-                id="photo"
-                type="file"
-                accept="image/*"
-                onChange={e => {
-                  if (e.target.files && e.target.files[0]) {
-                    setProfileData({ ...profileData, photo: e.target.files[0] });
-                    setPhotoPreview(URL.createObjectURL(e.target.files[0]));
-                  }
-                }}
-                disabled={loading}
-              />
-              {photoPreview && (
-                <div className="mt-2 flex justify-center">
-                  <img src={photoPreview} alt="Profile Preview" className="w-24 h-24 object-cover rounded-full border" />
-                </div>
-              )}
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                  Setting Up...
-                </span>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Complete Setup
-                </>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {error && <ErrorAlert error={error} />}
+      <ProfileSetupForm
+        profileData={profileData}
+        setProfileData={setProfileData}
+        photoPreview={photoPreview}
+        setPhotoPreview={setPhotoPreview}
+        validationErrors={validationErrors}
+        loading={loading}
+        onSubmit={onSubmit}
+      />
     </div>
   );
 };
