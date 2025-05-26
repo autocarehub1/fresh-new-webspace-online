@@ -8,12 +8,15 @@ type AuthContextValue = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isTwoFactorEnabled: boolean;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: AuthError | null }>;
   signUp: (email: string, password: string, metadata?: object) => Promise<{ error: AuthError | null, user: User | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
   signInWithProvider: (provider: Provider) => Promise<void>;
+  initiateTwoFactor: () => Promise<{ success: boolean; error?: string }>;
+  verifyTwoFactor: (code: string) => Promise<{ success: boolean; error?: string }>;
 };
 
 // Create the auth context with a default value
@@ -21,12 +24,15 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   session: null,
   isLoading: true,
+  isTwoFactorEnabled: false,
   signIn: async () => ({ error: null }),
   signUp: async () => ({ error: null, user: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
   signInWithProvider: async () => {},
+  initiateTwoFactor: async () => ({ success: false }),
+  verifyTwoFactor: async () => ({ success: false }),
 });
 
 // Export the useAuth hook directly
@@ -37,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTwoFactorEnabled, setIsTwoFactorEnabled] = useState(false);
 
   // Initialize auth state
   useEffect(() => {
@@ -235,17 +242,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Initiate two-factor authentication setup
+  const initiateTwoFactor = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Mock implementation for demo
+      console.log('Initiating 2FA setup');
+      return { success: true };
+    } catch (error) {
+      console.error('Error initiating 2FA:', error);
+      return { success: false, error: 'Failed to initiate 2FA setup' };
+    }
+  };
+
+  // Verify two-factor authentication code
+  const verifyTwoFactor = async (code: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Mock implementation for demo - accept 123456 as valid code
+      console.log('Verifying 2FA code:', code);
+      if (code === '123456') {
+        setIsTwoFactorEnabled(true);
+        return { success: true };
+      } else {
+        return { success: false, error: 'Invalid verification code' };
+      }
+    } catch (error) {
+      console.error('Error verifying 2FA:', error);
+      return { success: false, error: 'Failed to verify code' };
+    }
+  };
+
   // Provide the auth context to children
   const value = {
     user,
     session,
     isLoading,
+    isTwoFactorEnabled,
     signIn,
     signUp,
     signOut,
     resetPassword,
     updatePassword,
     signInWithProvider,
+    initiateTwoFactor,
+    verifyTwoFactor,
   };
 
   console.log('Auth provider value:', { 

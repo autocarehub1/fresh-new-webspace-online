@@ -94,7 +94,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             name: 'Customer Name', // This could be passed as a prop
           },
         },
-        description,
       });
 
       if (error) {
@@ -180,4 +179,4 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       </form>
     </Card>
   );
-}; 
+};

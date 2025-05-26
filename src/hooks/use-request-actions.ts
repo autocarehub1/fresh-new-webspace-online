@@ -1,3 +1,4 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeliveryRequest } from '@/types/delivery';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,8 +7,8 @@ import { toast } from 'sonner';
 export const useRequestActions = () => {
   const queryClient = useQueryClient();
 
-  const approveMutation = useMutation(
-    async (id: string) => {
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .update({ status: 'pending' })
@@ -19,15 +20,13 @@ export const useRequestActions = () => {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+    },
+  });
 
-  const declineMutation = useMutation(
-    async (id: string) => {
+  const declineMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .update({ status: 'declined' })
@@ -39,15 +38,13 @@ export const useRequestActions = () => {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+    },
+  });
 
-  const deleteMutation = useMutation(
-    async (id: string) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .delete()
@@ -59,15 +56,13 @@ export const useRequestActions = () => {
 
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+    },
+  });
   
-  const statusUpdateMutation = useMutation(
-    async ({ req, status }: { req: DeliveryRequest; status: string }) => {
+  const statusUpdateMutation = useMutation({
+    mutationFn: async ({ req, status }: { req: DeliveryRequest; status: string }) => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .update({ status: status })
@@ -79,12 +74,10 @@ export const useRequestActions = () => {
       
       return data;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+    },
+  });
 
   const handleApprove = async (id: string): Promise<boolean> => {
     try {

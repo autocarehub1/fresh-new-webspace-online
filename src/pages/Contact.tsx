@@ -209,7 +209,24 @@ const Contact = () => {
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold text-medical-blue mb-8 text-center">Our Location</h2>
             <div className="max-w-5xl mx-auto">
-              <Map center={[-98.6615, 29.5301]} />
+              <div className="space-y-8">
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Visit Our Office</h3>
+                  <p className="text-gray-600 mb-4">
+                    Our headquarters is located in the heart of the medical district, making us easily accessible for all your delivery needs.
+                  </p>
+                  <div className="bg-gray-100 p-4 rounded-lg">
+                    <p className="font-medium">Express Med Dispatch</p>
+                    <p>123 Medical Center Drive</p>
+                    <p>Boston, MA 02115</p>
+                    <p>Phone: (555) 123-4567</p>
+                  </div>
+                </div>
+                
+                <div className="h-64 bg-gray-200 rounded-lg overflow-hidden">
+                  <Map />
+                </div>
+              </div>
             </div>
           </div>
         </section>
