@@ -22,6 +22,11 @@ const NotFound = () => {
       <main className="flex-grow flex items-center justify-center bg-gray-50 py-12 px-4">
         <div className="max-w-md w-full text-center">
           <div className="mb-8">
+            <img 
+              src="/lovable-uploads/49b6466e-7267-4a9d-a03c-5b25317f80a4.png" 
+              alt="Catalyst Network Logistics" 
+              className="h-12 w-auto mx-auto mb-6"
+            />
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
