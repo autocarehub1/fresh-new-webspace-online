@@ -1,150 +1,295 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { toast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
 
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Mail, Lock, ArrowLeft, UserPlus } from 'lucide-react';
-import { useAuth } from '@/lib/auth';
-import { toast } from 'sonner';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
+const loginSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+});
 
-const CustomerLogin = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const { signIn, signUp } = useAuth();
+const registerSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email" }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  companyName: z.string().min(2, { message: "Company name is required" }),
+  fullName: z.string().min(2, { message: "Full name is required" }),
+});
+
+export default function CustomerLogin() {
+  const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/customer-portal");
+    }
+  }, [user, navigate]);
 
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const registerForm = useForm<z.infer<typeof registerSchema>>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      companyName: "",
+      fullName: "",
+    },
+  });
+
+  const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
+    setIsLoading(true);
     try {
-      if (isSignUp) {
-        await signUp(email, password);
-        toast.success('Account created successfully! Please check your email for verification.');
+      const { error } = await signIn(values.email, values.password);
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Login failed",
+          description: error.message,
+        });
       } else {
-        await signIn(email, password);
-        toast.success('Logged in successfully');
-        navigate('/customer-portal');
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
+        navigate("/customer-portal");
       }
-    } catch (err: any) {
-      console.error('Authentication error:', err);
-      setError(err.message || `Failed to ${isSignUp ? 'create account' : 'log in'}`);
-      toast.error(`${isSignUp ? 'Sign up' : 'Login'} failed`);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
+    setIsLoading(true);
+    try {
+      // First, create the user account
+      const { error } = await signUp(values.email, values.password);
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Registration failed",
+          description: error.message,
+        });
+      } else {
+        // Then, store additional profile data (would need to implement this function)
+        // await createCustomerProfile(values.email, values.companyName, values.fullName);
+        
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created. Please check your email to verify your account.",
+        });
+        
+        // Redirect to login tab
+        setActiveTab("login");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Registration failed",
+        description: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-grow bg-gray-50 flex items-center justify-center py-12 px-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <img 
-              src="/lovable-uploads/49b6466e-7267-4a9d-a03c-5b25317f80a4.png" 
-              alt="Catalyst Network Logistics" 
-              className="h-12 w-auto mx-auto mb-4"
-            />
-            <h1 className="text-2xl font-bold text-gray-900">Customer Portal</h1>
-            <p className="text-gray-600">
-              {isSignUp ? 'Create your account to manage deliveries' : 'Sign in to track and manage your deliveries'}
-            </p>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{isSignUp ? 'Create Account' : 'Welcome Back'}</CardTitle>
-              <CardDescription>
-                {isSignUp 
-                  ? 'Enter your details to create a customer account'
-                  : 'Enter your credentials to access your customer portal'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert variant="destructive" className="mb-6">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      placeholder="your@email.com"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      placeholder="Enter your password"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading 
-                    ? (isSignUp ? 'Creating Account...' : 'Signing in...') 
-                    : (isSignUp ? 'Create Account' : 'Sign In')
-                  }
-                </Button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="gap-2"
-                >
-                  <UserPlus size={16} />
-                  {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-                </Button>
-              </div>
-
-              <div className="mt-4 text-center">
-                <Button asChild variant="ghost" className="gap-2">
-                  <Link to="/">
-                    <ArrowLeft size={16} />
-                    Back to Home
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            Customer Portal
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Sign in to manage your delivery requests
+          </p>
         </div>
-      </main>
-      <Footer />
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Login</CardTitle>
+                <CardDescription>
+                  Enter your credentials to access your account
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    <FormField
+                      control={loginForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="your.email@company.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="********" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Signing in..." : "Sign in"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+              <CardFooter className="flex justify-center">
+                <Button variant="link" onClick={() => setActiveTab("register")}>
+                  Don't have an account? Register
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="register">
+            <Card>
+              <CardHeader>
+                <CardTitle>Create Account</CardTitle>
+                <CardDescription>
+                  Register for a new customer account
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="your.email@company.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Acme Corporation" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="********" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Creating account..." : "Create account"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+              <CardFooter className="flex justify-center">
+                <Button variant="link" onClick={() => setActiveTab("login")}>
+                  Already have an account? Login
+                </Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
-};
-
-export default CustomerLogin;
+} 

@@ -1,56 +1,70 @@
-
-import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Clock, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Clock, Shield, ThermometerSnowflake, MapPin, Navigation } from 'lucide-react';
 
-const Hero = () => {
+export const Hero = () => {
   return (
-    <section className="relative bg-gradient-to-br from-medical-blue to-medical-blue-light text-white py-20">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="mb-8">
-            <img 
-              src="/lovable-uploads/49b6466e-7267-4a9d-a03c-5b25317f80a4.png" 
-              alt="Catalyst Network Logistics" 
-              className="h-16 w-auto mx-auto mb-6 filter brightness-0 invert"
-            />
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Professional Medical Courier Services
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-gray-200">
-              Secure, reliable, and HIPAA-compliant delivery solutions for healthcare providers across San Antonio
+    <section className="relative bg-gradient-to-r from-medical-blue to-medical-teal text-white py-16 md:py-24 overflow-hidden">
+      {/* Background pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSIjZmZmIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjMiIGN5PSIzIiByPSIzIi8+PC9nPjwvc3ZnPg==')]"></div>
+      </div>
+      
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+            Professional Logistics Solutions in San Antonio
+          </h1>
+          <p className="text-lg md:text-xl mb-8 text-gray-100">
+            Specialized transportation for packages, documents, and sensitive items with real-time tracking and secure delivery guarantees.
+          </p>
+          
+          <div className="flex flex-wrap gap-4">
+            <Button asChild size="lg" className="bg-white text-medical-blue hover:bg-gray-100">
+              <Link to="/request-pickup">Request Pickup</Link>
+            </Button>
+            <Button asChild size="lg" variant="default" className="bg-medical-teal hover:bg-medical-blue border-2 border-white">
+              <Link to="/tracking">Track Delivery</Link>
+            </Button>
+          </div>
+          
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-white/20 p-2">
+                <AlertCircle size={20} className="text-white" />
+              </div>
+              <span className="text-sm font-medium">Priority Response</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-white/20 p-2">
+                <ThermometerSnowflake size={20} className="text-white" />
+              </div>
+              <span className="text-sm font-medium">Temperature Control</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-white/20 p-2">
+                <Shield size={20} className="text-white" />
+              </div>
+              <span className="text-sm font-medium">HIPAA Compliant</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-white/20 p-2">
+                <Clock size={20} className="text-white" />
+              </div>
+              <span className="text-sm font-medium">24/7 Service</span>
+            </div>
+          </div>
+
+          {/* New tracking capabilities section */}
+          <div className="mt-12 bg-white/10 p-6 rounded-lg">
+            <div className="flex items-center gap-4 mb-4">
+              <MapPin className="text-white w-8 h-8" />
+              <Navigation className="text-white w-8 h-8" />
+              <h3 className="text-xl font-semibold">Real-Time Tracking</h3>
+            </div>
+            <p className="text-gray-200">
+              Track your deliveries with precision. Our advanced tracking system provides real-time location updates, estimated delivery times, and instant notifications to keep you informed every step of the way.
             </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button asChild size="lg" className="bg-medical-teal hover:bg-medical-teal/90 text-white">
-              <Link to="/request-pickup" className="gap-2">
-                Request Pickup <ArrowRight size={20} />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-medical-blue">
-              <Link to="/tracking">
-                Track Delivery
-              </Link>
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center">
-              <Shield className="h-12 w-12 mb-4 text-medical-teal" />
-              <h3 className="text-lg font-semibold mb-2">HIPAA Compliant</h3>
-              <p className="text-gray-200">Secure handling of all medical specimens and documents</p>
-            </div>
-            <div className="flex flex-col items-center">
-              <Clock className="h-12 w-12 mb-4 text-medical-teal" />
-              <h3 className="text-lg font-semibold mb-2">24/7 Emergency</h3>
-              <p className="text-gray-200">Round-the-clock urgent delivery services</p>
-            </div>
-            <div className="flex flex-col items-center">
-              <MapPin className="h-12 w-12 mb-4 text-medical-teal" />
-              <h3 className="text-lg font-semibold mb-2">Real-time Tracking</h3>
-              <p className="text-gray-200">Live updates on your delivery status and location</p>
-            </div>
           </div>
         </div>
       </div>
