@@ -106,49 +106,73 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({ user, onComplete 
     setIsLoading(true);
 
     try {
-      // Update driver profile with additional information
-      const { error } = await supabase
+      console.log('Updating driver profile with additional information for user:', user.id);
+      
+      // First try to update existing profile in driver_profiles table
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('driver_profiles')
-        .upsert({
-          user_id: user.id,
-          email: user.email!,
-          full_name: `${user.user_metadata?.first_name} ${user.user_metadata?.last_name}`,
-          phone: user.user_metadata?.phone,
-          license_number: user.user_metadata?.license_number,
-          preferences: {
-            notifications: true,
-            location_sharing: true,
-            auto_accept_deliveries: false,
-            availability: profileData.availability,
-            preferred_areas: profileData.preferredAreas
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const profileUpdate = {
+        user_id: user.id,
+        email: user.email!,
+        full_name: `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim(),
+        phone: user.user_metadata?.phone || '',
+        license_number: user.user_metadata?.license_number || '',
+        preferences: {
+          notifications: true,
+          location_sharing: true,
+          auto_accept_deliveries: false,
+          availability: profileData.availability,
+          preferred_areas: profileData.preferredAreas
+        },
+        documents: {
+          date_of_birth: profileData.dateOfBirth,
+          address: {
+            street: profileData.address,
+            city: profileData.city,
+            state: profileData.state,
+            zip_code: profileData.zipCode
           },
-          documents: {
-            date_of_birth: profileData.dateOfBirth,
-            address: {
-              street: profileData.address,
-              city: profileData.city,
-              state: profileData.state,
-              zip_code: profileData.zipCode
-            },
-            emergency_contact: {
-              name: profileData.emergencyContactName,
-              phone: profileData.emergencyContactPhone,
-              relation: profileData.emergencyContactRelation
-            },
-            work_experience: profileData.workExperience
-          }
-        }, {
-          onConflict: 'user_id'
-        });
+          emergency_contact: {
+            name: profileData.emergencyContactName,
+            phone: profileData.emergencyContactPhone,
+            relation: profileData.emergencyContactRelation
+          },
+          work_experience: profileData.workExperience
+        }
+      };
 
-      if (error) throw error;
+      let error;
+      if (existingProfile) {
+        // Update existing profile
+        const result = await supabase
+          .from('driver_profiles')
+          .update(profileUpdate)
+          .eq('user_id', user.id);
+        error = result.error;
+      } else {
+        // Insert new profile
+        const result = await supabase
+          .from('driver_profiles')
+          .insert(profileUpdate);
+        error = result.error;
+      }
 
+      if (error) {
+        console.error('Profile update error:', error);
+        throw new Error(`Failed to update profile: ${error.message}`);
+      }
+
+      console.log('Profile completed successfully');
       toast.success('Profile completed successfully');
       onComplete();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error(error.message || 'Failed to update profile');
     } finally {
       setIsLoading(false);
     }

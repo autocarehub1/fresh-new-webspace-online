@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -52,37 +53,59 @@ const DriverProfileSetup = () => {
       return;
     }
     
-    // Pre-fill name if available from OAuth
-    if (user?.user_metadata?.full_name) {
-      setProfileData(prev => ({
-        ...prev,
-        name: user.user_metadata.full_name
-      }));
+    // Pre-fill name if available from user metadata
+    const firstName = user?.user_metadata?.first_name || '';
+    const lastName = user?.user_metadata?.last_name || '';
+    const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+    
+    if (fullName) {
+      setProfileData(prev => ({ ...prev, name: fullName }));
+    } else if (firstName || lastName) {
+      setProfileData(prev => ({ ...prev, name: `${firstName} ${lastName}`.trim() }));
     }
     
-    if (user?.user_metadata?.name) {
-      setProfileData(prev => ({
-        ...prev,
-        name: user.user_metadata.name
-      }));
+    // Pre-fill phone if available
+    const phone = user?.user_metadata?.phone || '';
+    if (phone) {
+      setProfileData(prev => ({ ...prev, phone }));
     }
     
     // Check if user already has a profile
     const checkProfile = async () => {
       try {
-        const { data, error } = await supabase
+        console.log('Checking for existing profile for user:', userId);
+        
+        // First check drivers table
+        const { data: driverData, error: driverError } = await supabase
           .from('drivers')
           .select('*')
           .eq('id', userId)
           .single();
           
-        if (data) {
-          // Profile exists, redirect to dashboard
+        if (driverData && !driverError) {
+          console.log('Driver profile exists, redirecting to dashboard');
           toast.info("Your profile is already set up");
           navigate(`/driver/${userId}`);
+          return;
         }
+        
+        // Then check driver_profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from('driver_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+          
+        if (profileData && !profileError) {
+          console.log('Driver profile exists in driver_profiles, redirecting to dashboard');
+          toast.info("Your profile is already set up");
+          navigate(`/driver/${userId}`);
+          return;
+        }
+        
+        console.log('No existing profile found, continuing with setup');
       } catch (err) {
-        // No profile exists, that's expected
+        console.log('No profile exists, that\'s expected for new users');
       }
     };
     
@@ -98,7 +121,7 @@ const DriverProfileSetup = () => {
     
     if (!profileData.phone.trim()) {
       errors.phone = 'Phone number is required';
-    } else if (!/^\+?[\d\s-]{10,}$/.test(profileData.phone)) {
+    } else if (!/^\+?[\d\s\-\(\)]{10,}$/.test(profileData.phone)) {
       errors.phone = 'Please enter a valid phone number';
     }
     
@@ -115,6 +138,8 @@ const DriverProfileSetup = () => {
     setLoading(true);
     setError(null);
     
+    console.log('Starting profile setup for user:', userId);
+    
     if (!validateForm()) {
       setLoading(false);
       return;
@@ -128,53 +153,95 @@ const DriverProfileSetup = () => {
       // 1. Upload photo if provided
       let photoUrl = '';
       if (profileData.photo) {
+        console.log('Uploading photo...');
         const fileExt = profileData.photo.name.split('.').pop();
         const fileName = `driver_${userId}_${Date.now()}.${fileExt}`;
+        
         const { error: uploadError } = await supabase.storage
           .from('driver-photos')
           .upload(fileName, profileData.photo, { upsert: true });
           
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Photo upload error:', uploadError);
+          throw new Error(`Failed to upload photo: ${uploadError.message}`);
+        }
         
         const { data: publicUrlData } = supabase.storage
           .from('driver-photos')
           .getPublicUrl(fileName);
           
         photoUrl = publicUrlData?.publicUrl || '';
+        console.log('Photo uploaded successfully:', photoUrl);
       }
       
-      // 2. Create driver profile
+      // 2. Create driver profile in drivers table
+      console.log('Creating driver profile...');
       const { error: profileError } = await supabase
         .from('drivers')
         .insert({
           id: userId,
-          name: profileData.name,
+          name: profileData.name.trim(),
           email: user?.email || '',
-          phone: profileData.phone,
+          phone: profileData.phone.trim(),
           vehicle_type: profileData.vehicle_type,
           photo: photoUrl,
           status: 'active',
         });
         
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('Driver profile creation error:', profileError);
+        throw new Error(`Failed to create driver profile: ${profileError.message}`);
+      }
       
-      // 3. Update user metadata
+      // 3. Also create entry in driver_profiles table for compatibility
+      console.log('Creating driver_profiles entry...');
+      const { error: driverProfileError } = await supabase
+        .from('driver_profiles')
+        .insert({
+          user_id: userId,
+          email: user?.email || '',
+          full_name: profileData.name.trim(),
+          phone: profileData.phone.trim(),
+          vehicle_type: profileData.vehicle_type,
+          preferences: {
+            notifications: true,
+            location_sharing: true,
+            auto_accept_deliveries: false
+          },
+          documents: {}
+        });
+        
+      if (driverProfileError) {
+        console.warn('Driver profiles creation warning:', driverProfileError);
+        // Don't fail if this table doesn't exist or has issues
+      }
+      
+      // 4. Update user metadata
+      console.log('Updating user metadata...');
       const { error: updateError } = await supabase.auth.updateUser({
         data: {
-          name: profileData.name,
-          phone: profileData.phone,
+          name: profileData.name.trim(),
+          phone: profileData.phone.trim(),
           vehicle_type: profileData.vehicle_type,
-          has_completed_profile: true
+          has_completed_profile: true,
+          onboarding_completed: true
         }
       });
       
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('User metadata update error:', updateError);
+        // Don't fail the whole process for metadata update issues
+        console.warn('Continuing despite metadata update error');
+      }
       
+      console.log('Profile setup completed successfully');
       toast.success("Profile setup complete!");
       navigate(`/driver/${userId}`);
+      
     } catch (err: any) {
       console.error('Profile setup error:', err);
       setError(err.message || 'Failed to set up profile');
+      toast.error(err.message || 'Failed to set up profile');
     } finally {
       setLoading(false);
     }
@@ -191,7 +258,8 @@ const DriverProfileSetup = () => {
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm flex items-center">
+              <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
               {error}
             </div>
           )}
@@ -205,6 +273,7 @@ const DriverProfileSetup = () => {
                 required
                 disabled={loading}
                 className={validationErrors.name ? 'border-red-500' : ''}
+                placeholder="Enter your full name"
               />
               {validationErrors.name && (
                 <p className="mt-1 text-sm text-red-500">{validationErrors.name}</p>
@@ -230,7 +299,7 @@ const DriverProfileSetup = () => {
               <label className="block text-sm font-medium mb-1" htmlFor="vehicle">Vehicle Type</label>
               <select
                 id="vehicle"
-                className={`w-full border rounded px-3 py-2 ${validationErrors.vehicle_type ? 'border-red-500' : ''}`}
+                className={`w-full border rounded px-3 py-2 ${validationErrors.vehicle_type ? 'border-red-500' : 'border-gray-300'} ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 value={profileData.vehicle_type}
                 onChange={e => setProfileData({ ...profileData, vehicle_type: e.target.value })}
                 required
@@ -246,7 +315,7 @@ const DriverProfileSetup = () => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="photo">Profile Photo</label>
+              <label className="block text-sm font-medium mb-1" htmlFor="photo">Profile Photo (Optional)</label>
               <Input
                 id="photo"
                 type="file"
@@ -272,7 +341,10 @@ const DriverProfileSetup = () => {
                   Setting Up...
                 </span>
               ) : (
-                'Complete Setup'
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Complete Setup
+                </>
               )}
             </Button>
           </form>
@@ -282,4 +354,4 @@ const DriverProfileSetup = () => {
   );
 };
 
-export default DriverProfileSetup; 
+export default DriverProfileSetup;
