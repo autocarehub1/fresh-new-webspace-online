@@ -9,8 +9,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -86,7 +85,6 @@ const RequestPickupForm: React.FC = () => {
     "TRK-" + Math.random().toString(36).substring(2, 10).toUpperCase()
   )
   const [selectedQuickService, setSelectedQuickService] = useState(null)
-  const { toast } = useToast()
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -126,27 +124,20 @@ const RequestPickupForm: React.FC = () => {
       const deliveryRequest: DeliveryRequest = {
         id: trackingId,
         trackingId,
-        status: 'pending' as const, // Proper type casting
+        status: 'pending' as const,
         pickup_location: pickupLocation,
         delivery_location: deliveryLocation,
-        priority: priority as 'normal' | 'urgent', // Proper type casting
+        priority: priority as 'normal' | 'urgent',
         packageType,
         email,
-        created_at: new Date().toISOString() // Add required field
+        created_at: new Date().toISOString()
       };
       
       // const response = await createRequest(deliveryRequest)
-      toast({
-        title: "Success!",
-        description: "Your request has been submitted.",
-      })
+      toast.success("Your request has been submitted.");
       navigate("/tracking?id=" + trackingId)
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request.",
-      })
+      toast.error("There was a problem with your request.");
     } finally {
       setIsSubmitting(false);
     }
@@ -161,27 +152,20 @@ const RequestPickupForm: React.FC = () => {
       const deliveryRequest: DeliveryRequest = {
         id: trackingId,
         trackingId,
-        status: 'pending' as const, // Proper type casting
+        status: 'pending' as const,
         pickup_location: selectedQuickService.pickup,
         delivery_location: selectedQuickService.delivery,
-        priority: selectedQuickService.priority as 'normal' | 'urgent', // Proper type casting
+        priority: selectedQuickService.priority as 'normal' | 'urgent',
         packageType: selectedQuickService.type,
         email: email || '',
-        created_at: new Date().toISOString() // Add required field
+        created_at: new Date().toISOString()
       };
       
       // const response = await createRequest(deliveryRequest)
-      toast({
-        title: "Success!",
-        description: "Your request has been submitted.",
-      })
+      toast.success("Your request has been submitted.");
       navigate("/tracking?id=" + trackingId)
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request.",
-      })
+      toast.error("There was a problem with your request.");
     } finally {
       setIsSubmitting(false);
     }

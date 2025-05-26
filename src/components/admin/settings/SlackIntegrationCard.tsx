@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -56,7 +57,7 @@ const SlackIntegrationCard: React.FC = () => {
   });
   
   useEffect(() => {
-    if (isConnected !== undefined) {
+    if (typeof isConnected === 'boolean') {
       setIsConfigured(isConnected);
     }
   }, [isConnected]);
@@ -110,7 +111,7 @@ const SlackIntegrationCard: React.FC = () => {
         packageType: 'Lab Samples',
         distance: 2.5,
         trackingId: 'TRK-TEST-001',
-        created_at: new Date().toISOString() // Add required field
+        created_at: new Date().toISOString()
       };
       
       const result = await sendSlackNotification(testDelivery, 'new_delivery');
@@ -120,7 +121,7 @@ const SlackIntegrationCard: React.FC = () => {
           ...testDelivery,
           id: 'test-urgent-123',
           status: 'completed' as const,
-          created_at: new Date().toISOString() // Add required field
+          created_at: new Date().toISOString()
         };
         
         await sendSlackNotification(urgentTestDelivery, 'delivery_completed');

@@ -413,6 +413,7 @@ const OrderManagement = () => {
         <BatchProcessingDialog 
           open={showBatchDialog} 
           onOpenChange={setShowBatchDialog}
+          requests={filteredRequests}
           onSuccess={handleSuccess}
         />
       )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { DeliveryRequest, DeliveryStatus } from '@/types/delivery';
+import { TrackingProps } from '@/types/tracking';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { toast } from 'sonner';
 import TrackingTimeline from './TrackingTimeline';
 import PackageInfo from './PackageInfo';
 import CourierInfo from './CourierInfo';
-import jsPDF from 'jspdf';
+import { generatePDF } from '@/utils/generatePDF';
 
 // Add a function to calculate ETA based on distance and speed
 const calculateETA = (

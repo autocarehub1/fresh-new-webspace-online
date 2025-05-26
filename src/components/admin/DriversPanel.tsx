@@ -47,6 +47,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
   const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
+  const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
 
   useEffect(() => {
     setIsSimulating(simulationActive);
@@ -250,6 +251,11 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     unassignDriver.mutate({ driverId, deliveryId: driver.current_delivery });
   };
 
+  const handleAddDriverSuccess = () => {
+    refetchDrivers();
+    setShowAddDriverDialog(false);
+  };
+
   if (isLoading || requestsLoading) {
     console.log('DriversPanel: Loading data...');
     return <div className="flex items-center justify-center py-10">Loading drivers data...</div>;
@@ -283,7 +289,12 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
               {isSimulating ? "Stop Simulation" : "Simulate Movement"}
             </Button>
             
-            <AddDriverDialog />
+            <Button 
+              onClick={() => setShowAddDriverDialog(true)}
+              className="rounded-lg shadow-none bg-[#9b87f5] hover:bg-[#7E69AB]"
+            >
+              Add Driver
+            </Button>
           </div>
         </div>
         <div className="p-6 md:p-8">
@@ -295,7 +306,6 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
             onUnassignDriver={handleUnassignDriver}
           />
           <DriverAssignment 
-            drivers={drivers}
             requests={requests || []}
             selectedDriverId={selectedDriverId}
             selectedRequestId={selectedRequestId}
@@ -322,6 +332,12 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AddDriverDialog 
+        open={showAddDriverDialog}
+        onOpenChange={setShowAddDriverDialog}
+        onSuccess={handleAddDriverSuccess}
+      />
     </div>
   );
 };
