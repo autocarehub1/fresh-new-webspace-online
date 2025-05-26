@@ -131,7 +131,6 @@ const AdminDashboard = () => {
         return (
           <DriversPanel 
             simulationActive={isSimulating}
-            availableRequests={requests?.filter(r => r.status === 'pending') || []}
           />
         );
       case 'orders':

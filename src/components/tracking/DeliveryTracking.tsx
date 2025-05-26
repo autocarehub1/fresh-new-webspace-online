@@ -1,17 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, Info, Truck, Clock, AlertTriangle } from 'lucide-react';
-import { DeliveryRequest } from '@/types/delivery';
-import Map from '@/components/map/Map';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { DeliveryRequest, DeliveryStatus } from '@/types/delivery';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import TrackingTimeline from './TrackingTimeline';
 import PackageInfo from './PackageInfo';
 import CourierInfo from './CourierInfo';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import { useQueryClient } from '@tanstack/react-query';
-import { Progress } from '@/components/ui/progress';
 
 const generatePDF = (delivery: DeliveryRequest) => {
   const doc = new jsPDF();
@@ -78,7 +74,8 @@ const calculateETA = (
   };
 };
 
-export const DeliveryTracking = ({ trackingId }: { trackingId: string }) => {
+export const DeliveryTracking = () => {
+  const { trackingId } = useParams();
   const [delivery, setDelivery] = useState<DeliveryRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

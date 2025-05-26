@@ -211,34 +211,16 @@ const OrderManagement = () => {
     setCurrentRequest(request);
     setShowCustodyDialog(true);
   };
-  
-  const handleExportCSV = () => {
-    if (filteredRequests.length === 0) {
-      toast.error('No requests to export');
-      return;
-    }
-    
-    // Create CSV content
-    const csvHeader = 'ID,Tracking ID,Status,Priority,Pickup Location,Delivery Location,Created At\n';
-    const csvRows = filteredRequests
-      .map(request => {
-        return `${request.id},${request.trackingId || ''},${request.status},${request.priority || 'normal'},${request.pickup_location},${request.delivery_location},${request.created_at}`;
-      })
-      .join('\n');
-    
-    const csvContent = csvHeader + csvRows;
-    
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `orders_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.click();
-    
-    toast.success('CSV file exported successfully');
-  };
 
+  // Success callback for edit and batch dialogs
+  const handleSuccess = () => {
+    refetch();
+    setCurrentRequest(null);
+    setShowEditDialog(false);
+    setShowBatchDialog(false);
+    setShowCustodyDialog(false);
+  };
+  
   const refreshData = () => {
     refetch();
   };
@@ -422,12 +404,17 @@ const OrderManagement = () => {
         <EditOrderDialog 
           open={showEditDialog} 
           onOpenChange={setShowEditDialog} 
-          request={currentRequest} 
+          request={currentRequest}
+          onSuccess={handleSuccess}
         />
       )}
       
       {showBatchDialog && (
-        <BatchProcessingDialog open={showBatchDialog} onOpenChange={setShowBatchDialog} />
+        <BatchProcessingDialog 
+          open={showBatchDialog} 
+          onOpenChange={setShowBatchDialog}
+          onSuccess={handleSuccess}
+        />
       )}
       
       {showCustodyDialog && currentRequest && (
@@ -441,4 +428,4 @@ const OrderManagement = () => {
   );
 };
 
-export default OrderManagement; 
+export default OrderManagement;

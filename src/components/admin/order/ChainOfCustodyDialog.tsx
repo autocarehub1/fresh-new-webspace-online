@@ -1,30 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
-import { DeliveryRequest } from '@/types/delivery';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, AlertCircle, PlusCircle, CheckCircle2, Calendar, Clock, User, FileText } from 'lucide-react';
-
-interface ChainOfCustodyRecord {
-  id: string;
-  created_at: string;
-  request_id: string;
-  action: string;
-  timestamp: string;
-  user_name: string;
-  location: string;
-  notes: string;
-  temperature?: string;
-  condition?: string;
-}
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { MapPin, Clock, Package, User, Phone, Mail } from 'lucide-react';
+import { DeliveryRequest } from '@/types/delivery';
+import { format } from 'date-fns';
 
 interface ChainOfCustodyDialogProps {
   open: boolean;
@@ -32,7 +13,11 @@ interface ChainOfCustodyDialogProps {
   request: DeliveryRequest;
 }
 
-const ChainOfCustodyDialog = ({ open, onOpenChange, request }: ChainOfCustodyDialogProps) => {
+const ChainOfCustodyDialog: React.FC<ChainOfCustodyDialogProps> = ({
+  open,
+  onOpenChange,
+  request
+}) => {
   const [custodyRecords, setCustodyRecords] = useState<ChainOfCustodyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingRecord, setIsAddingRecord] = useState(false);
@@ -433,4 +418,4 @@ const ChainOfCustodyDialog = ({ open, onOpenChange, request }: ChainOfCustodyDia
   );
 };
 
-export default ChainOfCustodyDialog; 
+export default ChainOfCustodyDialog;
