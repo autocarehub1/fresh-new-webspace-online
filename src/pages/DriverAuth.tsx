@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
@@ -8,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DriverAuth = () => {
@@ -55,6 +54,7 @@ const DriverAuth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
+      console.log('User authenticated, redirecting to driver dashboard');
       navigate('/driver-dashboard');
     }
   }, [user, isLoading, navigate]);
@@ -129,17 +129,22 @@ const DriverAuth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Sign in form submitted');
     
     if (!validateSignInForm()) {
+      console.log('Form validation failed');
       return;
     }
     
     setIsSubmitting(true);
+    setErrors({});
     
     try {
+      console.log('Attempting to sign in with:', signInData.email);
       const { error } = await signIn(signInData.email, signInData.password, signInData.rememberMe);
       
       if (error) {
+        console.error('Sign in error:', error);
         if (error.message.includes('Invalid login credentials')) {
           setErrors({ general: 'Invalid email or password. Please try again.' });
         } else if (error.message.includes('Email not confirmed')) {
@@ -148,8 +153,9 @@ const DriverAuth = () => {
           setErrors({ general: error.message });
         }
       } else {
+        console.log('Sign in successful');
         toast.success('Welcome back! Redirecting to your dashboard...');
-        navigate('/driver-dashboard');
+        // Navigation will be handled by the useEffect above
       }
     } catch (error) {
       console.error('Sign in error:', error);
@@ -161,12 +167,15 @@ const DriverAuth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Sign up form submitted');
     
     if (!validateSignUpForm()) {
+      console.log('Sign up validation failed');
       return;
     }
     
     setIsSubmitting(true);
+    setErrors({});
     
     try {
       const metadata = {
@@ -177,9 +186,11 @@ const DriverAuth = () => {
         user_type: 'driver'
       };
       
+      console.log('Attempting to sign up with:', signUpData.email, metadata);
       const { error, user } = await signUp(signUpData.email, signUpData.password, metadata);
       
       if (error) {
+        console.error('Sign up error:', error);
         if (error.message.includes('already registered')) {
           setErrors({ general: 'An account with this email already exists. Please sign in instead.' });
           setActiveTab('signin');
@@ -187,6 +198,7 @@ const DriverAuth = () => {
           setErrors({ general: error.message });
         }
       } else if (user) {
+        console.log('Sign up successful');
         toast.success('Account created successfully! Please check your email for verification.');
         setSignUpData({
           firstName: '',
@@ -262,6 +274,7 @@ const DriverAuth = () => {
                         if (errors.email) setErrors({ ...errors, email: '' });
                       }}
                       className={errors.email ? 'border-red-500' : ''}
+                      disabled={isSubmitting}
                     />
                     {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                   </div>
@@ -279,11 +292,13 @@ const DriverAuth = () => {
                           if (errors.password) setErrors({ ...errors, password: '' });
                         }}
                         className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        disabled={isSubmitting}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -298,6 +313,7 @@ const DriverAuth = () => {
                       checked={signInData.rememberMe}
                       onChange={(e) => setSignInData({ ...signInData, rememberMe: e.target.checked })}
                       className="rounded border-gray-300"
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor="remember-me" className="text-sm">Remember me</Label>
                   </div>
@@ -329,6 +345,7 @@ const DriverAuth = () => {
                           if (errors.firstName) setErrors({ ...errors, firstName: '' });
                         }}
                         className={errors.firstName ? 'border-red-500' : ''}
+                        disabled={isSubmitting}
                       />
                       {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
                     </div>
@@ -344,6 +361,7 @@ const DriverAuth = () => {
                           if (errors.lastName) setErrors({ ...errors, lastName: '' });
                         }}
                         className={errors.lastName ? 'border-red-500' : ''}
+                        disabled={isSubmitting}
                       />
                       {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
                     </div>
@@ -361,6 +379,7 @@ const DriverAuth = () => {
                         if (errors.email) setErrors({ ...errors, email: '' });
                       }}
                       className={errors.email ? 'border-red-500' : ''}
+                      disabled={isSubmitting}
                     />
                     {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
                   </div>
@@ -377,6 +396,7 @@ const DriverAuth = () => {
                         if (errors.phone) setErrors({ ...errors, phone: '' });
                       }}
                       className={errors.phone ? 'border-red-500' : ''}
+                      disabled={isSubmitting}
                     />
                     {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                   </div>
@@ -392,6 +412,7 @@ const DriverAuth = () => {
                         if (errors.licenseNumber) setErrors({ ...errors, licenseNumber: '' });
                       }}
                       className={errors.licenseNumber ? 'border-red-500' : ''}
+                      disabled={isSubmitting}
                     />
                     {errors.licenseNumber && <p className="text-sm text-red-500">{errors.licenseNumber}</p>}
                   </div>
@@ -409,11 +430,13 @@ const DriverAuth = () => {
                           if (errors.password) setErrors({ ...errors, password: '' });
                         }}
                         className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        disabled={isSubmitting}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -434,11 +457,13 @@ const DriverAuth = () => {
                           if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
                         }}
                         className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'}
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        disabled={isSubmitting}
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
