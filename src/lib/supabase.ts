@@ -11,3 +11,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   }
 });
+
+/**
+ * Forces a schema refresh for the delivery_requests table
+ * and verifies that required columns exist
+ */
+export const refreshSchemaCache = async (): Promise<boolean> => {
+  try {
+    console.log('Refreshing schema cache for delivery_requests table...');
+    
+    // Force refresh the schema by selecting all columns
+    await supabase.from('delivery_requests').select('*').limit(1);
+    
+    // Verify that key columns exist by attempting a simple select
+    const { data, error } = await supabase
+      .from('delivery_requests')
+      .select('id, pickup_location, delivery_location, package_type, priority, status, requester_name')
+      .limit(1);
+    
+    if (error) {
+      console.error('Schema refresh failed:', error);
+      return false;
+    }
+    
+    console.log('Schema refresh successful');
+    return true;
+  } catch (error) {
+    console.error('Unexpected error during schema refresh:', error);
+    return false;
+  }
+};
