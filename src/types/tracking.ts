@@ -1,5 +1,4 @@
 
-
 export interface TrackingProps {
   trackingId?: string;
 }
@@ -21,4 +20,3 @@ export interface Coordinates {
   lat: number;
   lng: number;
 }
-
