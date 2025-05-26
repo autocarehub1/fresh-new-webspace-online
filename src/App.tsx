@@ -45,6 +45,7 @@ const App = () => {
       queries: {
         retry: 1,
         refetchOnWindowFocus: false,
+        staleTime: 5000,
       },
     },
   });
@@ -73,6 +74,13 @@ const App = () => {
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/debug-supabase" element={<DebugSupabase />} />
               
+              {/* Driver profile setup - accessible after authentication */}
+              <Route path="/driver-profile-setup" element={
+                <ProtectedRoute>
+                  <DriverProfileSetup />
+                </ProtectedRoute>
+              } />
+              
               {/* Protected routes */}
               <Route path="/admin" element={
                 <ProtectedRoute>
@@ -87,11 +95,6 @@ const App = () => {
               <Route path="/driver-onboarding" element={
                 <ProtectedRoute>
                   <DriverOnboarding />
-                </ProtectedRoute>
-              } />
-              <Route path="/driver-profile-setup" element={
-                <ProtectedRoute>
-                  <DriverProfileSetup />
                 </ProtectedRoute>
               } />
               

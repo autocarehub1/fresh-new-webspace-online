@@ -12,33 +12,68 @@ export const useDriverQueries = () => {
     queryKey: ['drivers'],
     queryFn: async () => {
       try {
-        console.log('Fetching drivers from Supabase...');
+        console.log('Fetching drivers from database...');
         
-        // Use a safer query that only selects columns we know exist
+        // Query with only essential columns that should always exist
         const { data, error } = await supabase
           .from('drivers')
-          .select('id, name, phone, photo, status, vehicle_type, current_location, created_at');
+          .select('id, name, phone, photo, status, vehicle_type, current_location, created_at')
+          .order('created_at', { ascending: false });
           
         if (error) {
           console.error('Error fetching drivers:', error);
+          
+          if (error.message.includes('relation "drivers" does not exist')) {
+            console.warn('Drivers table does not exist, using local data');
+            return localDrivers;
+          }
+          
+          if (error.message.includes('column') && error.message.includes('does not exist')) {
+            console.warn('Some columns missing, trying with basic columns only');
+            
+            // Fallback to basic columns
+            const { data: basicData, error: basicError } = await supabase
+              .from('drivers')
+              .select('id, name, status')
+              .order('created_at', { ascending: false });
+              
+            if (basicError) {
+              console.error('Basic query also failed:', basicError);
+              return localDrivers;
+            }
+            
+            return (basicData as any[]).map(driver => ({
+              id: driver.id,
+              name: driver.name || 'Unknown Driver',
+              phone: '',
+              photo: '',
+              status: driver.status || 'active',
+              vehicle_type: 'Car',
+              current_location: { lat: 0, lng: 0 },
+              created_at: new Date().toISOString()
+            }));
+          }
+          
+          throw error;
+        }
+        
+        if (!data || data.length === 0) {
+          console.log('No drivers found in database');
           return localDrivers;
         }
         
-        console.log('Raw driver data from Supabase:', data);
+        console.log(`Successfully fetched ${data.length} drivers`);
         const mappedDrivers = (data as any[]).map(mapDbToDriver);
-        console.log('Mapped drivers:', mappedDrivers.map(d => ({
-          id: d.id,
-          name: d.name,
-          photo: d.photo
-        })));
-        
         return mappedDrivers;
+        
       } catch (err) {
         console.error('Exception when fetching drivers:', err);
         return localDrivers;
       }
     },
-    refetchInterval: 10000,
+    refetchInterval: 30000, // Increased interval to reduce load
+    retry: 1,
+    staleTime: 10000,
   });
 
   return {
