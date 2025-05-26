@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DriverSignInForm from '@/components/auth/DriverSignInForm';
 import DriverSignUpForm from '@/components/auth/DriverSignUpForm';
@@ -15,27 +14,10 @@ import Footer from '@/components/layout/Footer';
 
 const DriverAuth = () => {
   const [activeTab, setActiveTab] = useState('signin');
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    setErrors({}); // Clear errors when switching tabs
-  };
-
-  const handleForgotPassword = () => {
-    setActiveTab('reset');
-    setErrors({});
-  };
-
-  const handleSwitchToSignIn = () => {
-    setActiveTab('signin');
-    setErrors({});
-  };
-
-  const handleBackToSignIn = () => {
-    setActiveTab('signin');
-    setErrors({});
   };
 
   return (
@@ -61,13 +43,6 @@ const DriverAuth = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {errors.general && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{errors.general}</AlertDescription>
-                </Alert>
-              )}
-
               <Tabs value={activeTab} onValueChange={handleTabChange}>
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -76,25 +51,15 @@ const DriverAuth = () => {
                 </TabsList>
                 
                 <TabsContent value="signin">
-                  <DriverSignInForm 
-                    onForgotPassword={handleForgotPassword}
-                    errors={errors}
-                    setErrors={setErrors}
-                  />
+                  <DriverSignInForm />
                 </TabsContent>
                 
                 <TabsContent value="signup">
-                  <DriverSignUpForm 
-                    onSwitchToSignIn={handleSwitchToSignIn}
-                    errors={errors}
-                    setErrors={setErrors}
-                  />
+                  <DriverSignUpForm />
                 </TabsContent>
                 
                 <TabsContent value="reset">
-                  <DriverPasswordResetForm 
-                    onBackToSignIn={handleBackToSignIn}
-                  />
+                  <DriverPasswordResetForm />
                 </TabsContent>
               </Tabs>
 
