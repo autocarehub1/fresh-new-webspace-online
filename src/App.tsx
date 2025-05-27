@@ -2,7 +2,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import Index from "./pages/Index";
 import Services from "./pages/Services";
@@ -43,10 +43,16 @@ const App = () => (
             <Route path="/request-pickup" element={<RequestPickup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
+            
+            {/* Driver Portal Routes */}
+            <Route path="/driver" element={<Navigate to="/driver-auth" replace />} />
+            <Route path="/driver-login" element={<Navigate to="/driver-auth" replace />} />
+            <Route path="/driver-portal" element={<Navigate to="/driver-auth" replace />} />
             <Route path="/driver-auth" element={<DriverAuth />} />
             <Route path="/driver-dashboard" element={<DriverDashboard />} />
             <Route path="/driver-onboarding" element={<DriverOnboarding />} />
             <Route path="/driver-profile-setup" element={<DriverProfileSetup />} />
+            
             <Route path="/customer-login" element={<CustomerLogin />} />
             <Route path="/customer-portal" element={<CustomerPortal />} />
             <Route path="/auth/callback" element={<AuthCallback />} />

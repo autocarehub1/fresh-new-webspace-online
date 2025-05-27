@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -13,7 +13,6 @@ const AuthCallback = () => {
       try {
         console.log('Auth callback initiated');
         
-        // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const token_hash = urlParams.get('token_hash');
         const type = urlParams.get('type');
@@ -24,7 +23,6 @@ const AuthCallback = () => {
         
         if (token_hash && type) {
           console.log('Verifying OTP token...');
-          // Verify the OTP token
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash,
             type: type as any,
@@ -44,7 +42,6 @@ const AuthCallback = () => {
           }
         } else if (access_token && refresh_token) {
           console.log('Setting session from tokens...');
-          // Handle OAuth callback or other auth flows
           const { data, error } = await supabase.auth.setSession({
             access_token,
             refresh_token,
@@ -61,7 +58,6 @@ const AuthCallback = () => {
             navigate('/driver-dashboard');
           }
         } else {
-          // Fallback: check if user is already logged in and verified
           console.log('Checking existing session...');
           const { data: { user }, error } = await supabase.auth.getUser();
           
@@ -90,12 +86,17 @@ const AuthCallback = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md w-full mx-4">
-        <div className="flex justify-center mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
+      <div className="text-center p-8 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl max-w-md w-full mx-4">
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
+            <Shield className="w-8 h-8 text-white" />
+          </div>
+        </div>
+        <div className="flex justify-center mb-6">
           <img 
             src="/lovable-uploads/2cc5b47e-c0a1-4e3c-91b8-6bb24e0b8f97.png" 
-            alt="Company Logo" 
+            alt="Catalyst Network Logistics" 
             className="h-12 w-auto"
             onError={(e) => {
               console.error('Logo failed to load');
@@ -103,9 +104,12 @@ const AuthCallback = () => {
             }}
           />
         </div>
-        <Loader2 className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4" />
-        <h2 className="text-2xl font-semibold mb-4">Verifying your email...</h2>
-        <p className="text-gray-500">Please wait while we confirm your email address.</p>
+        <Loader2 className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-6" />
+        <h2 className="text-2xl font-semibold mb-4 text-gray-900">Verifying Your Access</h2>
+        <p className="text-gray-600">Please wait while we securely confirm your email address and activate your driver account.</p>
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-700">🔐 Your data is encrypted and secure</p>
+        </div>
       </div>
     </div>
   );
