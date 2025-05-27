@@ -59,44 +59,84 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
       
       console.log('Uploading file:', fileName);
       
-      // Upload to Supabase storage
-      const { data, error } = await supabase.storage
-        .from('proof-of-delivery')
-        .upload(fileName, selectedFile, { 
-          upsert: true,
-          contentType: selectedFile.type
-        });
-
-      if (error) {
-        console.error('Upload error:', error);
-        
-        if (error.message.includes('Bucket not found')) {
-          setBucketError(true);
-          throw new Error('Storage bucket is not available. Please contact system administrator to set up the proof-of-delivery storage bucket.');
-        }
-        
-        throw error;
-      }
-
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('proof-of-delivery')
-        .getPublicUrl(fileName);
-
-      if (!publicUrlData?.publicUrl) {
-        throw new Error('Failed to get public URL');
-      }
-
-      console.log('Photo uploaded successfully:', publicUrlData.publicUrl);
-      onPhotoUploaded(publicUrlData.publicUrl);
+      // Add retry logic for upload
+      let uploadSuccess = false;
+      let attempts = 0;
+      const maxAttempts = 3;
       
-      toast.success('Proof of delivery photo uploaded successfully!');
+      while (!uploadSuccess && attempts < maxAttempts) {
+        attempts++;
+        console.log(`Upload attempt ${attempts}/${maxAttempts}`);
+        
+        try {
+          // Upload to Supabase storage with timeout
+          const { data, error } = await Promise.race([
+            supabase.storage
+              .from('proof-of-delivery')
+              .upload(fileName, selectedFile, { 
+                upsert: true,
+                contentType: selectedFile.type
+              }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout')), 30000)
+            )
+          ]) as any;
+
+          if (error) {
+            console.error(`Upload attempt ${attempts} failed:`, error);
+            
+            if (error.message.includes('Bucket not found')) {
+              setBucketError(true);
+              throw new Error('Storage bucket is not available. Please contact system administrator to set up the proof-of-delivery storage bucket.');
+            }
+            
+            if (attempts === maxAttempts) {
+              throw error;
+            }
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
+            continue;
+          }
+
+          uploadSuccess = true;
+          
+          // Get public URL
+          const { data: publicUrlData } = supabase.storage
+            .from('proof-of-delivery')
+            .getPublicUrl(fileName);
+
+          if (!publicUrlData?.publicUrl) {
+            throw new Error('Failed to get public URL');
+          }
+
+          console.log('Photo uploaded successfully:', publicUrlData.publicUrl);
+          onPhotoUploaded(publicUrlData.publicUrl);
+          
+          toast.success('Proof of delivery photo uploaded successfully!');
+          
+        } catch (attemptError: any) {
+          console.error(`Upload attempt ${attempts} error:`, attemptError);
+          
+          if (attemptError.message.includes('timeout') && attempts < maxAttempts) {
+            console.log('Upload timed out, retrying...');
+            continue;
+          }
+          
+          if (attempts === maxAttempts) {
+            throw attemptError;
+          }
+        }
+      }
+      
     } catch (error: any) {
       console.error('Error uploading photo:', error);
       
       if (error.message.includes('Bucket not found') || error.message.includes('storage bucket')) {
         setBucketError(true);
         toast.error('Storage not configured. Please contact system administrator.');
+      } else if (error.message.includes('timeout')) {
+        toast.error('Upload timed out. Please check your connection and try again.');
       } else {
         toast.error(`Failed to upload photo: ${error.message}`);
       }
