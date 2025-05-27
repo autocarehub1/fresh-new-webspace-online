@@ -72,34 +72,44 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
 
   const handleStatusUpdate = async (request: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered') => {
     try {
-      const finalStatus = status === 'delivered' ? 'completed' : status;
+      // Map the status to the correct database values
+      let finalStatus = status;
+      if (status === 'delivered') {
+        finalStatus = 'completed';
+      }
+      
+      console.log(`Admin updating delivery ${request.id} to status: ${finalStatus}`);
       
       const { error } = await supabase
         .from('delivery_requests')
         .update({ status: finalStatus })
         .eq('id', request.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       // Add tracking update
-      const statusMessages = {
+      const statusMessages: { [key: string]: string } = {
         'picked_up': 'Package Picked Up',
         'in_transit': 'Package In Transit',
-        'delivered': 'Package Delivered'
+        'completed': 'Package Delivered'
       };
 
       await supabase
         .from('tracking_updates')
         .insert({
           delivery_id: request.id,
-          status: statusMessages[status],
+          status: statusMessages[finalStatus] || finalStatus,
           timestamp: new Date().toISOString(),
-          location: status === 'picked_up' ? 'Pickup Location' : 
-                   status === 'in_transit' ? 'En Route' : 'Delivery Location',
-          note: `Status updated by admin to ${status.replace('_', ' ')}`
+          location: finalStatus === 'picked_up' ? 'Pickup Location' : 
+                   finalStatus === 'in_transit' ? 'En Route' : 'Delivery Location',
+          note: `Status updated by admin to ${finalStatus.replace('_', ' ')}`
         });
 
-      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
+      toast.success(`Delivery marked as ${finalStatus.replace('_', ' ')}`);
+      console.log(`Successfully updated delivery ${request.id} to ${finalStatus}`);
     } catch (error) {
       console.error('Error updating delivery status:', error);
       toast.error('Failed to update delivery status');

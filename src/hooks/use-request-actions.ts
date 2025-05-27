@@ -63,12 +63,23 @@ export const useRequestActions = () => {
   
   const statusUpdateMutation = useMutation({
     mutationFn: async ({ req, status }: { req: DeliveryRequest; status: string }) => {
+      // Map status to correct database values
+      let dbStatus = status;
+      if (status === 'reset_to_pending') {
+        dbStatus = 'pending';
+      } else if (status === 'delivered') {
+        dbStatus = 'completed';
+      }
+      
+      console.log(`Hook updating delivery ${req.id} from ${req.status} to ${dbStatus}`);
+      
       const { data, error } = await supabase
         .from('delivery_requests')
-        .update({ status: status })
+        .update({ status: dbStatus })
         .eq('id', req.id);
       
       if (error) {
+        console.error('Status update error:', error);
         throw error;
       }
       
@@ -114,29 +125,11 @@ export const useRequestActions = () => {
   };
   
   const handleStatusUpdate = async (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered' | 'reset_to_pending'): Promise<boolean> => {
-    let newStatus: string;
-    
-    switch (status) {
-      case 'picked_up':
-        newStatus = 'in_progress';
-        break;
-      case 'in_transit':
-        newStatus = 'in_progress';
-        break;
-      case 'delivered':
-        newStatus = 'completed';
-        break;
-      case 'reset_to_pending':
-        newStatus = 'pending';
-        break;
-      default:
-        console.warn('Unknown status:', status);
-        return false;
-    }
-    
     try {
-      await statusUpdateMutation.mutateAsync({ req: req, status: newStatus });
-      toast.success(`Request status updated to ${newStatus}`);
+      await statusUpdateMutation.mutateAsync({ req: req, status: status });
+      const displayStatus = status === 'delivered' ? 'completed' : 
+                           status === 'reset_to_pending' ? 'pending' : status;
+      toast.success(`Request status updated to ${displayStatus.replace('_', ' ')}`);
       return true;
     } catch (error) {
       console.error('Error updating request status:', error);

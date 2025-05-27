@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
@@ -115,9 +114,21 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     try {
       console.log(`Updating delivery ${deliveryId} to status: ${status}`);
       
+      // Map the status to the correct database values
+      let dbStatus = status;
+      if (status === 'picked_up') {
+        dbStatus = 'picked_up';
+      } else if (status === 'in_transit') {
+        dbStatus = 'in_transit';
+      } else if (status === 'completed') {
+        dbStatus = 'completed';
+      }
+      
+      console.log(`Database status will be: ${dbStatus}`);
+      
       const { error } = await supabase
         .from('delivery_requests')
-        .update({ status })
+        .update({ status: dbStatus })
         .eq('id', deliveryId);
 
       if (error) {
@@ -126,7 +137,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
       }
 
       // Add tracking update with appropriate status message
-      const statusMessages = {
+      const statusMessages: { [key: string]: string } = {
         'in_progress': 'Driver En Route to Pickup',
         'picked_up': 'Package Picked Up',
         'in_transit': 'Package In Transit to Destination',
@@ -137,19 +148,19 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .from('tracking_updates')
         .insert({
           delivery_id: deliveryId,
-          status: statusMessages[status as keyof typeof statusMessages] || status,
+          status: statusMessages[dbStatus] || dbStatus,
           timestamp: new Date().toISOString(),
-          location: status === 'picked_up' ? 'Pickup Location' : 
-                   status === 'in_transit' ? 'En Route' : 
-                   status === 'completed' ? 'Delivery Location' : 'Driver Location',
-          note: `Status updated by driver to ${status.replace('_', ' ')}`
+          location: dbStatus === 'picked_up' ? 'Pickup Location' : 
+                   dbStatus === 'in_transit' ? 'En Route' : 
+                   dbStatus === 'completed' ? 'Delivery Location' : 'Driver Location',
+          note: `Status updated by driver to ${dbStatus.replace('_', ' ')}`
         });
 
       // Refresh the deliveries list to show updated status
       await fetchActiveDeliveries();
       
-      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
-      console.log(`Successfully updated delivery ${deliveryId} to ${status}`);
+      toast.success(`Delivery marked as ${dbStatus.replace('_', ' ')}`);
+      console.log(`Successfully updated delivery ${deliveryId} to ${dbStatus}`);
     } catch (error) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update delivery status');
