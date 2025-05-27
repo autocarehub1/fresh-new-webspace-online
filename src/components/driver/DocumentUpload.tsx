@@ -1,6 +1,6 @@
-
 import React, { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SecurityService } from '@/lib/security';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -94,24 +94,44 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
   };
 
   const uploadFile = async (file: File, documentType: string): Promise<string> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${documentType}_${Date.now()}.${fileExt}`;
+    console.log('Starting secure file upload...', { userId, documentType, fileName: file.name });
     
-    const { data, error } = await supabase.storage
-      .from('driver-documents')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    try {
+      // Use the secure upload from SecurityService
+      const result = await SecurityService.secureFileUpload(file, `driver-documents/${userId}/${documentType}`);
+      console.log('Secure upload result:', result);
+      return result.url;
+    } catch (error) {
+      console.error('Secure upload failed, trying direct upload:', error);
+      
+      // Fallback to direct upload if secure upload fails
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${documentType}_${Date.now()}.${fileExt}`;
+      
+      console.log('Attempting direct upload to bucket: driver-documents, path:', fileName);
+      
+      const { data, error: uploadError } = await supabase.storage
+        .from('driver-documents')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-    if (error) throw error;
-    
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('driver-documents')
-      .getPublicUrl(data.path);
+      if (uploadError) {
+        console.error('Direct upload error:', uploadError);
+        throw uploadError;
+      }
+      
+      console.log('Direct upload successful:', data);
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('driver-documents')
+        .getPublicUrl(data.path);
 
-    return urlData.publicUrl;
+      console.log('Generated public URL:', urlData.publicUrl);
+      return urlData.publicUrl;
+    }
   };
 
   const handleFileUpload = async (file: File, docType: DocumentType) => {
@@ -125,6 +145,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     setUploadProgress(prev => ({ ...prev, [docType.id]: 0 }));
 
     try {
+      console.log('Starting file upload process...', { docType: docType.id, fileName: file.name });
+      
       // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => ({
@@ -138,9 +160,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
       clearInterval(progressInterval);
       setUploadProgress(prev => ({ ...prev, [docType.id]: 100 }));
 
-      // Save document record to database
+      console.log('File uploaded successfully, saving to database...', { url, docType: docType.id });
+
+      // Save document record to database - using 'documents' table instead of 'driver_documents'
       const { error: dbError } = await supabase
-        .from('driver_documents')
+        .from('documents')
         .insert({
           driver_id: userId,
           document_type: docType.id,
@@ -153,7 +177,33 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
           }
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        // If table doesn't exist, try alternative table name
+        if (dbError.message.includes('relation "documents" does not exist')) {
+          console.log('Trying alternative table name: driver_documents');
+          const { error: altDbError } = await supabase
+            .from('driver_documents')
+            .insert({
+              driver_id: userId,
+              document_type: docType.id,
+              document_url: url,
+              verification_status: 'pending',
+              metadata: {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
+              }
+            });
+          
+          if (altDbError) {
+            console.error('Alternative database insert error:', altDbError);
+            throw altDbError;
+          }
+        } else {
+          throw dbError;
+        }
+      }
 
       const uploadedDoc: UploadedDocument = {
         id: Date.now().toString(),
@@ -166,10 +216,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
 
       setUploads(prev => ({ ...prev, [docType.id]: uploadedDoc }));
       toast.success(`${docType.name} uploaded successfully`);
+      console.log('Document upload completed successfully');
 
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(`Failed to upload ${docType.name}`);
+      toast.error(`Failed to upload ${docType.name}: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(prev => ({ ...prev, [docType.id]: false }));
       setTimeout(() => {
@@ -200,20 +251,43 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     if (!doc) return;
 
     try {
+      console.log('Removing document:', { docType, url: doc.url });
+      
       // Remove from storage
       const fileName = doc.url.split('/').pop();
       if (fileName) {
-        await supabase.storage
+        const { error: deleteError } = await supabase.storage
           .from('driver-documents')
           .remove([`${userId}/${fileName}`]);
+        
+        if (deleteError) {
+          console.warn('Storage deletion error:', deleteError);
+        }
       }
 
-      // Remove from database
-      await supabase
-        .from('driver_documents')
+      // Remove from database - try both table names
+      let deleteError = null;
+      
+      const { error: dbError1 } = await supabase
+        .from('documents')
         .delete()
         .eq('driver_id', userId)
         .eq('document_type', docType);
+        
+      if (dbError1?.message?.includes('relation "documents" does not exist')) {
+        const { error: dbError2 } = await supabase
+          .from('driver_documents')
+          .delete()
+          .eq('driver_id', userId)
+          .eq('document_type', docType);
+        deleteError = dbError2;
+      } else {
+        deleteError = dbError1;
+      }
+
+      if (deleteError) {
+        console.warn('Database deletion error:', deleteError);
+      }
 
       setUploads(prev => {
         const updated = { ...prev };
@@ -223,6 +297,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
 
       toast.success('Document removed');
     } catch (error) {
+      console.error('Remove document error:', error);
       toast.error('Failed to remove document');
     }
   };
