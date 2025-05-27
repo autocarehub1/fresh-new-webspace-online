@@ -1,37 +1,23 @@
 
-import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
+import React from 'react';
 import ProofOfDeliveryCapture from './ProofOfDeliveryCapture';
+import { useDeliveryCompletion } from './proof-of-delivery/useDeliveryCompletion';
 
 interface ProofOfDeliveryPhotoFormProps {
   deliveryId: string;
   onComplete?: () => void;
 }
 
-const ProofOfDeliveryPhotoForm: React.FC<ProofOfDeliveryPhotoFormProps> = ({ deliveryId, onComplete }) => {
-  const [uploading, setUploading] = useState(false);
+const ProofOfDeliveryPhotoForm: React.FC<ProofOfDeliveryPhotoFormProps> = ({ 
+  deliveryId, 
+  onComplete 
+}) => {
+  const { completeDeliveryWithPhoto } = useDeliveryCompletion();
 
   const handlePhotoUploaded = async (photoUrl: string) => {
-    setUploading(true);
-    try {
-      // Update delivery record with proof photo
-      const { error: updateError } = await supabase
-        .from('delivery_requests')
-        .update({ proofOfDeliveryPhoto: photoUrl, status: 'completed' })
-        .eq('id', deliveryId);
-
-      if (updateError) throw updateError;
-
-      toast.success('Proof of delivery uploaded and delivery marked as completed!');
-      if (onComplete) onComplete();
-    } catch (err: any) {
-      console.error('Error completing delivery:', err);
-      toast.error(err.message || 'Failed to complete delivery.');
-    } finally {
-      setUploading(false);
+    const success = await completeDeliveryWithPhoto(deliveryId, photoUrl);
+    if (success && onComplete) {
+      onComplete();
     }
   };
 
