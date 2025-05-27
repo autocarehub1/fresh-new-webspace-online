@@ -16,6 +16,7 @@ import BatchProcessingDialog from './order/BatchProcessingDialog';
 import ChainOfCustodyDialog from './order/ChainOfCustodyDialog';
 import OrdersTable from './order/OrdersTable';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const OrderManagement = () => {
   const { deliveries: requests, isLoading, refetch } = useDeliveryData();
@@ -121,34 +122,62 @@ const OrderManagement = () => {
     });
   };
   
-  const handleStatusChange = (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered' | 'reset_to_pending') => {
+  const handleStatusChange = async (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered' | 'reset_to_pending') => {
     console.log(`OrderManagement: Changing status of request ${req.id} from ${req.status} to ${status}`);
     
     try {
-      // Access the imported function from useRequestActions
-      handleStatusUpdate(req, status)
-        .then((success) => {
-          console.log(`Status change result for ${req.id}: ${success ? 'Success' : 'Failed'}`);
-          
-          if (success) {
-            // Force data refetch after a short delay
-            setTimeout(() => {
-              console.log(`Forcing query invalidation for request ${req.id}`);
-              // Invalidate the queries to get fresh data
-              queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
-              
-              // Manually trigger a refetch to ensure latest data
-              refetch();
-            }, 1000);
-          } else {
-            console.error(`Status update returned false for ${req.id}`);
-          }
-        })
-        .catch(error => {
-          console.error(`Error in status change promise for ${req.id}:`, error);
-        });
+      // Handle reset_to_pending separately since it's not part of the standard progression
+      if (status === 'reset_to_pending') {
+        console.log(`Resetting request ${req.id} to pending status`);
+        
+        const { error } = await supabase
+          .from('delivery_requests')
+          .update({ status: 'pending' })
+          .eq('id', req.id);
+
+        if (error) {
+          console.error('Error resetting status to pending:', error);
+          throw error;
+        }
+
+        // Add tracking update
+        await supabase
+          .from('tracking_updates')
+          .insert({
+            delivery_id: req.id,
+            status: 'Reset to Pending',
+            timestamp: new Date().toISOString(),
+            location: 'Admin Portal',
+            note: 'Status reset to pending by administrator'
+          });
+
+        toast.success('Request status reset to pending');
+        
+        // Force data refetch
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+          refetch();
+        }, 1000);
+        
+        return;
+      }
+
+      // Handle standard status updates (picked_up, in_transit, delivered)
+      const success = await handleStatusUpdate(req, status);
+      
+      if (success) {
+        // Force data refetch after a short delay
+        setTimeout(() => {
+          console.log(`Forcing query invalidation for request ${req.id}`);
+          queryClient.invalidateQueries({ queryKey: ['deliveryRequests'] });
+          refetch();
+        }, 1000);
+      } else {
+        console.error(`Status update returned false for ${req.id}`);
+      }
     } catch (error) {
       console.error(`Exception in handleStatusChange for ${req.id}:`, error);
+      toast.error('Failed to update request status');
     }
   };
   
