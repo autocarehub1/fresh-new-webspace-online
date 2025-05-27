@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -7,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Calendar, Clock, Package, MapPin, User, Phone, Mail, Info } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const serviceCategories = {
   medical: [
@@ -37,6 +39,7 @@ const serviceCategories = {
 
 const RequestPickup = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,31 +60,79 @@ const RequestPickup = () => {
     setIsSubmitting(true);
 
     try {
-      // Here you would typically send the form data to your backend
       console.log('Form submitted:', formData);
+
+      // Generate unique request ID
+      const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
+      // Map service types to package types
+      const packageTypeMapping: Record<string, string> = {
+        'urgent': 'medical_supplies',
+        'same-day': 'medical_supplies',
+        'scheduled': 'medical_supplies',
+        'temperature-controlled': 'medical_supplies',
+        'specimen': 'lab_samples',
+        'equipment': 'equipment',
+        'pharmaceutical': 'medication',
+        'document': 'documents',
+        'airport-baggage': 'baggage',
+        'luggage-storage': 'baggage',
+        'pet-transportation': 'pet_transport',
+        'veterinary-transport': 'pet_transport',
+        'furniture-delivery': 'furniture',
+        'home-improvement': 'materials'
+      };
+
+      // Determine priority based on service type
+      const urgentServices = ['urgent', 'specimen', 'pharmaceutical'];
+      const priority = urgentServices.includes(formData.serviceType) ? 'urgent' : 'normal';
+
+      // Create delivery request payload
+      const deliveryRequest = {
+        id: requestId,
+        tracking_id: `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        pickup_location: formData.pickupAddress,
+        delivery_location: formData.deliveryAddress,
+        package_type: packageTypeMapping[formData.serviceType] || 'medical_supplies',
+        priority: priority,
+        status: 'pending',
+        requester_name: formData.contactName,
+        email: formData.contactEmail,
+        phone: formData.contactPhone,
+        notes: formData.specialInstructions || null,
+        scheduled_pickup_date: formData.pickupDate ? `${formData.pickupDate}T${formData.pickupTime}:00` : null,
+        created_at: new Date().toISOString()
+      };
+
+      console.log('Creating delivery request:', deliveryRequest);
+
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('delivery_requests')
+        .insert(deliveryRequest)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Failed to create request: ${error.message}`);
+      }
+
+      console.log('Request created successfully:', data);
+
       toast({
-        title: "Request Submitted",
-        description: "We'll contact you shortly to confirm your pickup request.",
+        title: "Request Submitted Successfully",
+        description: `Your delivery request has been created with ID: ${requestId}. We'll contact you shortly to confirm details.`,
       });
 
-      // Reset form
-      setFormData({
-        serviceCategory: 'medical',
-        serviceType: '',
-        pickupAddress: '',
-        deliveryAddress: '',
-        pickupDate: '',
-        pickupTime: '',
-        contactName: '',
-        contactPhone: '',
-        contactEmail: '',
-        specialInstructions: ''
-      });
-    } catch (error) {
+      // Navigate to tracking page
+      navigate(`/tracking?id=${requestId}`);
+
+    } catch (error: any) {
+      console.error('Error submitting request:', error);
       toast({
         title: "Error",
-        description: "There was an error submitting your request. Please try again.",
+        description: error.message || "There was an error submitting your request. Please try again.",
         variant: "destructive",
       });
     } finally {
