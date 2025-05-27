@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useDriverData } from '@/hooks/use-driver-data';
@@ -77,10 +76,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
       
       const { error } = await supabase
         .from('delivery_requests')
-        .update({ 
-          status: finalStatus,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: finalStatus })
         .eq('id', request.id);
 
       if (error) throw error;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -115,10 +114,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     try {
       const { error } = await supabase
         .from('delivery_requests')
-        .update({ 
-          status,
-          updated_at: new Date().toISOString()
-        })
+        .update({ status })
         .eq('id', deliveryId);
 
       if (error) throw error;
@@ -162,8 +158,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .from('delivery_requests')
         .update({ 
           status: 'completed',
-          proofOfDeliveryPhoto: photoUrl,
-          updated_at: new Date().toISOString()
+          proofOfDeliveryPhoto: photoUrl
         })
         .eq('id', selectedDeliveryId);
 
