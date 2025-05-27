@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { toast } from 'sonner';
 import { DeliveryRequest } from '@/types/delivery';
-import ProofOfDeliveryCapture from './ProofOfDeliveryCapture';
 import DriverStatusAlert from './DriverStatusAlert';
 import EmptyDeliveries from './EmptyDeliveries';
 import DeliveryCard from './DeliveryCard';
+import DeliveryTrackerHeader from './DeliveryTrackerHeader';
+import useDeliveryTrackerSubscriptions from './DeliveryTrackerSubscriptions';
+import { useDeliveryActions } from './DeliveryTrackerActions';
+import DeliveryTrackerDialog from './DeliveryTrackerDialog';
 
 interface DeliveryTrackerProps {
   driverId: string;
@@ -21,11 +21,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
   const [driverStatus, setDriverStatus] = useState<string>('inactive');
 
-  useEffect(() => {
-    fetchActiveDeliveries();
-    fetchDriverStatus();
-    setupRealtimeSubscription();
-  }, [driverId]);
+  const { updateDeliveryStatus, completeDeliveryWithProof } = useDeliveryActions();
 
   const fetchDriverStatus = async () => {
     try {
@@ -56,117 +52,26 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
       setActiveDeliveries(data || []);
     } catch (error) {
       console.error('Error fetching deliveries:', error);
-      toast.error('Failed to load deliveries');
     } finally {
       setLoading(false);
     }
   };
 
-  const setupRealtimeSubscription = () => {
-    const channel = supabase
-      .channel(`driver_deliveries_${driverId}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'delivery_requests',
-        filter: `assigned_driver=eq.${driverId}`
-      }, (payload) => {
-        console.log('Real-time delivery update:', payload);
-        
-        // Show notification for new assignments with proper type checking
-        if (payload.eventType === 'UPDATE' && 
-            payload.new && typeof payload.new === 'object' && 'assigned_driver' in payload.new &&
-            payload.old && typeof payload.old === 'object' && 'assigned_driver' in payload.old &&
-            payload.new.assigned_driver === driverId && 
-            !payload.old.assigned_driver) {
-          const newPayload = payload.new as any;
-          toast.success('🚚 New delivery assigned to you!', {
-            description: `Pickup: ${newPayload.pickup_location}`,
-            action: {
-              label: "View",
-              onClick: () => fetchActiveDeliveries()
-            }
-          });
-        }
-        
-        // Refresh deliveries on any change
-        fetchActiveDeliveries();
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'drivers',
-        filter: `id=eq.${driverId}`
-      }, (payload) => {
-        console.log('Driver status update:', payload);
-        if (payload.new && typeof payload.new === 'object' && 'status' in payload.new &&
-            payload.old && typeof payload.old === 'object' && 'status' in payload.old &&
-            payload.new.status !== payload.old.status) {
-          const newStatus = payload.new.status as string;
-          setDriverStatus(newStatus);
-          toast.info(`Status updated to: ${newStatus}`);
-        }
-      })
-      .subscribe();
+  useEffect(() => {
+    fetchActiveDeliveries();
+    fetchDriverStatus();
+  }, [driverId]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
+  useDeliveryTrackerSubscriptions({
+    driverId,
+    onDeliveriesChange: fetchActiveDeliveries,
+    onDriverStatusChange: setDriverStatus
+  });
 
-  const updateDeliveryStatus = async (deliveryId: string, status: string) => {
-    try {
-      console.log(`Driver updating delivery ${deliveryId} from current status to: ${status}`);
-      
-      // Map UI status to valid database status
-      let dbStatus = status;
-      if (status === 'in_transit') {
-        // Use 'in_progress' instead of 'in_transit' since it's not allowed by database constraint
-        dbStatus = 'in_progress';
-        console.log(`Mapping status from ${status} to ${dbStatus} for database compatibility`);
-      }
-      
-      const { error } = await supabase
-        .from('delivery_requests')
-        .update({ status: dbStatus })
-        .eq('id', deliveryId);
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      // Add tracking update with appropriate status message
-      const statusMessages: { [key: string]: string } = {
-        'in_progress': status === 'in_transit' ? 'Package In Transit to Destination' : 'Package Picked Up by Driver',
-        'completed': 'Package Delivered'
-      };
-
-      await supabase
-        .from('tracking_updates')
-        .insert({
-          delivery_id: deliveryId,
-          status: statusMessages[dbStatus] || dbStatus,
-          timestamp: new Date().toISOString(),
-          location: status === 'in_progress' ? 'Pickup Location' : 
-                   status === 'in_transit' ? 'En Route' : 
-                   status === 'completed' ? 'Delivery Location' : 'Driver Location',
-          note: `Status updated by driver to ${status.replace('_', ' ')}`
-        });
-
-      console.log(`Successfully updated delivery ${deliveryId} to ${dbStatus}`);
-      
-      // Show success message with proper display text
-      const displayStatus = status === 'in_progress' ? 'picked up' : 
-                           status === 'in_transit' ? 'in transit' : 
-                           status.replace('_', ' ');
-      toast.success(`Delivery marked as ${displayStatus}`);
-      
-      // Refresh the deliveries list immediately to show updated status
+  const handleStatusUpdate = async (deliveryId: string, status: string) => {
+    const success = await updateDeliveryStatus(deliveryId, status);
+    if (success) {
       await fetchActiveDeliveries();
-    } catch (error) {
-      console.error('Error updating delivery:', error);
-      toast.error('Failed to update delivery status');
     }
   };
 
@@ -176,39 +81,17 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
   };
 
   const handleProofUploaded = async (photoUrl: string) => {
-    try {
-      // Update delivery with proof photo and mark as completed
-      const { error } = await supabase
-        .from('delivery_requests')
-        .update({ 
-          status: 'completed',
-          proofOfDeliveryPhoto: photoUrl
-        })
-        .eq('id', selectedDeliveryId);
-
-      if (error) throw error;
-
-      // Add final tracking update
-      await supabase
-        .from('tracking_updates')
-        .insert({
-          delivery_id: selectedDeliveryId,
-          status: 'Delivered',
-          timestamp: new Date().toISOString(),
-          location: 'Delivery Location',
-          note: 'Package delivered with proof photo'
-        });
-
-      // Refresh the deliveries list
+    const success = await completeDeliveryWithProof(selectedDeliveryId, photoUrl);
+    if (success) {
       await fetchActiveDeliveries();
-
       setShowProofDialog(false);
       setSelectedDeliveryId('');
-      toast.success('Delivery completed successfully!');
-    } catch (error) {
-      console.error('Error completing delivery:', error);
-      toast.error('Failed to complete delivery');
     }
+  };
+
+  const handleDialogCancel = () => {
+    setShowProofDialog(false);
+    setSelectedDeliveryId('');
   };
 
   if (loading) {
@@ -229,12 +112,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Active Deliveries</h3>
-        <Badge variant="default" className="bg-green-600">
-          Status: Active
-        </Badge>
-      </div>
+      <DeliveryTrackerHeader driverStatus={driverStatus} />
       
       {activeDeliveries.length === 0 ? (
         <EmptyDeliveries />
@@ -243,34 +121,19 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           <DeliveryCard
             key={delivery.id}
             delivery={delivery}
-            onStatusUpdate={updateDeliveryStatus}
+            onStatusUpdate={handleStatusUpdate}
             onCompleteDelivery={handleCompleteDelivery}
           />
         ))
       )}
 
-      <Dialog open={showProofDialog} onOpenChange={setShowProofDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Complete Delivery</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <p className="text-sm text-gray-600 mb-4">
-              Please take a photo as proof of delivery before completing this request.
-            </p>
-            
-            <ProofOfDeliveryCapture
-              deliveryId={selectedDeliveryId}
-              onPhotoUploaded={handleProofUploaded}
-              onCancel={() => {
-                setShowProofDialog(false);
-                setSelectedDeliveryId('');
-              }}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DeliveryTrackerDialog
+        open={showProofDialog}
+        onOpenChange={setShowProofDialog}
+        selectedDeliveryId={selectedDeliveryId}
+        onProofUploaded={handleProofUploaded}
+        onCancel={handleDialogCancel}
+      />
     </div>
   );
 };
