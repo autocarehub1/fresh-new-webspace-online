@@ -93,18 +93,43 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     return null;
   };
 
+  const createStorageBucketIfNeeded = async () => {
+    try {
+      // Check if bucket exists by trying to list files
+      const { error } = await supabase.storage.from('driver-documents').list('', { limit: 1 });
+      
+      if (error && error.message.includes('Bucket not found')) {
+        console.log('Creating driver-documents storage bucket...');
+        // Note: Bucket creation is typically done via migration, but we log the attempt
+        toast.error('Storage bucket not found. Please contact support.');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error checking storage bucket:', error);
+      return false;
+    }
+  };
+
   const uploadFile = async (file: File, documentType: string): Promise<string> => {
-    console.log('Starting secure file upload...', { userId, documentType, fileName: file.name });
+    console.log('Starting file upload...', { userId, documentType, fileName: file.name });
+    
+    // Ensure storage bucket exists
+    const bucketExists = await createStorageBucketIfNeeded();
+    if (!bucketExists) {
+      throw new Error('Storage bucket not available');
+    }
     
     try {
-      // Use the secure upload from SecurityService
+      // Try secure upload first
       const result = await SecurityService.secureFileUpload(file, `driver-documents/${userId}/${documentType}`);
       console.log('Secure upload result:', result);
       return result.url;
     } catch (error) {
       console.error('Secure upload failed, trying direct upload:', error);
       
-      // Fallback to direct upload if secure upload fails
+      // Fallback to direct upload
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${documentType}_${Date.now()}.${fileExt}`;
       
@@ -162,9 +187,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
 
       console.log('File uploaded successfully, saving to database...', { url, docType: docType.id });
 
-      // Save document record to database - using 'documents' table instead of 'driver_documents'
+      // Save document record to database
       const { error: dbError } = await supabase
-        .from('documents')
+        .from('driver_documents')
         .insert({
           driver_id: userId,
           document_type: docType.id,
@@ -179,30 +204,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
 
       if (dbError) {
         console.error('Database insert error:', dbError);
-        // If table doesn't exist, try alternative table name
-        if (dbError.message.includes('relation "documents" does not exist')) {
-          console.log('Trying alternative table name: driver_documents');
-          const { error: altDbError } = await supabase
-            .from('driver_documents')
-            .insert({
-              driver_id: userId,
-              document_type: docType.id,
-              document_url: url,
-              verification_status: 'pending',
-              metadata: {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type
-              }
-            });
-          
-          if (altDbError) {
-            console.error('Alternative database insert error:', altDbError);
-            throw altDbError;
-          }
-        } else {
-          throw dbError;
-        }
+        throw dbError;
       }
 
       const uploadedDoc: UploadedDocument = {
@@ -265,28 +267,16 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
         }
       }
 
-      // Remove from database - try both table names
-      let deleteError = null;
-      
-      const { error: dbError1 } = await supabase
-        .from('documents')
+      // Remove from database
+      const { error: deleteError } = await supabase
+        .from('driver_documents')
         .delete()
         .eq('driver_id', userId)
         .eq('document_type', docType);
-        
-      if (dbError1?.message?.includes('relation "documents" does not exist')) {
-        const { error: dbError2 } = await supabase
-          .from('driver_documents')
-          .delete()
-          .eq('driver_id', userId)
-          .eq('document_type', docType);
-        deleteError = dbError2;
-      } else {
-        deleteError = dbError1;
-      }
 
       if (deleteError) {
         console.warn('Database deletion error:', deleteError);
+        throw deleteError;
       }
 
       setUploads(prev => {
