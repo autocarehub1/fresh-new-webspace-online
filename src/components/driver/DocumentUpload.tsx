@@ -1,79 +1,13 @@
+
 import React, { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SecurityService } from '@/lib/security';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  Upload, 
-  FileText, 
-  CheckCircle, 
-  AlertCircle, 
-  X,
-  Image as ImageIcon,
-  File
-} from 'lucide-react';
 import { toast } from 'sonner';
-
-interface DocumentUploadProps {
-  userId: string;
-  onComplete: () => void;
-}
-
-interface DocumentType {
-  id: string;
-  name: string;
-  description: string;
-  required: boolean;
-  maxSize: number; // in MB
-  acceptedTypes: string[];
-}
-
-interface UploadedDocument {
-  id: string;
-  type: string;
-  fileName: string;
-  url: string;
-  status: 'pending' | 'verified' | 'rejected';
-  uploadedAt: Date;
-}
-
-const documentTypes: DocumentType[] = [
-  {
-    id: 'license',
-    name: 'Driver License',
-    description: 'Front and back of your valid driver license',
-    required: true,
-    maxSize: 5,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-  },
-  {
-    id: 'insurance',
-    name: 'Vehicle Insurance',
-    description: 'Current vehicle insurance certificate',
-    required: true,
-    maxSize: 5,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-  },
-  {
-    id: 'registration',
-    name: 'Vehicle Registration',
-    description: 'Current vehicle registration document',
-    required: true,
-    maxSize: 5,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
-  },
-  {
-    id: 'background_check',
-    name: 'Background Check',
-    description: 'Recent background check certificate (if available)',
-    required: false,
-    maxSize: 5,
-    acceptedTypes: ['application/pdf', 'image/jpeg', 'image/png']
-  }
-];
+import { DocumentUploadProps, UploadedDocument } from './document-upload/types';
+import { documentTypes } from './document-upload/constants';
+import { validateFile, uploadFile } from './document-upload/utils';
+import { DocumentCard } from './document-upload/DocumentCard';
+import { DocumentUploadHeader } from './document-upload/DocumentUploadHeader';
+import { DocumentUploadFooter } from './document-upload/DocumentUploadFooter';
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) => {
   const [uploads, setUploads] = useState<Record<string, UploadedDocument>>({});
@@ -81,85 +15,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [dragOver, setDragOver] = useState<string | null>(null);
 
-  const validateFile = (file: File, docType: DocumentType): string | null => {
-    if (file.size > docType.maxSize * 1024 * 1024) {
-      return `File size must be less than ${docType.maxSize}MB`;
-    }
-    
-    if (!docType.acceptedTypes.includes(file.type)) {
-      return `File type not supported. Accepted types: ${docType.acceptedTypes.join(', ')}`;
-    }
-    
-    return null;
-  };
-
-  const createStorageBucketIfNeeded = async () => {
-    try {
-      // Check if bucket exists by trying to list files
-      const { error } = await supabase.storage.from('driver-documents').list('', { limit: 1 });
-      
-      if (error && error.message.includes('Bucket not found')) {
-        console.log('Creating driver-documents storage bucket...');
-        // Note: Bucket creation is typically done via migration, but we log the attempt
-        toast.error('Storage bucket not found. Please contact support.');
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error checking storage bucket:', error);
-      return false;
-    }
-  };
-
-  const uploadFile = async (file: File, documentType: string): Promise<string> => {
-    console.log('Starting file upload...', { userId, documentType, fileName: file.name });
-    
-    // Ensure storage bucket exists
-    const bucketExists = await createStorageBucketIfNeeded();
-    if (!bucketExists) {
-      throw new Error('Storage bucket not available');
-    }
-    
-    try {
-      // Try secure upload first
-      const result = await SecurityService.secureFileUpload(file, `driver-documents/${userId}/${documentType}`);
-      console.log('Secure upload result:', result);
-      return result.url;
-    } catch (error) {
-      console.error('Secure upload failed, trying direct upload:', error);
-      
-      // Fallback to direct upload
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}/${documentType}_${Date.now()}.${fileExt}`;
-      
-      console.log('Attempting direct upload to bucket: driver-documents, path:', fileName);
-      
-      const { data, error: uploadError } = await supabase.storage
-        .from('driver-documents')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        console.error('Direct upload error:', uploadError);
-        throw uploadError;
-      }
-      
-      console.log('Direct upload successful:', data);
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('driver-documents')
-        .getPublicUrl(data.path);
-
-      console.log('Generated public URL:', urlData.publicUrl);
-      return urlData.publicUrl;
-    }
-  };
-
-  const handleFileUpload = async (file: File, docType: DocumentType) => {
+  const handleFileUpload = async (file: File, docType: typeof documentTypes[0]) => {
     const validation = validateFile(file, docType);
     if (validation) {
       toast.error(validation);
@@ -180,7 +36,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
         }));
       }, 200);
 
-      const url = await uploadFile(file, docType.id);
+      const url = await uploadFile(file, docType.id, userId);
       
       clearInterval(progressInterval);
       setUploadProgress(prev => ({ ...prev, [docType.id]: 100 }));
@@ -231,7 +87,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent, docType: DocumentType) => {
+  const handleDrop = useCallback((e: React.DragEvent, docType: typeof documentTypes[0]) => {
     e.preventDefault();
     setDragOver(null);
     
@@ -241,7 +97,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     }
   }, []);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, docType: DocumentType) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, docType: typeof documentTypes[0]) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       handleFileUpload(files[0], docType);
@@ -301,139 +157,32 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     }
   }, [allRequiredUploaded, onComplete]);
 
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'webp'].includes(ext || '')) {
-      return <ImageIcon className="h-5 w-5" />;
-    }
-    return <File className="h-5 w-5" />;
-  };
-
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Required Documents</h3>
-        <p className="text-gray-600">
-          Upload clear photos or scans of your documents. All required documents must be uploaded to proceed.
-        </p>
-      </div>
-
-      {allRequiredUploaded && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            All required documents have been uploaded successfully!
-          </AlertDescription>
-        </Alert>
-      )}
+      <DocumentUploadHeader allRequiredUploaded={allRequiredUploaded} />
 
       <div className="grid gap-6">
-        {documentTypes.map((docType) => {
-          const isUploaded = uploads[docType.id];
-          const isUploading = uploading[docType.id];
-          const progress = uploadProgress[docType.id] || 0;
-
-          return (
-            <Card key={docType.id} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      {docType.name}
-                      {docType.required && <span className="text-red-500">*</span>}
-                    </CardTitle>
-                    <CardDescription>{docType.description}</CardDescription>
-                  </div>
-                  {isUploaded && (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDocument(docType.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                {isUploaded ? (
-                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                    {getFileIcon(isUploaded.fileName)}
-                    <div className="flex-1">
-                      <p className="font-medium text-green-900">{isUploaded.fileName}</p>
-                      <p className="text-sm text-green-700">
-                        Status: {isUploaded.status === 'pending' ? 'Under Review' : isUploaded.status}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                        dragOver === docType.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOver(docType.id);
-                      }}
-                      onDragLeave={() => setDragOver(null)}
-                      onDrop={(e) => handleDrop(e, docType)}
-                    >
-                      {isUploading ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-center">
-                            <Upload className="h-8 w-8 text-blue-600 animate-pulse" />
-                          </div>
-                          <p className="text-blue-600">Uploading...</p>
-                          <Progress value={progress} className="max-w-xs mx-auto" />
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                          <div>
-                            <p className="text-gray-600 mb-1">
-                              Drop your file here, or{' '}
-                              <Label htmlFor={`file-${docType.id}`} className="text-blue-600 cursor-pointer hover:underline">
-                                browse
-                              </Label>
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Max {docType.maxSize}MB • {docType.acceptedTypes.join(', ')}
-                            </p>
-                          </div>
-                          <input
-                            id={`file-${docType.id}`}
-                            type="file"
-                            accept={docType.acceptedTypes.join(',')}
-                            onChange={(e) => handleFileSelect(e, docType)}
-                            className="hidden"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+        {documentTypes.map((docType) => (
+          <DocumentCard
+            key={docType.id}
+            docType={docType}
+            uploadedDoc={uploads[docType.id]}
+            isUploading={uploading[docType.id] || false}
+            progress={uploadProgress[docType.id] || 0}
+            dragOver={dragOver === docType.id}
+            onFileSelect={(e) => handleFileSelect(e, docType)}
+            onDrop={(e) => handleDrop(e, docType)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(docType.id);
+            }}
+            onDragLeave={() => setDragOver(null)}
+            onRemove={() => removeDocument(docType.id)}
+          />
+        ))}
       </div>
 
-      <div className="text-center text-sm text-gray-600">
-        <p>
-          <strong>Note:</strong> All documents will be reviewed by our team within 1-2 business days.
-          You'll receive an email notification once your documents are verified.
-        </p>
-      </div>
+      <DocumentUploadFooter />
     </div>
   );
 };
