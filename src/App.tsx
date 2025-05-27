@@ -46,6 +46,7 @@ const App = () => (
             
             {/* Driver Portal Routes */}
             <Route path="/driver" element={<Navigate to="/driver-auth" replace />} />
+            <Route path="/driver/:userId" element={<DriverDashboard />} />
             <Route path="/driver-login" element={<Navigate to="/driver-auth" replace />} />
             <Route path="/driver-portal" element={<Navigate to="/driver-auth" replace />} />
             <Route path="/driver-auth" element={<DriverAuth />} />

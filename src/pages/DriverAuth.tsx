@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
@@ -36,7 +35,7 @@ const DriverAuth = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (user && !isLoading) {
-      console.log('User authenticated, redirecting to driver dashboard or onboarding');
+      console.log('User authenticated, redirecting to driver dashboard');
       const userMetadata = user.user_metadata;
       if (!userMetadata?.onboarding_completed) {
         navigate('/driver-onboarding');
