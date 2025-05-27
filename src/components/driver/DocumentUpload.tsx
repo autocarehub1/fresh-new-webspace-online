@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { DocumentUploadProps, UploadedDocument } from './document-upload/types';
@@ -14,8 +13,89 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Check if database and storage are ready
+  useEffect(() => {
+    const checkDatabaseReady = async () => {
+      try {
+        console.log('Checking if database is ready...');
+        
+        // Test database connection
+        const { error: dbError } = await supabase
+          .from('driver_documents')
+          .select('count')
+          .limit(1);
+        
+        if (dbError) {
+          console.error('Database not ready:', dbError);
+          toast.error('Database is not ready yet. Please wait a moment and try again.');
+          return;
+        }
+
+        // Test storage bucket
+        const { error: storageError } = await supabase.storage
+          .from('driver-documents')
+          .list('', { limit: 1 });
+        
+        if (storageError) {
+          console.error('Storage not ready:', storageError);
+          toast.error('File storage is not ready yet. Please wait a moment and try again.');
+          return;
+        }
+
+        console.log('Database and storage are ready');
+        setIsInitialized(true);
+        loadExistingDocuments();
+      } catch (error) {
+        console.error('Error checking database readiness:', error);
+        toast.error('Unable to connect to the database. Please refresh the page.');
+      }
+    };
+
+    checkDatabaseReady();
+  }, [userId]);
+
+  const loadExistingDocuments = async () => {
+    try {
+      console.log('Loading existing documents for user:', userId);
+      const { data, error } = await supabase
+        .from('driver_documents')
+        .select('*')
+        .eq('driver_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading documents:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const existingUploads: Record<string, UploadedDocument> = {};
+        data.forEach(doc => {
+          existingUploads[doc.document_type] = {
+            id: doc.id,
+            type: doc.document_type,
+            fileName: doc.metadata?.fileName || 'Unknown file',
+            url: doc.document_url,
+            status: doc.verification_status || 'pending',
+            uploadedAt: new Date(doc.created_at)
+          };
+        });
+        setUploads(existingUploads);
+        console.log('Loaded existing documents:', existingUploads);
+      }
+    } catch (error) {
+      console.error('Error loading existing documents:', error);
+    }
+  };
 
   const handleFileUpload = async (file: File, docType: typeof documentTypes[0]) => {
+    if (!isInitialized) {
+      toast.error('System is still initializing. Please wait a moment.');
+      return;
+    }
+
     const validation = validateFile(file, docType);
     if (validation) {
       toast.error(validation);
@@ -95,7 +175,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     if (files.length > 0) {
       handleFileUpload(files[0], docType);
     }
-  }, []);
+  }, [isInitialized]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, docType: typeof documentTypes[0]) => {
     const files = e.target.files;
@@ -111,19 +191,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
     try {
       console.log('Removing document:', { docType, url: doc.url });
       
-      // Remove from storage
-      const fileName = doc.url.split('/').pop();
-      if (fileName) {
-        const { error: deleteError } = await supabase.storage
-          .from('driver-documents')
-          .remove([`${userId}/${fileName}`]);
-        
-        if (deleteError) {
-          console.warn('Storage deletion error:', deleteError);
-        }
-      }
-
-      // Remove from database
+      // Remove from database first
       const { error: deleteError } = await supabase
         .from('driver_documents')
         .delete()
@@ -133,6 +201,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
       if (deleteError) {
         console.warn('Database deletion error:', deleteError);
         throw deleteError;
+      }
+
+      // Try to remove from storage (non-critical if it fails)
+      try {
+        const fileName = doc.url.split('/').pop();
+        if (fileName) {
+          await supabase.storage
+            .from('driver-documents')
+            .remove([`${userId}/${fileName}`]);
+        }
+      } catch (storageError) {
+        console.warn('Storage deletion warning:', storageError);
       }
 
       setUploads(prev => {
@@ -156,6 +236,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ userId, onComplete }) =
       onComplete();
     }
   }, [allRequiredUploaded, onComplete]);
+
+  if (!isInitialized) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing document upload system...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
