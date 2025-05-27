@@ -3,9 +3,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
-import { toast } from 'sonner';
 
 interface DriverSignUpFormProps {
   onSwitchToSignIn: () => void;
@@ -20,13 +20,12 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
 }) => {
   const { signUp } = useAuth();
   const [signUpData, setSignUpData] = useState({
-    firstName: '',
-    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    fullName: '',
     phone: '',
-    licenseNumber: ''
+    vehicleType: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -37,20 +36,8 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
     return emailRegex.test(email);
   };
 
-  const validatePassword = (password: string) => {
-    return password.length >= 8;
-  };
-
   const validateSignUpForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    if (!signUpData.firstName) {
-      newErrors.firstName = 'First name is required';
-    }
-    
-    if (!signUpData.lastName) {
-      newErrors.lastName = 'Last name is required';
-    }
     
     if (!signUpData.email) {
       newErrors.email = 'Email is required';
@@ -60,8 +47,8 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
     
     if (!signUpData.password) {
       newErrors.password = 'Password is required';
-    } else if (!validatePassword(signUpData.password)) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (signUpData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters long';
     }
     
     if (!signUpData.confirmPassword) {
@@ -70,12 +57,16 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
+    if (!signUpData.fullName) {
+      newErrors.fullName = 'Full name is required';
+    }
+    
     if (!signUpData.phone) {
       newErrors.phone = 'Phone number is required';
     }
     
-    if (!signUpData.licenseNumber) {
-      newErrors.licenseNumber = 'Driver license number is required';
+    if (!signUpData.vehicleType) {
+      newErrors.vehicleType = 'Vehicle type is required';
     }
     
     setErrors(newErrors);
@@ -87,7 +78,7 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
     console.log('Sign up form submitted');
     
     if (!validateSignUpForm()) {
-      console.log('Sign up validation failed');
+      console.log('Form validation failed');
       return;
     }
     
@@ -95,39 +86,27 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
     setErrors({});
     
     try {
-      const metadata = {
-        first_name: signUpData.firstName,
-        last_name: signUpData.lastName,
+      console.log('Attempting to sign up driver with:', signUpData.email);
+      const { error } = await signUp(signUpData.email, signUpData.password, {
+        full_name: signUpData.fullName,
         phone: signUpData.phone,
-        license_number: signUpData.licenseNumber,
-        user_type: 'driver',
-        onboarding_completed: false
-      };
-      
-      console.log('Attempting to sign up with:', signUpData.email, metadata);
-      const { error, user } = await signUp(signUpData.email, signUpData.password, metadata);
+        vehicle_type: signUpData.vehicleType,
+        user_type: 'driver'
+      });
       
       if (error) {
         console.error('Sign up error:', error);
         if (error.message.includes('already registered')) {
           setErrors({ general: 'An account with this email already exists. Please sign in instead.' });
-          onSwitchToSignIn();
         } else {
           setErrors({ general: error.message });
         }
-      } else if (user) {
+      } else {
         console.log('Sign up successful');
-        toast.success('Account created successfully! Please check your email for verification.');
-        setSignUpData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          phone: '',
-          licenseNumber: ''
-        });
-        onSwitchToSignIn();
+        setErrors({ success: 'Account created successfully! Please check your email for verification.' });
+        setTimeout(() => {
+          onSwitchToSignIn();
+        }, 2000);
       }
     } catch (error) {
       console.error('Sign up error:', error);
@@ -139,38 +118,21 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
 
   return (
     <form onSubmit={handleSignUp} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          <Input
-            id="firstName"
-            placeholder="John"
-            value={signUpData.firstName}
-            onChange={(e) => {
-              setSignUpData({ ...signUpData, firstName: e.target.value });
-              if (errors.firstName) setErrors({ ...errors, firstName: '' });
-            }}
-            className={errors.firstName ? 'border-red-500' : ''}
-            disabled={isSubmitting}
-          />
-          {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input
-            id="lastName"
-            placeholder="Doe"
-            value={signUpData.lastName}
-            onChange={(e) => {
-              setSignUpData({ ...signUpData, lastName: e.target.value });
-              if (errors.lastName) setErrors({ ...errors, lastName: '' });
-            }}
-            className={errors.lastName ? 'border-red-500' : ''}
-            disabled={isSubmitting}
-          />
-          {errors.lastName && <p className="text-sm text-red-500">{errors.lastName}</p>}
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="signup-fullname">Full Name</Label>
+        <Input
+          id="signup-fullname"
+          type="text"
+          placeholder="Enter your full name"
+          value={signUpData.fullName}
+          onChange={(e) => {
+            setSignUpData({ ...signUpData, fullName: e.target.value });
+            if (errors.fullName) setErrors({ ...errors, fullName: '' });
+          }}
+          className={errors.fullName ? 'border-red-500' : ''}
+          disabled={isSubmitting}
+        />
+        {errors.fullName && <p className="text-sm text-red-500">{errors.fullName}</p>}
       </div>
 
       <div className="space-y-2">
@@ -178,7 +140,7 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
         <Input
           id="signup-email"
           type="email"
-          placeholder="john.doe@example.com"
+          placeholder="Enter your email"
           value={signUpData.email}
           onChange={(e) => {
             setSignUpData({ ...signUpData, email: e.target.value });
@@ -191,11 +153,11 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number</Label>
+        <Label htmlFor="signup-phone">Phone Number</Label>
         <Input
-          id="phone"
+          id="signup-phone"
           type="tel"
-          placeholder="(555) 123-4567"
+          placeholder="Enter your phone number"
           value={signUpData.phone}
           onChange={(e) => {
             setSignUpData({ ...signUpData, phone: e.target.value });
@@ -208,19 +170,25 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="licenseNumber">Driver License Number</Label>
-        <Input
-          id="licenseNumber"
-          placeholder="DL123456789"
-          value={signUpData.licenseNumber}
+        <Label htmlFor="signup-vehicle">Vehicle Type</Label>
+        <select
+          id="signup-vehicle"
+          value={signUpData.vehicleType}
           onChange={(e) => {
-            setSignUpData({ ...signUpData, licenseNumber: e.target.value });
-            if (errors.licenseNumber) setErrors({ ...errors, licenseNumber: '' });
+            setSignUpData({ ...signUpData, vehicleType: e.target.value });
+            if (errors.vehicleType) setErrors({ ...errors, vehicleType: '' });
           }}
-          className={errors.licenseNumber ? 'border-red-500' : ''}
+          className={`w-full px-3 py-2 border rounded-md ${errors.vehicleType ? 'border-red-500' : 'border-gray-300'}`}
           disabled={isSubmitting}
-        />
-        {errors.licenseNumber && <p className="text-sm text-red-500">{errors.licenseNumber}</p>}
+        >
+          <option value="">Select your vehicle type</option>
+          <option value="car">Car</option>
+          <option value="motorcycle">Motorcycle</option>
+          <option value="van">Van</option>
+          <option value="truck">Truck</option>
+          <option value="bicycle">Bicycle</option>
+        </select>
+        {errors.vehicleType && <p className="text-sm text-red-500">{errors.vehicleType}</p>}
       </div>
 
       <div className="space-y-2">
@@ -229,7 +197,7 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
           <Input
             id="signup-password"
             type={showPassword ? 'text' : 'password'}
-            placeholder="Create a strong password"
+            placeholder="Enter your password"
             value={signUpData.password}
             onChange={(e) => {
               setSignUpData({ ...signUpData, password: e.target.value });
@@ -251,10 +219,10 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="signup-confirm-password">Confirm Password</Label>
         <div className="relative">
           <Input
-            id="confirmPassword"
+            id="signup-confirm-password"
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="Confirm your password"
             value={signUpData.confirmPassword}
@@ -277,6 +245,13 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
         {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
       </div>
 
+      {errors.success && (
+        <Alert className="border-green-500 bg-green-50">
+          <AlertCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">{errors.success}</AlertDescription>
+        </Alert>
+      )}
+
       <Button type="submit" className="w-full" disabled={isSubmitting}>
         {isSubmitting ? (
           <>
@@ -284,9 +259,22 @@ const DriverSignUpForm: React.FC<DriverSignUpFormProps> = ({
             Creating Account...
           </>
         ) : (
-          'Create Account'
+          'Create Driver Account'
         )}
       </Button>
+
+      <div className="text-center">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onSwitchToSignIn}
+          className="text-sm text-blue-600 hover:text-blue-700"
+          disabled={isSubmitting}
+        >
+          Already have an account? Sign in
+        </Button>
+      </div>
     </form>
   );
 };
