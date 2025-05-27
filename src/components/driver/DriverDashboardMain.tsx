@@ -12,12 +12,15 @@ import {
   Clock,
   Package,
   FileText,
-  Camera
+  Camera,
+  Shield,
+  BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DriverLocationTracker from './DriverLocation';
 import DeliveryTracker from './DeliveryTracker';
 import FileStorage from './FileStorage';
+import AdvancedSecurity from './AdvancedSecurity';
 
 interface DriverDashboardMainProps {
   user: any;
@@ -75,7 +78,7 @@ const DriverDashboardMain: React.FC<DriverDashboardMainProps> = ({ user }) => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Dashboard
@@ -91,6 +94,14 @@ const DriverDashboardMain: React.FC<DriverDashboardMainProps> = ({ user }) => {
             <TabsTrigger value="files" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Documents
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Security
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -174,10 +185,10 @@ const DriverDashboardMain: React.FC<DriverDashboardMainProps> = ({ user }) => {
                 <Button 
                   variant="outline" 
                   className="h-16 flex-col gap-2"
-                  onClick={() => setActiveTab('files')}
+                  onClick={() => setActiveTab('security')}
                 >
-                  <FileText className="h-5 w-5" />
-                  Documents
+                  <Shield className="h-5 w-5" />
+                  Security
                 </Button>
               </CardContent>
             </Card>
@@ -193,6 +204,23 @@ const DriverDashboardMain: React.FC<DriverDashboardMainProps> = ({ user }) => {
 
           <TabsContent value="files">
             <FileStorage driverId={user?.id} />
+          </TabsContent>
+
+          <TabsContent value="security">
+            <AdvancedSecurity driverId={user?.id} />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center py-8 text-gray-500">
+                  Detailed analytics coming soon...
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
