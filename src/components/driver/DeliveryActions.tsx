@@ -28,22 +28,11 @@ const DeliveryActions: React.FC<DeliveryActionsProps> = ({
       
       {status === 'in_progress' && (
         <Button 
-          onClick={() => onStatusUpdate('picked_up')}
+          onClick={() => onStatusUpdate('in_transit')}
           size="sm"
           className="bg-orange-600 hover:bg-orange-700"
         >
           <Truck className="h-4 w-4 mr-2" />
-          Mark as Picked Up
-        </Button>
-      )}
-      
-      {status === 'picked_up' && (
-        <Button 
-          onClick={() => onStatusUpdate('in_transit')}
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700"
-        >
-          <ArrowRight className="h-4 w-4 mr-2" />
           Mark In Transit
         </Button>
       )}

@@ -44,6 +44,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
   const fetchActiveDeliveries = async () => {
     try {
+      console.log('Fetching active deliveries for driver:', driverId);
       const { data, error } = await supabase
         .from('delivery_requests')
         .select('*')
@@ -51,6 +52,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .in('status', ['pending', 'in_progress', 'in_transit']);
 
       if (error) throw error;
+      console.log('Active deliveries fetched:', data);
       setActiveDeliveries(data || []);
     } catch (error) {
       console.error('Error fetching deliveries:', error);
@@ -87,6 +89,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           });
         }
         
+        // Refresh deliveries on any change
         fetchActiveDeliveries();
       })
       .on('postgres_changes', {
@@ -113,23 +116,11 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
   const updateDeliveryStatus = async (deliveryId: string, status: string) => {
     try {
-      console.log(`Updating delivery ${deliveryId} to status: ${status}`);
-      
-      // Map the status to the correct database values - align with the database constraints
-      let dbStatus = status;
-      if (status === 'picked_up') {
-        dbStatus = 'in_progress'; // Use in_progress instead of picked_up to avoid constraint violation
-      } else if (status === 'in_transit') {
-        dbStatus = 'in_transit';
-      } else if (status === 'completed') {
-        dbStatus = 'completed';
-      }
-      
-      console.log(`Database status will be: ${dbStatus}`);
+      console.log(`Driver updating delivery ${deliveryId} from current status to: ${status}`);
       
       const { error } = await supabase
         .from('delivery_requests')
-        .update({ status: dbStatus })
+        .update({ status: status })
         .eq('id', deliveryId);
 
       if (error) {
@@ -148,19 +139,24 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .from('tracking_updates')
         .insert({
           delivery_id: deliveryId,
-          status: statusMessages[dbStatus] || dbStatus,
+          status: statusMessages[status] || status,
           timestamp: new Date().toISOString(),
-          location: dbStatus === 'in_progress' ? 'Pickup Location' : 
-                   dbStatus === 'in_transit' ? 'En Route' : 
-                   dbStatus === 'completed' ? 'Delivery Location' : 'Driver Location',
-          note: `Status updated by driver to ${dbStatus.replace('_', ' ')}`
+          location: status === 'in_progress' ? 'Pickup Location' : 
+                   status === 'in_transit' ? 'En Route' : 
+                   status === 'completed' ? 'Delivery Location' : 'Driver Location',
+          note: `Status updated by driver to ${status.replace('_', ' ')}`
         });
 
-      // Refresh the deliveries list to show updated status
-      await fetchActiveDeliveries();
+      console.log(`Successfully updated delivery ${deliveryId} to ${status}`);
       
-      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
-      console.log(`Successfully updated delivery ${deliveryId} to ${dbStatus}`);
+      // Show success message with proper display text
+      const displayStatus = status === 'in_progress' ? 'picked up' : 
+                           status === 'in_transit' ? 'in transit' : 
+                           status.replace('_', ' ');
+      toast.success(`Delivery marked as ${displayStatus}`);
+      
+      // Refresh the deliveries list immediately to show updated status
+      await fetchActiveDeliveries();
     } catch (error) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update delivery status');
