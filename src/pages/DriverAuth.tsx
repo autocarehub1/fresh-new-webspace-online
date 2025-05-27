@@ -62,9 +62,22 @@ const DriverAuth = () => {
   if (showResetForm) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <DriverPasswordResetForm 
-          onBackToSignIn={() => setShowResetForm(false)}
-        />
+        <div className="w-full max-w-md">
+          {/* Logo for reset form */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/lovable-uploads/2cc5b47e-c0a1-4e3c-91b8-6bb24e0b8f97.png" 
+                alt="Company Logo" 
+                className="h-16 w-auto"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Driver Portal</h1>
+          </div>
+          <DriverPasswordResetForm 
+            onBackToSignIn={() => setShowResetForm(false)}
+          />
+        </div>
       </div>
     );
   }
