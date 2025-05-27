@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { EmailNotificationService } from '@/services/emailNotificationService';
 
 export class SecurityService {
   
@@ -12,24 +13,28 @@ export class SecurityService {
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password,
-        options: {
-          data: {
-            device_fingerprint: deviceInfo.fingerprint,
-            login_ip: deviceInfo.ip,
-            user_agent: deviceInfo.userAgent,
-            timezone: deviceInfo.timezone
-          }
-        }
+        password
       });
 
       if (error) throw error;
 
-      // Log security event
+      // Log security event after successful login
       await this.logSecurityEvent('login_success', {
         user_id: data.user?.id,
         device_info: deviceInfo
       });
+
+      // Store device info in user metadata
+      if (data.user) {
+        await supabase.auth.updateUser({
+          data: {
+            last_device_fingerprint: deviceInfo.fingerprint,
+            last_login_ip: deviceInfo.ip,
+            last_user_agent: deviceInfo.userAgent,
+            last_login_timezone: deviceInfo.timezone
+          }
+        });
+      }
 
       return data;
     } catch (error) {
@@ -101,6 +106,33 @@ export class SecurityService {
       return data;
     } catch (error) {
       console.error('Session monitoring failed:', error);
+    }
+  }
+
+  // Send emergency alert
+  static async sendEmergencyAlert(
+    driverId: string,
+    location: { lat: number; lng: number },
+    message: string
+  ) {
+    try {
+      // Send email notification
+      await EmailNotificationService.sendEmergencyAlert(driverId, location, message);
+      
+      // Log security event
+      await this.logSecurityEvent('emergency_alert', {
+        driver_id: driverId,
+        location,
+        message,
+        timestamp: new Date().toISOString()
+      });
+
+      toast.success('Emergency alert sent successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('Emergency alert failed:', error);
+      toast.error('Failed to send emergency alert');
+      throw error;
     }
   }
 
