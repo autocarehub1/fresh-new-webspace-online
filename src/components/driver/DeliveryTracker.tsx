@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
@@ -47,7 +48,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .from('delivery_requests')
         .select('*')
         .eq('assigned_driver', driverId)
-        .in('status', ['pending', 'in_progress', 'picked_up', 'in_transit']);
+        .in('status', ['pending', 'in_progress', 'in_transit']);
 
       if (error) throw error;
       setActiveDeliveries(data || []);
@@ -114,10 +115,10 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     try {
       console.log(`Updating delivery ${deliveryId} to status: ${status}`);
       
-      // Map the status to the correct database values
+      // Map the status to the correct database values - align with the database constraints
       let dbStatus = status;
       if (status === 'picked_up') {
-        dbStatus = 'picked_up';
+        dbStatus = 'in_progress'; // Use in_progress instead of picked_up to avoid constraint violation
       } else if (status === 'in_transit') {
         dbStatus = 'in_transit';
       } else if (status === 'completed') {
@@ -138,8 +139,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
       // Add tracking update with appropriate status message
       const statusMessages: { [key: string]: string } = {
-        'in_progress': 'Driver En Route to Pickup',
-        'picked_up': 'Package Picked Up',
+        'in_progress': 'Package Picked Up by Driver',
         'in_transit': 'Package In Transit to Destination',
         'completed': 'Package Delivered'
       };
@@ -150,7 +150,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           delivery_id: deliveryId,
           status: statusMessages[dbStatus] || dbStatus,
           timestamp: new Date().toISOString(),
-          location: dbStatus === 'picked_up' ? 'Pickup Location' : 
+          location: dbStatus === 'in_progress' ? 'Pickup Location' : 
                    dbStatus === 'in_transit' ? 'En Route' : 
                    dbStatus === 'completed' ? 'Delivery Location' : 'Driver Location',
           note: `Status updated by driver to ${dbStatus.replace('_', ' ')}`
@@ -159,7 +159,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
       // Refresh the deliveries list to show updated status
       await fetchActiveDeliveries();
       
-      toast.success(`Delivery marked as ${dbStatus.replace('_', ' ')}`);
+      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
       console.log(`Successfully updated delivery ${deliveryId} to ${dbStatus}`);
     } catch (error) {
       console.error('Error updating delivery:', error);

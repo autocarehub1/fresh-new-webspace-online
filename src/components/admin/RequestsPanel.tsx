@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useDriverData } from '@/hooks/use-driver-data';
@@ -20,7 +21,7 @@ interface RequestsPanelProps {
 const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   const { deliveries: requests, isLoading, simulateMovement } = useDeliveryData();
   const { drivers } = useDriverData();
-  const { handleRequestAction, handleDeleteRequest } = useRequestActions();
+  const { handleRequestAction, handleDeleteRequest, handleStatusUpdate } = useRequestActions();
   
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
   const [viewTrackingMap, setViewTrackingMap] = useState(false);
@@ -70,49 +71,14 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
     setViewTrackingMap(true);
   };
 
-  const handleStatusUpdate = async (request: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered') => {
-    try {
-      // Map the status to the correct database values
-      let finalStatus = status;
-      if (status === 'delivered') {
-        finalStatus = 'completed';
-      }
-      
-      console.log(`Admin updating delivery ${request.id} to status: ${finalStatus}`);
-      
-      const { error } = await supabase
-        .from('delivery_requests')
-        .update({ status: finalStatus })
-        .eq('id', request.id);
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      // Add tracking update
-      const statusMessages: { [key: string]: string } = {
-        'picked_up': 'Package Picked Up',
-        'in_transit': 'Package In Transit',
-        'completed': 'Package Delivered'
-      };
-
-      await supabase
-        .from('tracking_updates')
-        .insert({
-          delivery_id: request.id,
-          status: statusMessages[finalStatus] || finalStatus,
-          timestamp: new Date().toISOString(),
-          location: finalStatus === 'picked_up' ? 'Pickup Location' : 
-                   finalStatus === 'in_transit' ? 'En Route' : 'Delivery Location',
-          note: `Status updated by admin to ${finalStatus.replace('_', ' ')}`
-        });
-
-      toast.success(`Delivery marked as ${finalStatus.replace('_', ' ')}`);
-      console.log(`Successfully updated delivery ${request.id} to ${finalStatus}`);
-    } catch (error) {
-      console.error('Error updating delivery status:', error);
-      toast.error('Failed to update delivery status');
+  const handleAdminStatusUpdate = async (request: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered') => {
+    console.log(`Admin updating delivery ${request.id} to status: ${status}`);
+    
+    // Use the hook's status update function which handles the mapping correctly
+    const success = await handleStatusUpdate(request, status);
+    
+    if (success) {
+      console.log(`Successfully updated delivery ${request.id} to ${status}`);
     }
   };
   
@@ -173,7 +139,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
         getDriverName={getDriverName}
         onApprove={(id) => handleRequestAction(id, 'approve')}
         onDecline={(id) => handleRequestAction(id, 'decline')}
-        onStatusUpdate={handleStatusUpdate}
+        onStatusUpdate={handleAdminStatusUpdate}
         onViewDetails={setSelectedRequest}
         onViewTracking={handleViewTracking}
         onDelete={onDeleteRequest}
