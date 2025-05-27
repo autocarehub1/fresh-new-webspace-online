@@ -1,22 +1,31 @@
+
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeliveryRequest } from '@/types/delivery';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateTrackingId } from '@/utils/deliveryUtils';
 
 export const useRequestActions = () => {
   const queryClient = useQueryClient();
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Generate tracking ID when approving
+      const trackingId = generateTrackingId();
+      
       const { data, error } = await supabase
         .from('delivery_requests')
-        .update({ status: 'pending' })
+        .update({ 
+          status: 'pending',
+          tracking_id: trackingId
+        })
         .eq('id', id);
 
       if (error) {
         throw error;
       }
 
+      console.log(`Request ${id} approved with tracking ID: ${trackingId}`);
       return data;
     },
     onSuccess: () => {
@@ -62,22 +71,49 @@ export const useRequestActions = () => {
   
   const statusUpdateMutation = useMutation({
     mutationFn: async ({ req, status }: { req: DeliveryRequest; status: string }) => {
-      // Map status to correct database values - use the actual database enum values
+      // Get current delivery data
+      const { data: currentDelivery, error: fetchError } = await supabase
+        .from('delivery_requests')
+        .select('tracking_id')
+        .eq('id', req.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching current delivery:', fetchError);
+        throw fetchError;
+      }
+
+      // Generate tracking_id if it doesn't exist and we're moving to active status
+      let trackingId = currentDelivery.tracking_id;
+      if (!trackingId && (status === 'picked_up' || status === 'in_transit' || status === 'delivered')) {
+        trackingId = generateTrackingId();
+        console.log(`Generated tracking ID for admin status update: ${trackingId}`);
+      }
+
+      // Map status to correct database values
       let dbStatus = status;
       if (status === 'delivered') {
         dbStatus = 'completed';
       }
-      // Keep picked_up and in_transit as they are since they're causing constraint violations
-      // Let's check what the actual allowed values are and use 'in_progress' for picked_up
       if (status === 'picked_up') {
         dbStatus = 'in_progress';
       }
+      if (status === 'reset_to_pending') {
+        dbStatus = 'pending';
+        trackingId = trackingId || generateTrackingId(); // Ensure tracking ID exists for reset
+      }
       
-      console.log(`Hook updating delivery ${req.id} from ${req.status} to ${dbStatus}`);
+      console.log(`Admin updating delivery ${req.id} from ${req.status} to ${dbStatus}${trackingId ? ` with tracking ID ${trackingId}` : ''}`);
       
+      // Prepare update data
+      const updateData: any = { status: dbStatus };
+      if (trackingId) {
+        updateData.tracking_id = trackingId;
+      }
+
       const { data, error } = await supabase
         .from('delivery_requests')
-        .update({ status: dbStatus })
+        .update(updateData)
         .eq('id', req.id);
       
       if (error) {
@@ -102,7 +138,7 @@ export const useRequestActions = () => {
           location: dbStatus === 'in_progress' ? 'Pickup Location' : 
                    dbStatus === 'in_transit' ? 'En Route' : 
                    dbStatus === 'completed' ? 'Delivery Location' : 'Processing',
-          note: `Status updated to ${dbStatus.replace('_', ' ')}`
+          note: `Status updated by admin to ${dbStatus.replace('_', ' ')}`
         });
       
       return data;
@@ -146,11 +182,12 @@ export const useRequestActions = () => {
     }
   };
   
-  const handleStatusUpdate = async (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered'): Promise<boolean> => {
+  const handleStatusUpdate = async (req: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered' | 'reset_to_pending'): Promise<boolean> => {
     try {
       await statusUpdateMutation.mutateAsync({ req: req, status: status });
       const displayStatus = status === 'delivered' ? 'completed' : 
                            status === 'picked_up' ? 'picked up' : 
+                           status === 'reset_to_pending' ? 'reset to pending' :
                            status.replace('_', ' ');
       toast.success(`Request status updated to ${displayStatus}`);
       return true;
