@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Upload, X } from 'lucide-react';
+import { Camera, Upload, X, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProofOfDeliveryCaptureProps {
@@ -20,6 +20,7 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const [bucketError, setBucketError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +49,46 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
     }
   };
 
+  const createBucketIfNeeded = async () => {
+    try {
+      console.log('Checking if proof-of-delivery bucket exists...');
+      
+      // Try to list files in the bucket to check if it exists
+      const { error: listError } = await supabase.storage
+        .from('proof-of-delivery')
+        .list('', { limit: 1 });
+
+      if (listError && listError.message.includes('Bucket not found')) {
+        console.log('Bucket does not exist, attempting to create...');
+        
+        // Try to create the bucket
+        const { error: createError } = await supabase.storage
+          .createBucket('proof-of-delivery', {
+            public: true,
+            fileSizeLimit: 10485760, // 10MB
+            allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp']
+          });
+
+        if (createError) {
+          console.error('Failed to create bucket:', createError);
+          throw new Error('Storage bucket could not be created. Please contact system administrator.');
+        }
+        
+        console.log('Bucket created successfully');
+        return true;
+      } else if (listError) {
+        console.error('Other bucket error:', listError);
+        throw listError;
+      }
+      
+      console.log('Bucket exists and is accessible');
+      return true;
+    } catch (error) {
+      console.error('Bucket setup error:', error);
+      throw error;
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) {
       toast.error('Please select a photo first');
@@ -55,10 +96,17 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
     }
 
     setUploading(true);
+    setBucketError(false);
+    
     try {
+      // First, ensure the bucket exists
+      await createBucketIfNeeded();
+      
       // Generate unique filename
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `pod_${deliveryId}_${Date.now()}.${fileExt}`;
+      
+      console.log('Uploading file:', fileName);
       
       // Upload to Supabase storage
       const { data, error } = await supabase.storage
@@ -70,6 +118,12 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
 
       if (error) {
         console.error('Upload error:', error);
+        
+        if (error.message.includes('Bucket not found')) {
+          setBucketError(true);
+          throw new Error('Storage bucket is not available. Please contact system administrator to set up the proof-of-delivery storage bucket.');
+        }
+        
         throw error;
       }
 
@@ -88,7 +142,13 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
       toast.success('Proof of delivery photo uploaded successfully!');
     } catch (error: any) {
       console.error('Error uploading photo:', error);
-      toast.error(`Failed to upload photo: ${error.message}`);
+      
+      if (error.message.includes('Bucket not found') || error.message.includes('storage bucket')) {
+        setBucketError(true);
+        toast.error('Storage not configured. Please contact system administrator.');
+      } else {
+        toast.error(`Failed to upload photo: ${error.message}`);
+      }
     } finally {
       setUploading(false);
     }
@@ -97,10 +157,56 @@ const ProofOfDeliveryCapture: React.FC<ProofOfDeliveryCaptureProps> = ({
   const clearSelection = () => {
     setSelectedFile(null);
     setPreviewUrl('');
+    setBucketError(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
+
+  if (bucketError) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-orange-600">
+            <AlertTriangle className="h-5 w-5" />
+            Storage Configuration Required
+          </CardTitle>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="text-center p-4 bg-orange-50 rounded-lg">
+            <p className="text-sm text-orange-800 mb-4">
+              The photo storage system needs to be configured by your system administrator. 
+              The "proof-of-delivery" storage bucket is missing.
+            </p>
+            
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBucketError(false);
+                  clearSelection();
+                }}
+                className="w-full"
+              >
+                Try Again
+              </Button>
+              
+              {onCancel && (
+                <Button
+                  variant="ghost"
+                  onClick={onCancel}
+                  className="w-full"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">
