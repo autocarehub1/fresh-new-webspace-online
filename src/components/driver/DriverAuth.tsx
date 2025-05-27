@@ -1,76 +1,16 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/lib/auth';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Shield, Truck, Clock, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import DriverSignInForm from '@/components/auth/DriverSignInForm';
-import DriverSignUpForm from '@/components/auth/DriverSignUpForm';
-import DriverPasswordResetForm from '@/components/auth/DriverPasswordResetForm';
+import { Shield, Truck, Clock, CheckCircle } from 'lucide-react';
+import DriverSignIn from './DriverSignIn';
+import DriverSignUp from './DriverSignUp';
+import DriverPasswordReset from './DriverPasswordReset';
 
 const DriverAuth = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
-  
   const [activeTab, setActiveTab] = useState('signin');
   const [showResetForm, setShowResetForm] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check for URL parameters
-  useEffect(() => {
-    const verified = searchParams.get('verified');
-    const error = searchParams.get('error');
-    
-    if (verified === 'true') {
-      toast.success('Email verified successfully! You can now sign in.');
-      setActiveTab('signin');
-    } else if (error) {
-      toast.error(decodeURIComponent(error));
-    }
-  }, [searchParams]);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (user && !isLoading) {
-      console.log('User authenticated, redirecting to driver dashboard');
-      const userMetadata = user.user_metadata;
-      
-      // Check if profile setup is needed
-      if (!userMetadata?.has_completed_profile || !userMetadata?.profile_completed) {
-        console.log('Redirecting to profile setup');
-        navigate('/driver-profile-setup', { state: { userId: user.id } });
-        return;
-      }
-      
-      // Check if onboarding is needed
-      if (!userMetadata?.onboarding_completed) {
-        console.log('Redirecting to onboarding');
-        navigate('/driver-onboarding');
-        return;
-      }
-      
-      // Profile and onboarding complete, go to dashboard
-      console.log('Redirecting to dashboard');
-      navigate('/driver-dashboard');
-    }
-  }, [user, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-6 text-blue-400" />
-          <p className="text-white text-lg">Loading Driver Portal...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Password reset form
   if (showResetForm) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4">
@@ -82,7 +22,6 @@ const DriverAuth = () => {
                 alt="Catalyst Network Logistics" 
                 className="h-20 w-auto filter brightness-0 invert"
                 onError={(e) => {
-                  console.error('Logo failed to load');
                   e.currentTarget.style.display = 'none';
                 }}
               />
@@ -90,9 +29,7 @@ const DriverAuth = () => {
             <h1 className="text-4xl font-bold text-white mb-3">Driver Portal</h1>
             <p className="text-blue-200">Secure Password Recovery</p>
           </div>
-          <DriverPasswordResetForm 
-            onBackToSignIn={() => setShowResetForm(false)}
-          />
+          <DriverPasswordReset onBackToSignIn={() => setShowResetForm(false)} />
         </div>
       </div>
     );
@@ -110,7 +47,6 @@ const DriverAuth = () => {
               alt="Catalyst Network Logistics" 
               className="h-16 w-auto mr-4 filter brightness-0 invert"
               onError={(e) => {
-                console.error('Logo failed to load');
                 e.currentTarget.style.display = 'none';
               }}
             />
@@ -172,7 +108,6 @@ const DriverAuth = () => {
                 alt="Catalyst Network Logistics" 
                 className="h-16 w-auto filter brightness-0 invert"
                 onError={(e) => {
-                  console.error('Logo failed to load');
                   e.currentTarget.style.display = 'none';
                 }}
               />
@@ -202,27 +137,12 @@ const DriverAuth = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                {errors.general && (
-                  <Alert variant="destructive" className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="text-red-800">{errors.general}</AlertDescription>
-                  </Alert>
-                )}
-
                 <TabsContent value="signin" className="space-y-4 mt-6">
-                  <DriverSignInForm 
-                    onForgotPassword={() => setShowResetForm(true)}
-                    errors={errors}
-                    setErrors={setErrors}
-                  />
+                  <DriverSignIn onForgotPassword={() => setShowResetForm(true)} />
                 </TabsContent>
 
                 <TabsContent value="signup" className="space-y-4 mt-6">
-                  <DriverSignUpForm 
-                    onSwitchToSignIn={() => setActiveTab('signin')}
-                    errors={errors}
-                    setErrors={setErrors}
-                  />
+                  <DriverSignUp onSwitchToSignIn={() => setActiveTab('signin')} />
                 </TabsContent>
               </Tabs>
             </CardContent>

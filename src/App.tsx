@@ -12,8 +12,7 @@ import Tracking from "./pages/Tracking";
 import RequestPickup from "./pages/RequestPickup";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
-import DriverAuth from "./pages/DriverAuth";
-import DriverDashboard from "./pages/DriverDashboard";
+import DriverPortal from "./pages/DriverPortal";
 import DriverOnboarding from "./pages/DriverOnboarding";
 import DriverProfileSetup from "./pages/DriverProfileSetup";
 import CustomerLogin from "./pages/CustomerLogin";
@@ -44,13 +43,13 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<Admin />} />
             
-            {/* Driver Portal Routes */}
-            <Route path="/driver" element={<Navigate to="/driver-auth" replace />} />
-            <Route path="/driver/:userId" element={<DriverDashboard />} />
-            <Route path="/driver-login" element={<Navigate to="/driver-auth" replace />} />
-            <Route path="/driver-portal" element={<Navigate to="/driver-auth" replace />} />
-            <Route path="/driver-auth" element={<DriverAuth />} />
-            <Route path="/driver-dashboard" element={<DriverDashboard />} />
+            {/* Driver Portal Routes - Consolidated */}
+            <Route path="/driver" element={<Navigate to="/driver-portal" replace />} />
+            <Route path="/driver/:userId" element={<Navigate to="/driver-portal" replace />} />
+            <Route path="/driver-login" element={<Navigate to="/driver-portal" replace />} />
+            <Route path="/driver-auth" element={<Navigate to="/driver-portal" replace />} />
+            <Route path="/driver-dashboard" element={<Navigate to="/driver-portal" replace />} />
+            <Route path="/driver-portal" element={<DriverPortal />} />
             <Route path="/driver-onboarding" element={<DriverOnboarding />} />
             <Route path="/driver-profile-setup" element={<DriverProfileSetup />} />
             
