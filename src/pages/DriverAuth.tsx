@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/lib/auth';
@@ -37,11 +38,24 @@ const DriverAuth = () => {
     if (user && !isLoading) {
       console.log('User authenticated, redirecting to driver dashboard');
       const userMetadata = user.user_metadata;
-      if (!userMetadata?.onboarding_completed) {
-        navigate('/driver-onboarding');
-      } else {
-        navigate('/driver-dashboard');
+      
+      // Check if profile setup is needed
+      if (!userMetadata?.has_completed_profile || !userMetadata?.profile_completed) {
+        console.log('Redirecting to profile setup');
+        navigate('/driver-profile-setup', { state: { userId: user.id } });
+        return;
       }
+      
+      // Check if onboarding is needed
+      if (!userMetadata?.onboarding_completed) {
+        console.log('Redirecting to onboarding');
+        navigate('/driver-onboarding');
+        return;
+      }
+      
+      // Profile and onboarding complete, go to dashboard
+      console.log('Redirecting to dashboard');
+      navigate('/driver-dashboard');
     }
   }, [user, isLoading, navigate]);
 
