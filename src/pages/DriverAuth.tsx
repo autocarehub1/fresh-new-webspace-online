@@ -70,6 +70,10 @@ const DriverAuth = () => {
                 src="/lovable-uploads/2cc5b47e-c0a1-4e3c-91b8-6bb24e0b8f97.png" 
                 alt="Company Logo" 
                 className="h-16 w-auto"
+                onError={(e) => {
+                  console.error('Logo failed to load');
+                  e.currentTarget.style.display = 'none';
+                }}
               />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Driver Portal</h1>
@@ -91,6 +95,10 @@ const DriverAuth = () => {
               src="/lovable-uploads/2cc5b47e-c0a1-4e3c-91b8-6bb24e0b8f97.png" 
               alt="Company Logo" 
               className="h-16 w-auto"
+              onError={(e) => {
+                console.error('Logo failed to load');
+                e.currentTarget.style.display = 'none';
+              }}
             />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Driver Portal</h1>
