@@ -1,5 +1,4 @@
-
-export type DeliveryStatus = 'pending' | 'in_progress' | 'completed' | 'declined';
+export type DeliveryStatus = 'pending' | 'in_progress' | 'picked_up' | 'in_transit' | 'completed' | 'declined';
 
 export interface TrackingUpdate {
   status: string;

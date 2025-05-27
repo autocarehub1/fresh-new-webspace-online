@@ -1,8 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useDeliveryData } from '@/hooks/use-delivery-data';
 import { useDriverData } from '@/hooks/use-driver-data';
 import { useInterval } from '@/hooks/use-interval';
 import { useRequestActions } from '@/hooks/use-request-actions';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 import RequestsStats from './RequestsStats';
 import RequestsTable from './RequestsTable';
 import RequestDetailsDialog from './RequestDetailsDialog';
@@ -18,7 +21,7 @@ interface RequestsPanelProps {
 const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   const { deliveries: requests, isLoading, simulateMovement } = useDeliveryData();
   const { drivers } = useDriverData();
-  const { handleRequestAction, handleStatusUpdate, handleDeleteRequest } = useRequestActions();
+  const { handleRequestAction, handleDeleteRequest } = useRequestActions();
   
   const [selectedRequest, setSelectedRequest] = useState<DeliveryRequest | null>(null);
   const [viewTrackingMap, setViewTrackingMap] = useState(false);
@@ -67,6 +70,45 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
     setSelectedRequest(request);
     setViewTrackingMap(true);
   };
+
+  const handleStatusUpdate = async (request: DeliveryRequest, status: 'picked_up' | 'in_transit' | 'delivered') => {
+    try {
+      const finalStatus = status === 'delivered' ? 'completed' : status;
+      
+      const { error } = await supabase
+        .from('delivery_requests')
+        .update({ 
+          status: finalStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      // Add tracking update
+      const statusMessages = {
+        'picked_up': 'Package Picked Up',
+        'in_transit': 'Package In Transit',
+        'delivered': 'Package Delivered'
+      };
+
+      await supabase
+        .from('tracking_updates')
+        .insert({
+          delivery_id: request.id,
+          status: statusMessages[status],
+          timestamp: new Date().toISOString(),
+          location: status === 'picked_up' ? 'Pickup Location' : 
+                   status === 'in_transit' ? 'En Route' : 'Delivery Location',
+          note: `Status updated by admin to ${status.replace('_', ' ')}`
+        });
+
+      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
+    } catch (error) {
+      console.error('Error updating delivery status:', error);
+      toast.error('Failed to update delivery status');
+    }
+  };
   
   const onDeleteRequest = (id: string) => {
     // Ask for confirmation before deletion
@@ -109,7 +151,7 @@ const RequestsPanel = ({ simulationActive = false }: RequestsPanelProps) => {
   }
 
   const pendingRequests = requests?.filter(req => req.status === 'pending').length;
-  const inProgressRequests = requests?.filter(req => req.status === 'in_progress').length;
+  const inProgressRequests = requests?.filter(req => ['in_progress', 'picked_up', 'in_transit'].includes(req.status)).length;
   const completedRequests = requests?.filter(req => req.status === 'completed').length;
 
   return (

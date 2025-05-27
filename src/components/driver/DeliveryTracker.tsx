@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MapPin, Clock, Package, Navigation, Camera, Bell } from 'lucide-react';
+import { MapPin, Clock, Package, Navigation, Camera, Bell, Truck, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeliveryRequest } from '@/types/delivery';
 import ProofOfDeliveryCapture from './ProofOfDeliveryCapture';
@@ -47,7 +48,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         .from('delivery_requests')
         .select('*')
         .eq('assigned_driver', driverId)
-        .in('status', ['pending', 'in_progress']);
+        .in('status', ['pending', 'in_progress', 'picked_up', 'in_transit']);
 
       if (error) throw error;
       setActiveDeliveries(data || []);
@@ -122,18 +123,27 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
       if (error) throw error;
 
-      // Add tracking update
+      // Add tracking update with appropriate status message
+      const statusMessages = {
+        'in_progress': 'Driver En Route to Pickup',
+        'picked_up': 'Package Picked Up',
+        'in_transit': 'Package In Transit to Destination',
+        'completed': 'Package Delivered'
+      };
+
       await supabase
         .from('tracking_updates')
         .insert({
           delivery_id: deliveryId,
-          status: status === 'in_progress' ? 'Driver En Route' : 'Delivered',
+          status: statusMessages[status as keyof typeof statusMessages] || status,
           timestamp: new Date().toISOString(),
-          location: status === 'in_progress' ? 'Pickup Location' : 'Delivery Location',
-          note: `Status updated by driver to ${status}`
+          location: status === 'picked_up' ? 'Pickup Location' : 
+                   status === 'in_transit' ? 'En Route' : 
+                   status === 'completed' ? 'Delivery Location' : 'Driver Location',
+          note: `Status updated by driver to ${status.replace('_', ' ')}`
         });
 
-      toast.success(`Delivery marked as ${status}`);
+      toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
     } catch (error) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update delivery status');
@@ -176,6 +186,28 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     } catch (error) {
       console.error('Error completing delivery:', error);
       toast.error('Failed to complete delivery');
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'pending': return 'secondary';
+      case 'in_progress': return 'default';
+      case 'picked_up': return 'outline';
+      case 'in_transit': return 'default';
+      case 'completed': return 'secondary';
+      default: return 'secondary';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'text-yellow-600';
+      case 'in_progress': return 'text-blue-600';
+      case 'picked_up': return 'text-orange-600';
+      case 'in_transit': return 'text-purple-600';
+      case 'completed': return 'text-green-600';
+      default: return 'text-gray-600';
     }
   };
 
@@ -244,8 +276,8 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
                 <CardTitle className="text-lg">
                   Delivery #{delivery.tracking_id || delivery.id.slice(0, 8)}
                 </CardTitle>
-                <Badge variant={delivery.status === 'pending' ? 'secondary' : 'default'}>
-                  {delivery.status}
+                <Badge variant={getStatusBadgeVariant(delivery.status)} className={getStatusColor(delivery.status)}>
+                  {delivery.status.replace('_', ' ').toUpperCase()}
                 </Badge>
               </div>
             </CardHeader>
@@ -283,7 +315,7 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
                 </div>
               </div>
               
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 {delivery.status === 'pending' && (
                   <Button 
                     onClick={() => updateDeliveryStatus(delivery.id, 'in_progress')}
@@ -295,6 +327,28 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
                 )}
                 
                 {delivery.status === 'in_progress' && (
+                  <Button 
+                    onClick={() => updateDeliveryStatus(delivery.id, 'picked_up')}
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Truck className="h-4 w-4 mr-2" />
+                    Mark as Picked Up
+                  </Button>
+                )}
+                
+                {delivery.status === 'picked_up' && (
+                  <Button 
+                    onClick={() => updateDeliveryStatus(delivery.id, 'in_transit')}
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Mark In Transit
+                  </Button>
+                )}
+                
+                {delivery.status === 'in_transit' && (
                   <Button 
                     onClick={() => handleCompleteDelivery(delivery.id)}
                     size="sm"
