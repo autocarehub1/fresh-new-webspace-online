@@ -37,7 +37,7 @@ const DeliveryActions: React.FC<DeliveryActionsProps> = ({
         </Button>
       )}
       
-      {status === 'in_transit' && (
+      {status === 'in_progress' && (
         <Button 
           onClick={onCompleteDelivery}
           size="sm"
