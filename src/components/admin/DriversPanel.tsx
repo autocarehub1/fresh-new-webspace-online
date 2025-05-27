@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RefreshCw, Users, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import MapWrapper from '../map/MapWrapper';
 import DriversOverview from './drivers/DriversOverview';
 import DriversTable from './drivers/DriversTable';
 import DriverAssignment from './drivers/DriverAssignment';
+import DriverApproval from './drivers/DriverApproval';
 import AddDriverDialog from './drivers/AddDriverDialog';
 import type { Driver } from '@/types/delivery';
 import { useDriverData } from '@/hooks/use-driver-data';
@@ -43,11 +45,13 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
     simulateMovement,
     refetch: refetchDeliveries
   } = useDeliveryData();
+  
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [isSimulating, setIsSimulating] = useState(simulationActive);
   const [selectedDriverId, setSelectedDriverId] = useState('');
   const [selectedRequestId, setSelectedRequestId] = useState('');
   const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('active-drivers');
 
   useEffect(() => {
     setIsSimulating(simulationActive);
@@ -277,7 +281,7 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
         <div className={`${accentBanner}`}>
           <div>
             <h2 className={headerText}>Driver Management</h2>
-            <div className={subText}>Assign, locate, and manage all drivers.</div>
+            <div className={subText}>Approve, assign, locate, and manage all drivers.</div>
           </div>
           <div className={actionBar}>
             <Button 
@@ -297,22 +301,43 @@ const DriversPanel = ({ simulationActive = false }: DriversPanelProps) => {
             </Button>
           </div>
         </div>
+        
         <div className="p-6 md:p-8">
-          <DriversTable 
-            drivers={drivers}
-            onStatusToggle={handleStatusToggle}
-            onDeleteDriver={handleDeleteDriver}
-            onLocateDriver={setSelectedDriver}
-            onUnassignDriver={handleUnassignDriver}
-          />
-          <DriverAssignment 
-            requests={requests || []}
-            selectedDriverId={selectedDriverId}
-            selectedRequestId={selectedRequestId}
-            onDriverSelect={setSelectedDriverId}
-            onRequestSelect={setSelectedRequestId}
-            onAssignDriver={handleAssignDriver}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="active-drivers" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Active Drivers
+              </TabsTrigger>
+              <TabsTrigger value="approval-queue" className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                Approval Queue
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="active-drivers" className="space-y-6">
+              <DriversTable 
+                drivers={drivers.filter(d => d.status === 'active')}
+                onStatusToggle={handleStatusToggle}
+                onDeleteDriver={handleDeleteDriver}
+                onLocateDriver={setSelectedDriver}
+                onUnassignDriver={handleUnassignDriver}
+              />
+              <DriverAssignment 
+                drivers={drivers}
+                requests={requests || []}
+                selectedDriverId={selectedDriverId}
+                selectedRequestId={selectedRequestId}
+                onDriverSelect={setSelectedDriverId}
+                onRequestSelect={setSelectedRequestId}
+                onAssignDriver={handleAssignDriver}
+              />
+            </TabsContent>
+            
+            <TabsContent value="approval-queue">
+              <DriverApproval />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       

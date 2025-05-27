@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MapPin, Clock, Package, Navigation, Camera } from 'lucide-react';
+import { MapPin, Clock, Package, Navigation, Camera, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeliveryRequest } from '@/types/delivery';
 import ProofOfDeliveryCapture from './ProofOfDeliveryCapture';
@@ -19,11 +19,28 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
   const [loading, setLoading] = useState(true);
   const [showProofDialog, setShowProofDialog] = useState(false);
   const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
+  const [driverStatus, setDriverStatus] = useState<string>('inactive');
 
   useEffect(() => {
     fetchActiveDeliveries();
+    fetchDriverStatus();
     setupRealtimeSubscription();
   }, [driverId]);
+
+  const fetchDriverStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('status')
+        .eq('id', driverId)
+        .single();
+
+      if (error) throw error;
+      setDriverStatus(data?.status || 'inactive');
+    } catch (error) {
+      console.error('Error fetching driver status:', error);
+    }
+  };
 
   const fetchActiveDeliveries = async () => {
     try {
@@ -53,7 +70,33 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         filter: `assigned_driver=eq.${driverId}`
       }, (payload) => {
         console.log('Real-time delivery update:', payload);
+        
+        // Show notification for new assignments
+        if (payload.eventType === 'UPDATE' && 
+            payload.new.assigned_driver === driverId && 
+            !payload.old.assigned_driver) {
+          toast.success('🚚 New delivery assigned to you!', {
+            description: `Pickup: ${payload.new.pickup_location}`,
+            action: {
+              label: "View",
+              onClick: () => fetchActiveDeliveries()
+            }
+          });
+        }
+        
         fetchActiveDeliveries();
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'drivers',
+        filter: `id=eq.${driverId}`
+      }, (payload) => {
+        console.log('Driver status update:', payload);
+        if (payload.new.status !== payload.old.status) {
+          setDriverStatus(payload.new.status);
+          toast.info(`Status updated to: ${payload.new.status}`);
+        }
       })
       .subscribe();
 
@@ -141,14 +184,51 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     );
   }
 
+  // Show status warning if driver is not active
+  if (driverStatus !== 'active') {
+    return (
+      <Card className="border-orange-200 bg-orange-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-orange-700">
+            <Bell className="h-5 w-5" />
+            Driver Status: {driverStatus}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <p className="text-orange-600">
+              {driverStatus === 'pending' && 'Your driver application is pending admin approval.'}
+              {driverStatus === 'inactive' && 'Your driver account is currently inactive. Please contact admin.'}
+              {driverStatus === 'suspended' && 'Your driver account has been suspended. Please contact admin.'}
+            </p>
+            <Badge variant="outline" className="border-orange-300 text-orange-700">
+              Status: {driverStatus}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Active Deliveries</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Active Deliveries</h3>
+        <Badge variant="default" className="bg-green-600">
+          Status: Active
+        </Badge>
+      </div>
       
       {activeDeliveries.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center text-gray-500">No active deliveries assigned</p>
+            <div className="text-center py-8">
+              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">No active deliveries assigned</p>
+              <p className="text-sm text-gray-400">
+                New deliveries will appear here when assigned by dispatch
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : (
