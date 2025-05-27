@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,12 +70,15 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
       }, (payload) => {
         console.log('Real-time delivery update:', payload);
         
-        // Show notification for new assignments
+        // Show notification for new assignments with proper type checking
         if (payload.eventType === 'UPDATE' && 
+            payload.new && typeof payload.new === 'object' && 'assigned_driver' in payload.new &&
+            payload.old && typeof payload.old === 'object' && 'assigned_driver' in payload.old &&
             payload.new.assigned_driver === driverId && 
             !payload.old.assigned_driver) {
+          const newPayload = payload.new as any;
           toast.success('🚚 New delivery assigned to you!', {
-            description: `Pickup: ${payload.new.pickup_location}`,
+            description: `Pickup: ${newPayload.pickup_location}`,
             action: {
               label: "View",
               onClick: () => fetchActiveDeliveries()
@@ -93,9 +95,12 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
         filter: `id=eq.${driverId}`
       }, (payload) => {
         console.log('Driver status update:', payload);
-        if (payload.new.status !== payload.old.status) {
-          setDriverStatus(payload.new.status);
-          toast.info(`Status updated to: ${payload.new.status}`);
+        if (payload.new && typeof payload.new === 'object' && 'status' in payload.new &&
+            payload.old && typeof payload.old === 'object' && 'status' in payload.old &&
+            payload.new.status !== payload.old.status) {
+          const newStatus = payload.new.status as string;
+          setDriverStatus(newStatus);
+          toast.info(`Status updated to: ${newStatus}`);
         }
       })
       .subscribe();
