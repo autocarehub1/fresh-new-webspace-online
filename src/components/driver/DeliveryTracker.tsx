@@ -112,12 +112,17 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
 
   const updateDeliveryStatus = async (deliveryId: string, status: string) => {
     try {
+      console.log(`Updating delivery ${deliveryId} to status: ${status}`);
+      
       const { error } = await supabase
         .from('delivery_requests')
         .update({ status })
         .eq('id', deliveryId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
       // Add tracking update with appropriate status message
       const statusMessages = {
@@ -139,7 +144,11 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           note: `Status updated by driver to ${status.replace('_', ' ')}`
         });
 
+      // Refresh the deliveries list to show updated status
+      await fetchActiveDeliveries();
+      
       toast.success(`Delivery marked as ${status.replace('_', ' ')}`);
+      console.log(`Successfully updated delivery ${deliveryId} to ${status}`);
     } catch (error) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update delivery status');
@@ -174,6 +183,9 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           location: 'Delivery Location',
           note: 'Package delivered with proof photo'
         });
+
+      // Refresh the deliveries list
+      await fetchActiveDeliveries();
 
       setShowProofDialog(false);
       setSelectedDeliveryId('');
