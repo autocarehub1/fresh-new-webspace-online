@@ -4,9 +4,11 @@ import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Package, Navigation } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { MapPin, Clock, Package, Navigation, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeliveryRequest } from '@/types/delivery';
+import ProofOfDeliveryCapture from './ProofOfDeliveryCapture';
 
 interface DeliveryTrackerProps {
   driverId: string;
@@ -15,6 +17,8 @@ interface DeliveryTrackerProps {
 const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
   const [activeDeliveries, setActiveDeliveries] = useState<DeliveryRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showProofDialog, setShowProofDialog] = useState(false);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('');
 
   useEffect(() => {
     fetchActiveDeliveries();
@@ -85,6 +89,45 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
     } catch (error) {
       console.error('Error updating delivery:', error);
       toast.error('Failed to update delivery status');
+    }
+  };
+
+  const handleCompleteDelivery = (deliveryId: string) => {
+    setSelectedDeliveryId(deliveryId);
+    setShowProofDialog(true);
+  };
+
+  const handleProofUploaded = async (photoUrl: string) => {
+    try {
+      // Update delivery with proof photo and mark as completed
+      const { error } = await supabase
+        .from('delivery_requests')
+        .update({ 
+          status: 'completed',
+          proofOfDeliveryPhoto: photoUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedDeliveryId);
+
+      if (error) throw error;
+
+      // Add final tracking update
+      await supabase
+        .from('tracking_updates')
+        .insert({
+          delivery_id: selectedDeliveryId,
+          status: 'Delivered',
+          timestamp: new Date().toISOString(),
+          location: 'Delivery Location',
+          note: 'Package delivered with proof photo'
+        });
+
+      setShowProofDialog(false);
+      setSelectedDeliveryId('');
+      toast.success('Delivery completed successfully!');
+    } catch (error) {
+      console.error('Error completing delivery:', error);
+      toast.error('Failed to complete delivery');
     }
   };
 
@@ -168,11 +211,12 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
                 
                 {delivery.status === 'in_progress' && (
                   <Button 
-                    onClick={() => updateDeliveryStatus(delivery.id, 'completed')}
+                    onClick={() => handleCompleteDelivery(delivery.id)}
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    Mark Delivered
+                    <Camera className="h-4 w-4 mr-2" />
+                    Complete with Photo
                   </Button>
                 )}
               </div>
@@ -180,6 +224,29 @@ const DeliveryTracker: React.FC<DeliveryTrackerProps> = ({ driverId }) => {
           </Card>
         ))
       )}
+
+      <Dialog open={showProofDialog} onOpenChange={setShowProofDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Complete Delivery</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">
+              Please take a photo as proof of delivery before completing this request.
+            </p>
+            
+            <ProofOfDeliveryCapture
+              deliveryId={selectedDeliveryId}
+              onPhotoUploaded={handleProofUploaded}
+              onCancel={() => {
+                setShowProofDialog(false);
+                setSelectedDeliveryId('');
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
