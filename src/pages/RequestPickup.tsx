@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
@@ -87,7 +86,7 @@ const RequestPickup = () => {
       const urgentServices = ['urgent', 'specimen', 'pharmaceutical'];
       const priority = urgentServices.includes(formData.serviceType) ? 'urgent' : 'normal';
 
-      // Create delivery request payload
+      // Create delivery request payload with only fields that exist in the database
       const deliveryRequest = {
         id: requestId,
         tracking_id: `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
@@ -96,11 +95,6 @@ const RequestPickup = () => {
         package_type: packageTypeMapping[formData.serviceType] || 'medical_supplies',
         priority: priority,
         status: 'pending',
-        requester_name: formData.contactName,
-        email: formData.contactEmail,
-        phone: formData.contactPhone,
-        notes: formData.specialInstructions || null,
-        scheduled_pickup_date: formData.pickupDate ? `${formData.pickupDate}T${formData.pickupTime}:00` : null,
         created_at: new Date().toISOString()
       };
 
