@@ -61,16 +61,22 @@ export const useDeliveryActions = () => {
 
   const completeDeliveryWithProof = async (deliveryId: string, photoUrl: string) => {
     try {
+      console.log('Completing delivery with proof photo:', { deliveryId, photoUrl });
+      
       // Update delivery with proof photo and mark as completed
+      // Use the actual column name from the database (lowercase)
       const { error } = await supabase
         .from('delivery_requests')
         .update({ 
           status: 'completed',
-          proofOfDeliveryPhoto: photoUrl
+          proofofdeliveryphoto: photoUrl
         })
         .eq('id', deliveryId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating delivery with proof:', error);
+        throw error;
+      }
 
       // Add final tracking update
       await supabase
@@ -83,6 +89,7 @@ export const useDeliveryActions = () => {
           note: 'Package delivered with proof photo'
         });
 
+      console.log('Delivery completed successfully with proof photo');
       toast.success('Delivery completed successfully!');
       return true;
     } catch (error) {
