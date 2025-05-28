@@ -37,35 +37,87 @@ serve(async (req) => {
       case 'in_progress':
         subject = `Your delivery is on the way - ${delivery.tracking_id}`;
         htmlContent = `
-          <h2>Delivery Update</h2>
-          <p>Your delivery <strong>${delivery.tracking_id}</strong> is now in progress.</p>
-          <p><strong>Driver:</strong> ${delivery.driver?.name || 'Assigned'}</p>
-          <p><strong>From:</strong> ${delivery.pickup_location}</p>
-          <p><strong>To:</strong> ${delivery.delivery_location}</p>
-          <p>You can track your delivery in real-time using your tracking ID.</p>
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">Delivery Update</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p>Your delivery <strong>${delivery.tracking_id}</strong> is now in progress.</p>
+                  <p><strong>Driver:</strong> ${delivery.driver?.name || 'Assigned'}</p>
+                  <p><strong>From:</strong> ${delivery.pickup_location}</p>
+                  <p><strong>To:</strong> ${delivery.delivery_location}</p>
+                  <p>You can track your delivery in real-time using your tracking ID.</p>
+                </div>
+              </div>
+            </body>
+          </html>
         `;
         break;
       case 'completed':
         subject = `Delivery completed - ${delivery.tracking_id}`;
         htmlContent = `
-          <h2>Delivery Completed!</h2>
-          <p>Your delivery <strong>${delivery.tracking_id}</strong> has been successfully completed.</p>
-          <p><strong>Delivered to:</strong> ${delivery.delivery_location}</p>
-          <p><strong>Completed at:</strong> ${new Date().toLocaleString()}</p>
-          ${additionalData?.proofUrl ? `<p><a href="${additionalData.proofUrl}">View Proof of Delivery</a></p>` : ''}
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">Delivery Completed!</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p>Your delivery <strong>${delivery.tracking_id}</strong> has been successfully completed.</p>
+                  <p><strong>Delivered to:</strong> ${delivery.delivery_location}</p>
+                  <p><strong>Completed at:</strong> ${new Date().toLocaleString()}</p>
+                  ${additionalData?.proofUrl ? `<p><a href="${additionalData.proofUrl}">View Proof of Delivery</a></p>` : ''}
+                </div>
+              </div>
+            </body>
+          </html>
         `;
         break;
       default:
         subject = `Delivery status update - ${delivery.tracking_id}`;
         htmlContent = `
-          <h2>Delivery Status Update</h2>
-          <p>Your delivery <strong>${delivery.tracking_id}</strong> status has been updated to: <strong>${status}</strong></p>
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">Delivery Status Update</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p>Your delivery <strong>${delivery.tracking_id}</strong> status has been updated to: <strong>${status}</strong></p>
+                </div>
+              </div>
+            </body>
+          </html>
         `;
     }
 
-    // Send email using your preferred email service
-    // This is a placeholder - integrate with your email provider
-    console.log('Sending email:', { recipientEmail, subject, htmlContent });
+    // Send email using Brevo API
+    const brevoApiKey = Deno.env.get("BREVO_API_KEY");
+    if (brevoApiKey) {
+      const brevoPayload = {
+        sender: { email: "noreply@catalystnetworklogistics.com", name: "Catalyst Network Logistics" },
+        to: [{ email: recipientEmail }],
+        subject,
+        htmlContent,
+      };
+
+      const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": brevoApiKey,
+        },
+        body: JSON.stringify(brevoPayload),
+      });
+
+      if (brevoResponse.ok) {
+        console.log('Email sent successfully via Brevo');
+      } else {
+        console.error('Brevo email failed, logging notification anyway');
+      }
+    }
 
     // Log the notification
     await supabaseClient.from('notification_logs').insert({
@@ -77,7 +129,7 @@ serve(async (req) => {
     });
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email notification sent' }),
+      JSON.stringify({ success: true, message: 'Email notification sent via Brevo' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

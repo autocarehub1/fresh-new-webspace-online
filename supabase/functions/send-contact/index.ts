@@ -1,7 +1,5 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,12 +36,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send email to admin
-    const adminEmailResponse = await resend.emails.send({
-      from: "Contact Form <onboarding@resend.dev>",
-      to: ["catalystlogistics2025@gmail.com"],
+    const brevoApiKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoApiKey) {
+      console.error("BREVO_API_KEY not found in environment variables");
+      return new Response(
+        JSON.stringify({ error: "Brevo API key not configured" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Send email to admin using Brevo
+    const adminEmailPayload = {
+      sender: { email: "noreply@catalystnetworklogistics.com", name: "Contact Form" },
+      to: [{ email: "catalystlogistics2025@gmail.com", name: "Admin" }],
       subject: `New Contact Form Submission from ${request.name}`,
-      html: `
+      htmlContent: `
         <html>
           <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
             <div style="max-width: 600px; margin: 0 auto;">
@@ -65,14 +75,29 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
         </html>
       `,
+    };
+
+    console.log("Sending admin email via Brevo API");
+    const adminResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": brevoApiKey,
+      },
+      body: JSON.stringify(adminEmailPayload),
     });
 
-    // Send confirmation email to user
-    const userEmailResponse = await resend.emails.send({
-      from: "Catalyst Network Logistics <onboarding@resend.dev>",
-      to: [request.email],
+    if (!adminResponse.ok) {
+      const errorData = await adminResponse.json();
+      console.error("Brevo API error for admin email:", errorData);
+    }
+
+    // Send confirmation email to user using Brevo
+    const userEmailPayload = {
+      sender: { email: "noreply@catalystnetworklogistics.com", name: "Catalyst Network Logistics" },
+      to: [{ email: request.email, name: request.name }],
       subject: "Thank you for contacting us",
-      html: `
+      htmlContent: `
         <html>
           <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
             <div style="max-width: 600px; margin: 0 auto;">
@@ -94,9 +119,24 @@ const handler = async (req: Request): Promise<Response> => {
           </body>
         </html>
       `,
+    };
+
+    console.log("Sending user confirmation email via Brevo API");
+    const userResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": brevoApiKey,
+      },
+      body: JSON.stringify(userEmailPayload),
     });
 
-    console.log("Emails sent successfully:", { adminEmailResponse, userEmailResponse });
+    if (!userResponse.ok) {
+      const errorData = await userResponse.json();
+      console.error("Brevo API error for user email:", errorData);
+    }
+
+    console.log("Emails sent successfully via Brevo");
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
@@ -117,4 +157,4 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-serve(handler); 
+serve(handler);

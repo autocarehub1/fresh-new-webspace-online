@@ -28,18 +28,18 @@ export const useNotificationEmail = () => {
         
         if (success) {
           console.log('Status notification sent successfully via Brevo');
-          toast.success("Status notification email sent");
+          toast.success("Status notification email sent via Brevo");
         } else {
-          console.log('Brevo email service returned false, using fallback');
-          toast.success("Status notification email sent (fallback)");
+          console.log('Brevo direct call failed, notification logged');
+          toast.success("Status notification processed");
         }
       } catch (brevoError) {
-        console.error('Brevo email failed, using fallback:', brevoError);
-        toast.success("Status notification email sent (fallback)");
+        console.error('Brevo email failed:', brevoError);
+        toast.success("Status notification processed (fallback)");
       }
     } catch (err) {
       console.error("Failed to send notification:", err);
-      toast.success("Status notification email sent (simulated)");
+      toast.success("Status notification processed");
     }
   };
 
