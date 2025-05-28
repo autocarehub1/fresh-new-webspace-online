@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -35,41 +36,61 @@ export const useDriverSignup = () => {
       if (error) {
         console.error('Signup error:', error);
         
-        // Handle email confirmation errors specifically
-        if (error.message?.includes('confirmation email') || error.code === 'unexpected_failure') {
-          console.log('Primary signup email failed, trying welcome email...');
-          
-          // Try to send welcome email directly
+        // Handle specific error cases
+        if (error.message?.includes('User already registered')) {
+          toast.error('An account with this email already exists. Please try signing in instead.');
+          return;
+        }
+        
+        if (error.message?.includes('Password should be at least 6 characters')) {
+          toast.error('Password must be at least 6 characters long.');
+          return;
+        }
+        
+        if (error.message?.includes('Invalid email')) {
+          toast.error('Please enter a valid email address.');
+          return;
+        }
+
+        // For other errors, show generic message but still try to send welcome email if user was created
+        console.log('Signup had issues, but checking if user was created...');
+        
+        // If we have a user object despite the error, the account was likely created
+        if (user?.id) {
+          console.log('User was created despite error, sending welcome email...');
           const emailSent = await sendDriverSignupWelcomeEmail(
             formData.email, 
             `${formData.firstName} ${formData.lastName}`,
-            user?.id || 'pending'
+            user.id
           );
 
           if (emailSent) {
-            toast.success('Account created! Welcome email sent. You can now sign in.');
+            toast.success('Account created successfully! Please check your email to verify your account before signing in.');
           } else {
-            toast.success('Account created! You can now sign in with your credentials.');
+            toast.success('Account created successfully! You can now sign in. Email verification may be required.');
           }
         } else {
-          // Other signup errors
-          toast.error(error.message || 'Failed to create account');
+          toast.error(error.message || 'Failed to create account. Please try again.');
         }
-      } else {
+      } else if (user) {
         console.log('Signup successful:', user);
         
-        // Try to send welcome email for successful signups too
+        // Send welcome email for successful signups
         const emailSent = await sendDriverSignupWelcomeEmail(
           formData.email,
           `${formData.firstName} ${formData.lastName}`,
-          user?.id || ''
+          user.id
         );
 
         if (emailSent) {
-          toast.success('Account created successfully! Welcome email sent. Please check your email.');
+          toast.success('Account created successfully! Please check your email to verify your account before signing in.');
         } else {
-          toast.success('Account created successfully! Please check your email for verification.');
+          toast.success('Account created successfully! Please check your email for verification instructions.');
         }
+      } else {
+        // No error but no user - unusual case
+        console.warn('No error but no user returned from signup');
+        toast.error('Something went wrong during signup. Please try again.');
       }
 
     } catch (error: any) {
