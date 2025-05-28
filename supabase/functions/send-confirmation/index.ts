@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface DeliveryStatusEmailRequest {
+interface EmailRequest {
   id: string;
   trackingId?: string;
   pickup_location?: string;
@@ -21,26 +21,31 @@ interface DeliveryStatusEmailRequest {
   status: string;
   status_note?: string;
   assigned_driver?: string;
+  driver_name?: string;
 }
 
 const statusSubjectMapping: Record<string, string> = {
   'pending': 'Delivery Request Submitted',
-  'in_progress': 'Delivery Request Approved',
+  'approved': 'Delivery Request Approved',
+  'in_progress': 'Package Picked Up',
   'completed': 'Delivery Completed',
   'declined': 'Delivery Request Declined',
   'picked_up': 'Package Picked Up',
   'in_transit': 'Package In Transit',
-  'delivered': 'Package Delivered'
+  'delivered': 'Package Delivered',
+  'driver_welcome': 'Welcome to Medical Courier Service'
 };
 
 const statusNoteDefault: Record<string, string> = {
   'pending': 'Your delivery request has been submitted and is awaiting approval.',
-  'in_progress': 'Your delivery request has been approved and is now in progress.',
+  'approved': 'Your delivery request has been approved and will be assigned to a driver soon.',
+  'in_progress': 'Your package has been picked up and is now in progress.',
   'completed': 'Your delivery has been completed.',
   'declined': 'Your delivery request was declined.',
   'picked_up': 'The courier has picked up your package.',
   'in_transit': 'Your package is in transit to its destination.',
-  'delivered': 'Your package has been delivered.'
+  'delivered': 'Your package has been delivered.',
+  'driver_welcome': 'Welcome to our driver network! Your account has been set up successfully.'
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -51,7 +56,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log("Send confirmation function called");
-    const request: DeliveryStatusEmailRequest = await req.json();
+    const request: EmailRequest = await req.json();
     console.log("Sending email for request status:", request);
 
     if (!request.email) {
@@ -94,11 +99,47 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Prepared email with subject:", subject);
     console.log("Tracking URL:", trackingUrl);
     
-    // Add a random parameter to prevent caching issues
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     console.log("Using Resend API key:", resendApiKey ? "API key found" : "API key missing");
 
-    // Send the email
+    // Handle driver welcome email differently
+    if (request.status === 'driver_welcome') {
+      const emailResponse = await resend.emails.send({
+        from: "Medical Courier Service <onboarding@resend.dev>",
+        to: [request.email],
+        subject: subject,
+        html: `
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">Welcome to Medical Courier Service!</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p style="font-size: 16px; color: #111827;">Hello ${request.driver_name || 'Driver'},</p>
+                  <p style="font-size: 16px; color: #111827;">${note}</p>
+                  <p style="font-size: 16px; color: #111827;">Your driver profile has been created and is currently under review. You will receive another email once your account is approved.</p>
+                  <div style="text-align:center;margin-top:32px;">
+                    <a href="${baseUrl}/driver-portal" style="background:#3E92CC;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">
+                      Access Driver Portal
+                    </a>
+                  </div>
+                  <div style="margin-top: 32px; font-size: 12px; color:#6B7280;">If you have questions, reply to this email.<br/>Medical Courier Service Driver Support</div>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+
+      console.log("Driver welcome email sent successfully:", emailResponse);
+      return new Response(JSON.stringify(emailResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Send the delivery status email
     const emailResponse = await resend.emails.send({
       from: "Medical Courier Service <onboarding@resend.dev>",
       to: [request.email],

@@ -2,8 +2,12 @@
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { generateTrackingId } from '@/utils/deliveryUtils';
+import { useNotificationEmail } from '@/hooks/use-notification-email';
+import { DeliveryRequest } from '@/types/delivery';
 
 export const useDeliveryActions = () => {
+  const { sendStatusNotification } = useNotificationEmail();
+
   const updateDeliveryStatus = async (deliveryId: string, status: string) => {
     try {
       console.log(`Driver updating delivery ${deliveryId} from current status to: ${status}`);
@@ -41,10 +45,12 @@ export const useDeliveryActions = () => {
         updateData.tracking_id = trackingId;
       }
 
-      const { error } = await supabase
+      const { data: updatedDelivery, error } = await supabase
         .from('delivery_requests')
         .update(updateData)
-        .eq('id', deliveryId);
+        .eq('id', deliveryId)
+        .select()
+        .single();
 
       if (error) {
         console.error('Database error:', error);
@@ -68,6 +74,16 @@ export const useDeliveryActions = () => {
                    status === 'completed' ? 'Delivery Location' : 'Driver Location',
           note: `Status updated by driver to ${status.replace('_', ' ')}`
         });
+
+      // Send email notification for status update
+      if (updatedDelivery) {
+        const statusNotes: { [key: string]: string } = {
+          'in_progress': status === 'in_transit' ? 'Your package is now in transit to its destination.' : 'Your package has been picked up by the driver.',
+          'completed': 'Your package has been successfully delivered.'
+        };
+        
+        await sendStatusNotification(updatedDelivery as DeliveryRequest, dbStatus, statusNotes[dbStatus]);
+      }
 
       console.log(`Successfully updated delivery ${deliveryId} to ${dbStatus}${trackingId ? ` with tracking ID ${trackingId}` : ''}`);
       
@@ -109,14 +125,16 @@ export const useDeliveryActions = () => {
       }
       
       // Update delivery with proof photo, tracking ID, and mark as completed
-      const { error } = await supabase
+      const { data: updatedDelivery, error } = await supabase
         .from('delivery_requests')
         .update({ 
           status: 'completed',
           proofofdeliveryphoto: photoUrl,
           tracking_id: trackingId
         })
-        .eq('id', deliveryId);
+        .eq('id', deliveryId)
+        .select()
+        .single();
 
       if (error) {
         console.error('Error updating delivery with proof:', error);
@@ -133,6 +151,11 @@ export const useDeliveryActions = () => {
           location: 'Delivery Location',
           note: 'Package delivered with proof photo'
         });
+
+      // Send completion email notification
+      if (updatedDelivery) {
+        await sendStatusNotification(updatedDelivery as DeliveryRequest, 'completed', 'Your package has been successfully delivered with proof of delivery.');
+      }
 
       console.log('Delivery completed successfully with proof photo and tracking ID:', trackingId);
       toast.success(`Delivery completed successfully! (Tracking: ${trackingId})`);

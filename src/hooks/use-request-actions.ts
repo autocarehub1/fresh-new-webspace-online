@@ -1,12 +1,13 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { DeliveryRequest } from '@/types/delivery';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { generateTrackingId } from '@/utils/deliveryUtils';
+import { useNotificationEmail } from '@/hooks/use-notification-email';
 
 export const useRequestActions = () => {
   const queryClient = useQueryClient();
+  const { sendStatusNotification } = useNotificationEmail();
 
   const approveMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -19,13 +20,21 @@ export const useRequestActions = () => {
           status: 'pending',
           tracking_id: trackingId
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) {
         throw error;
       }
 
       console.log(`Request ${id} approved with tracking ID: ${trackingId}`);
+      
+      // Send approval email notification
+      if (data) {
+        await sendStatusNotification(data as DeliveryRequest, 'approved', 'Your delivery request has been approved and is now pending pickup.');
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -38,10 +47,17 @@ export const useRequestActions = () => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .update({ status: 'declined' })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) {
         throw error;
+      }
+
+      // Send decline email notification
+      if (data) {
+        await sendStatusNotification(data as DeliveryRequest, 'declined', 'Your delivery request has been declined. Please contact us for more information.');
       }
 
       return data;
@@ -114,7 +130,9 @@ export const useRequestActions = () => {
       const { data, error } = await supabase
         .from('delivery_requests')
         .update(updateData)
-        .eq('id', req.id);
+        .eq('id', req.id)
+        .select()
+        .single();
       
       if (error) {
         console.error('Status update error:', error);
@@ -140,6 +158,17 @@ export const useRequestActions = () => {
                    dbStatus === 'completed' ? 'Delivery Location' : 'Processing',
           note: `Status updated by admin to ${dbStatus.replace('_', ' ')}`
         });
+
+      // Send status update email notification
+      if (data) {
+        const statusNotes: { [key: string]: string } = {
+          'in_progress': 'Your package has been picked up and is now in progress.',
+          'completed': 'Your package has been successfully delivered.',
+          'pending': 'Your delivery request is pending assignment.'
+        };
+        
+        await sendStatusNotification(data as DeliveryRequest, dbStatus, statusNotes[dbStatus]);
+      }
       
       return data;
     },
