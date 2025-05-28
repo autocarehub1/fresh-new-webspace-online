@@ -25,13 +25,16 @@ export const useDriverSignup = () => {
         first_name: formData.firstName,
         last_name: formData.lastName,
         full_name: `${formData.firstName} ${formData.lastName}`,
-        user_type: 'driver'
+        user_type: 'driver',
+        email_confirm: false // Disable Supabase email confirmation
       };
 
       console.log('Attempting signup with metadata:', metadata);
 
-      // Try to sign up the user
-      const { error, user } = await signUp(formData.email, formData.password, metadata);
+      // Try to sign up the user with email confirmation disabled
+      const { error, user } = await signUp(formData.email, formData.password, metadata, { 
+        emailRedirectTo: undefined // Disable email confirmation redirect
+      });
 
       if (error) {
         console.error('Signup error:', error);
@@ -52,12 +55,10 @@ export const useDriverSignup = () => {
           return;
         }
 
-        // For other errors, show generic message but still try to send welcome email if user was created
-        console.log('Signup had issues, but checking if user was created...');
-        
-        // If we have a user object despite the error, the account was likely created
-        if (user?.id) {
-          console.log('User was created despite error, sending welcome email...');
+        // For email confirmation errors, continue if user was created
+        if (error.message?.includes('confirmation email') && user?.id) {
+          console.log('Email confirmation failed but user created, sending custom email...');
+          
           const emailSent = await sendDriverSignupWelcomeEmail(
             formData.email, 
             `${formData.firstName} ${formData.lastName}`,
@@ -65,17 +66,21 @@ export const useDriverSignup = () => {
           );
 
           if (emailSent) {
-            toast.success('Account created successfully! Please check your email to verify your account before signing in.');
+            toast.success('Account created successfully! Please check your email for welcome instructions.');
           } else {
-            toast.success('Account created successfully! You can now sign in. Email verification may be required.');
+            toast.success('Account created successfully! You can now sign in.');
           }
-        } else {
-          toast.error(error.message || 'Failed to create account. Please try again.');
+          return;
         }
-      } else if (user) {
+
+        toast.error(error.message || 'Failed to create account. Please try again.');
+        return;
+      }
+
+      if (user) {
         console.log('Signup successful:', user);
         
-        // Send welcome email for successful signups
+        // Send welcome email using our Brevo service
         const emailSent = await sendDriverSignupWelcomeEmail(
           formData.email,
           `${formData.firstName} ${formData.lastName}`,
@@ -83,12 +88,11 @@ export const useDriverSignup = () => {
         );
 
         if (emailSent) {
-          toast.success('Account created successfully! Please check your email to verify your account before signing in.');
+          toast.success('Account created successfully! Please check your email for welcome instructions.');
         } else {
-          toast.success('Account created successfully! Please check your email for verification instructions.');
+          toast.success('Account created successfully! You can now sign in.');
         }
       } else {
-        // No error but no user - unusual case
         console.warn('No error but no user returned from signup');
         toast.error('Something went wrong during signup. Please try again.');
       }

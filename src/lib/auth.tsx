@@ -10,7 +10,7 @@ type AuthContextValue = {
   isLoading: boolean;
   isTwoFactorEnabled: boolean;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: AuthError | null }>;
-  signUp: (email: string, password: string, metadata?: object) => Promise<{ error: AuthError | null, user: User | null }>;
+  signUp: (email: string, password: string, metadata?: object, options?: { emailRedirectTo?: string }) => Promise<{ user: User | null, session: Session | null, error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: AuthError | null }>;
@@ -131,36 +131,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, metadata?: object) => {
+  const signUp = async (email: string, password: string, metadata?: any, options?: { emailRedirectTo?: string }) => {
     try {
       console.log('Signing up with email:', email, 'metadata:', metadata);
       
-      // Get the current domain for redirect URL
-      const origin = window.location.origin;
-      const redirectUrl = `${origin}/auth/callback`;
+      const redirectTo = options?.emailRedirectTo !== undefined 
+        ? options.emailRedirectTo 
+        : `${window.location.origin}/auth/callback`;
       
-      console.log('Using redirect URL:', redirectUrl);
-      
+      console.log('Using redirect URL:', redirectTo);
+
+      const signUpOptions: any = {
+        data: metadata
+      };
+
+      // Only add emailRedirectTo if it's not explicitly disabled
+      if (redirectTo) {
+        signUpOptions.options = {
+          emailRedirectTo: redirectTo
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: metadata,
-          emailRedirectTo: redirectUrl
-        }
+        ...signUpOptions
       });
-
-      if (!error && data.user) {
-        console.log('Sign up successful:', data.user);
-        toast.success('Verification email sent! Please check your inbox.');
-      } else {
-        console.error('Sign up error:', error);
+      
+      if (error) {
+        console.log('Sign up error:', error);
+        throw error;
       }
-
-      return { error, user: data.user || null };
+      
+      return { user: data.user, session: data.session, error: null };
     } catch (error) {
-      console.error('Sign up error:', error);
-      return { error: error as AuthError, user: null };
+      console.error('Auth signup error:', error);
+      return { user: null, session: null, error };
     }
   };
 
