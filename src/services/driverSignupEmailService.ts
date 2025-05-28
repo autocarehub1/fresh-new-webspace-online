@@ -1,42 +1,29 @@
 
-export const sendDriverSignupWelcomeEmail = async (email: string, driverName: string, userId: string): Promise<boolean> => {
+import { BrevoEmailService } from './brevoEmailService';
+
+export const sendDriverSignupWelcomeEmail = async (
+  email: string, 
+  driverName: string, 
+  userId: string
+): Promise<boolean> => {
   try {
-    console.log('Attempting to send welcome email to:', email);
+    console.log('Attempting to send welcome email via Brevo to:', email);
     
-    // Use the correct Supabase project URL
-    const baseUrl = 'https://joziqntfciyflfsgvsqz.supabase.co';
-    
-    const emailData = {
-      email,
-      status: 'driver_signup_welcome',
-      driver_name: driverName,
-      id: userId
-    };
+    const success = await BrevoEmailService.sendDriverSignupWelcomeEmail(
+      email, 
+      driverName, 
+      userId
+    );
 
-    console.log('Email data:', emailData);
-    
-    const response = await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvemlxbnRmY2l5Zmxmc2d2c3F6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ5MTYwNDksImV4cCI6MjA2MDQ5MjA0OX0.7j-9MsQNma6N1fnKvFB7wBJReL6PHy_ncwJqDdMeIQA`
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    console.log('Email service response status:', response.status);
-
-    if (response.ok) {
-      const result = await response.json();
-      console.log('Welcome email sent successfully:', result);
+    if (success) {
+      console.log('Welcome email sent successfully via Brevo');
       return true;
     } else {
-      const errorText = await response.text();
-      console.log('Email service error:', response.status, errorText);
+      console.log('Brevo email service returned false');
       return false;
     }
   } catch (error) {
-    console.error('Email sending failed:', error);
+    console.error('Brevo email sending failed:', error);
     return false;
   }
 };
