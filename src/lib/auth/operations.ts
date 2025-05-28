@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import type { Provider, AuthError } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -26,40 +25,20 @@ export const authOperations = {
     }
   },
 
-  // Sign up with email and password - completely disable email for drivers
+  // Sign up with email and password - use standard flow for drivers with email confirmation disabled
   signUp: async (email: string, password: string, metadata?: any, options?: { emailRedirectTo?: string }) => {
     try {
       console.log('Signing up with email:', email, 'metadata:', metadata);
       
-      // For driver signups, completely bypass Supabase email confirmation
       const isDriverSignup = metadata?.user_type === 'driver';
       
-      if (isDriverSignup) {
-        console.log('Driver signup detected - using admin create user to bypass email confirmation');
-        
-        // Use admin API to create user without email confirmation
-        const { data, error } = await supabase.auth.admin.createUser({
-          email,
-          password,
-          user_metadata: metadata,
-          email_confirm: true // Auto-confirm email
-        });
-        
-        if (error) {
-          console.error('Admin create user error:', error);
-          return { user: null, session: null, error };
-        }
-        
-        console.log('Driver user created successfully via admin API:', data.user);
-        return { user: data.user, session: null, error: null };
-      }
-      
-      // For non-driver signups, use normal flow with email confirmation
+      // For driver signups, use standard signup but without email redirect to bypass confirmation
       const signUpOptions: any = {
         data: metadata
       };
 
-      if (options?.emailRedirectTo !== undefined) {
+      // Only add email redirect for non-driver signups
+      if (!isDriverSignup && options?.emailRedirectTo !== undefined) {
         const redirectTo = options.emailRedirectTo || `${window.location.origin}/auth/callback`;
         console.log('Using redirect URL for non-driver signup:', redirectTo);
         
@@ -79,6 +58,7 @@ export const authOperations = {
         return { user: null, session: null, error };
       }
       
+      console.log('Sign up successful:', data);
       return { user: data.user, session: data.session, error: null };
     } catch (error) {
       console.error('Auth signup error:', error);
@@ -107,7 +87,6 @@ export const authOperations = {
     try {
       console.log('Sending password reset for email:', email);
       
-      // Get the current domain for redirect URL
       const origin = window.location.origin;
       const redirectUrl = `${origin}/auth/callback`;
       
