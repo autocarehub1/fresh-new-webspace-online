@@ -18,7 +18,7 @@ export const useDriverSignup = () => {
     setLoading(true);
 
     try {
-      console.log('Starting driver signup process...');
+      console.log('Starting driver signup process with Brevo email...');
       
       // Prepare user metadata
       const metadata = {
@@ -26,14 +26,14 @@ export const useDriverSignup = () => {
         last_name: formData.lastName,
         full_name: `${formData.firstName} ${formData.lastName}`,
         user_type: 'driver',
-        email_confirm: false // Disable Supabase email confirmation
+        email_confirm: true // Mark as confirmed since we handle email via Brevo
       };
 
       console.log('Attempting signup with metadata:', metadata);
 
-      // Try to sign up the user with email confirmation disabled
+      // Sign up without email confirmation (since we use Brevo)
       const { error, user } = await signUp(formData.email, formData.password, metadata, { 
-        emailRedirectTo: undefined // Disable email confirmation redirect
+        emailRedirectTo: undefined // Disable Supabase email confirmation
       });
 
       if (error) {
@@ -55,30 +55,12 @@ export const useDriverSignup = () => {
           return;
         }
 
-        // For email confirmation errors, continue if user was created
-        if (error.message?.includes('confirmation email') && user?.id) {
-          console.log('Email confirmation failed but user created, sending custom email...');
-          
-          const emailSent = await sendDriverSignupWelcomeEmail(
-            formData.email, 
-            `${formData.firstName} ${formData.lastName}`,
-            user.id
-          );
-
-          if (emailSent) {
-            toast.success('Account created successfully! Please check your email for welcome instructions.');
-          } else {
-            toast.success('Account created successfully! You can now sign in.');
-          }
-          return;
-        }
-
         toast.error(error.message || 'Failed to create account. Please try again.');
         return;
       }
 
       if (user) {
-        console.log('Signup successful:', user);
+        console.log('Signup successful, sending welcome email via Brevo:', user);
         
         // Send welcome email using our Brevo service
         const emailSent = await sendDriverSignupWelcomeEmail(
