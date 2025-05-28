@@ -26,7 +26,7 @@ const AuthContext = createContext<AuthContextValue>({
   isLoading: true,
   isTwoFactorEnabled: false,
   signIn: async () => ({ error: null }),
-  signUp: async () => ({ error: null, user: null }),
+  signUp: async () => ({ error: null, user: null, session: null }),
   signOut: async () => {},
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
@@ -160,13 +160,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.log('Sign up error:', error);
-        throw error;
+        return { user: null, session: null, error };
       }
       
       return { user: data.user, session: data.session, error: null };
     } catch (error) {
       console.error('Auth signup error:', error);
-      return { user: null, session: null, error };
+      return { user: null, session: null, error: error as AuthError };
     }
   };
 
