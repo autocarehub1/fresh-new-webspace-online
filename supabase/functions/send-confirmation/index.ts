@@ -33,7 +33,9 @@ const statusSubjectMapping: Record<string, string> = {
   'picked_up': 'Package Picked Up',
   'in_transit': 'Package In Transit',
   'delivered': 'Package Delivered',
-  'driver_welcome': 'Welcome to Medical Courier Service'
+  'driver_welcome': 'Welcome to Medical Courier Service',
+  'driver_signup_welcome': 'Welcome! Please Verify Your Email',
+  'request_submitted': 'Delivery Request Received'
 };
 
 const statusNoteDefault: Record<string, string> = {
@@ -45,7 +47,9 @@ const statusNoteDefault: Record<string, string> = {
   'picked_up': 'The courier has picked up your package.',
   'in_transit': 'Your package is in transit to its destination.',
   'delivered': 'Your package has been delivered.',
-  'driver_welcome': 'Welcome to our driver network! Your account has been set up successfully.'
+  'driver_welcome': 'Welcome to our driver network! Your account has been set up successfully.',
+  'driver_signup_welcome': 'Thank you for signing up! Please verify your email to complete your registration.',
+  'request_submitted': 'We have received your delivery request and will process it shortly.'
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -102,8 +106,8 @@ const handler = async (req: Request): Promise<Response> => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     console.log("Using Resend API key:", resendApiKey ? "API key found" : "API key missing");
 
-    // Handle driver welcome email differently
-    if (request.status === 'driver_welcome') {
+    // Handle driver signup welcome email
+    if (request.status === 'driver_signup_welcome') {
       const emailResponse = await resend.emails.send({
         from: "Medical Courier Service <onboarding@resend.dev>",
         to: [request.email],
@@ -114,6 +118,50 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="max-width: 600px; margin: 0 auto;">
                 <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
                   <h2 style="margin:0;">Welcome to Medical Courier Service!</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p style="font-size: 16px; color: #111827;">Hello ${request.driver_name || 'Driver'},</p>
+                  <p style="font-size: 16px; color: #111827;">Thank you for signing up to become a medical courier driver!</p>
+                  <p style="font-size: 16px; color: #111827;">Your account has been created successfully. You can now sign in to access the driver portal and complete your profile setup.</p>
+                  <div style="text-align:center;margin-top:32px;">
+                    <a href="${baseUrl}/driver-portal" style="background:#3E92CC;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:600;">
+                      Access Driver Portal
+                    </a>
+                  </div>
+                  <p style="font-size: 14px; color: #6B7280; margin-top: 24px;">Next steps:</p>
+                  <ul style="font-size: 14px; color: #6B7280;">
+                    <li>Sign in to your driver account</li>
+                    <li>Complete your driver profile</li>
+                    <li>Upload required documents</li>
+                    <li>Wait for account approval</li>
+                  </ul>
+                  <div style="margin-top: 32px; font-size: 12px; color:#6B7280;">If you have questions, reply to this email.<br/>Medical Courier Service Driver Support</div>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+
+      console.log("Driver signup welcome email sent successfully:", emailResponse);
+      return new Response(JSON.stringify(emailResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Handle driver welcome email (after profile setup)
+    if (request.status === 'driver_welcome') {
+      const emailResponse = await resend.emails.send({
+        from: "Medical Courier Service <onboarding@resend.dev>",
+        to: [request.email],
+        subject: subject,
+        html: `
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">Driver Profile Setup Complete!</h2>
                 </div>
                 <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
                   <p style="font-size: 16px; color: #111827;">Hello ${request.driver_name || 'Driver'},</p>
@@ -133,6 +181,49 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       console.log("Driver welcome email sent successfully:", emailResponse);
+      return new Response(JSON.stringify(emailResponse), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Handle request submitted confirmation
+    if (request.status === 'request_submitted') {
+      const emailResponse = await resend.emails.send({
+        from: "Medical Courier Service <onboarding@resend.dev>",
+        to: [request.email],
+        subject: subject,
+        html: `
+          <html>
+            <body style="font-family: Arial,sans-serif; background-color: #F9FAFB;">
+              <div style="max-width: 600px; margin: 0 auto;">
+                <div style="background: #0A2463; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+                  <h2 style="margin:0;">${subject}</h2>
+                </div>
+                <div style="background: white; padding: 32px; border-radius: 0 0 8px 8px;">
+                  <p style="font-size: 16px; color: #111827;">Thank you for your delivery request!</p>
+                  <p style="font-size: 16px; color: #111827;">${note}</p>
+                  <table style="width: 100%; margin: 24px 0;">
+                    ${request.pickup_location ? `
+                    <tr><td style="color: #6B7280;">Pickup:</td><td>${request.pickup_location}</td></tr>
+                    ` : ""}
+                    ${request.delivery_location ? `
+                    <tr><td style="color: #6B7280;">Delivery:</td><td>${request.delivery_location}</td></tr>
+                    ` : ""}
+                    ${request.priority ? `
+                    <tr><td style="color: #6B7280;">Priority:</td><td>${request.priority}</td></tr>
+                    ` : ""}
+                  </table>
+                  <p style="font-size: 14px; color: #6B7280;">You will receive an email notification once your request has been reviewed and approved.</p>
+                  <div style="margin-top: 32px; font-size: 12px; color:#6B7280;">If you have questions, reply to this email.<br/>Medical Courier Service</div>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+      });
+
+      console.log("Request submitted email sent successfully:", emailResponse);
       return new Response(JSON.stringify(emailResponse), {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
