@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,39 @@ const DriverSignUp: React.FC<DriverSignUpProps> = ({ onSwitchToSignIn }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const sendWelcomeEmail = async (email: string, driverName: string, userId: string) => {
+    try {
+      console.log('Attempting to send welcome email...');
+      
+      // Use the Supabase project URL directly
+      const baseUrl = 'https://joziqntfciyflfsgvsqz.supabase.co';
+      
+      const response = await fetch(`${baseUrl}/functions/v1/send-confirmation`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          status: 'driver_signup_welcome',
+          driver_name: driverName,
+          id: userId
+        }),
+      });
+
+      if (response.ok) {
+        console.log('Welcome email sent successfully');
+        return true;
+      } else {
+        console.log('Email service unavailable:', response.status);
+        return false;
+      }
+    } catch (error) {
+      console.log('Email sending failed:', error);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,34 +91,20 @@ const DriverSignUp: React.FC<DriverSignUpProps> = ({ onSwitchToSignIn }) => {
       if (error) {
         console.error('Signup error:', error);
         
-        // Handle specific email sending errors
+        // Handle email confirmation errors specifically
         if (error.message?.includes('confirmation email') || error.code === 'unexpected_failure') {
-          console.log('Email sending failed, but user may have been created. Attempting manual email send...');
+          console.log('Primary signup email failed, trying welcome email...');
           
-          // Try to send a custom welcome email
-          try {
-            const response = await fetch(`${window.location.origin.includes('localhost') ? 'https://joziqntfciyflfsgvsqz.supabase.co' : window.location.origin}/functions/v1/send-confirmation`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: formData.email,
-                status: 'driver_signup_welcome',
-                driver_name: `${formData.firstName} ${formData.lastName}`,
-                id: user?.id || 'pending'
-              }),
-            });
+          // Try to send welcome email directly
+          const emailSent = await sendWelcomeEmail(
+            formData.email, 
+            `${formData.firstName} ${formData.lastName}`,
+            user?.id || 'pending'
+          );
 
-            if (response.ok) {
-              toast.success('Account created! Please check your email to verify your account.');
-              console.log('Manual welcome email sent successfully');
-            } else {
-              toast.success('Account created! You can now sign in with your credentials.');
-              console.log('Manual email also failed, but account was created');
-            }
-          } catch (emailError) {
-            console.log('Manual email send failed:', emailError);
+          if (emailSent) {
+            toast.success('Account created! Welcome email sent. You can now sign in.');
+          } else {
             toast.success('Account created! You can now sign in with your credentials.');
           }
         } else {
@@ -93,7 +113,19 @@ const DriverSignUp: React.FC<DriverSignUpProps> = ({ onSwitchToSignIn }) => {
         }
       } else {
         console.log('Signup successful:', user);
-        toast.success('Account created successfully! Please check your email to verify your account.');
+        
+        // Try to send welcome email for successful signups too
+        const emailSent = await sendWelcomeEmail(
+          formData.email,
+          `${formData.firstName} ${formData.lastName}`,
+          user?.id || ''
+        );
+
+        if (emailSent) {
+          toast.success('Account created successfully! Welcome email sent. Please check your email.');
+        } else {
+          toast.success('Account created successfully! Please check your email for verification.');
+        }
       }
 
     } catch (error: any) {
