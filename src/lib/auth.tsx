@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session, Provider, AuthError } from '@supabase/supabase-js';
@@ -131,28 +130,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Sign up with email and password - disable email confirmation for drivers
+  // Sign up with email and password - completely disable email for drivers
   const signUp = async (email: string, password: string, metadata?: any, options?: { emailRedirectTo?: string }) => {
     try {
       console.log('Signing up with email:', email, 'metadata:', metadata);
       
-      // For driver signups, completely disable email confirmation
+      // For driver signups, completely bypass Supabase email confirmation
       const isDriverSignup = metadata?.user_type === 'driver';
       
+      if (isDriverSignup) {
+        console.log('Driver signup detected - using admin create user to bypass email confirmation');
+        
+        // Use admin API to create user without email confirmation
+        const { data, error } = await supabase.auth.admin.createUser({
+          email,
+          password,
+          user_metadata: metadata,
+          email_confirm: true // Auto-confirm email
+        });
+        
+        if (error) {
+          console.error('Admin create user error:', error);
+          return { user: null, session: null, error };
+        }
+        
+        console.log('Driver user created successfully via admin API:', data.user);
+        return { user: data.user, session: null, error: null };
+      }
+      
+      // For non-driver signups, use normal flow with email confirmation
       const signUpOptions: any = {
         data: metadata
       };
 
-      // Only add email confirmation for non-driver signups
-      if (!isDriverSignup && options?.emailRedirectTo !== undefined) {
+      if (options?.emailRedirectTo !== undefined) {
         const redirectTo = options.emailRedirectTo || `${window.location.origin}/auth/callback`;
         console.log('Using redirect URL for non-driver signup:', redirectTo);
         
         signUpOptions.options = {
           emailRedirectTo: redirectTo
         };
-      } else {
-        console.log('Skipping email confirmation for driver signup');
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -164,21 +181,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.log('Sign up error:', error);
         return { user: null, session: null, error };
-      }
-      
-      // For driver signups, mark email as confirmed immediately
-      if (isDriverSignup && data.user && !data.user.email_confirmed_at) {
-        console.log('Auto-confirming driver email to bypass confirmation requirement');
-        
-        // Update user metadata to indicate email is confirmed
-        const { error: updateError } = await supabase.auth.admin.updateUserById(
-          data.user.id,
-          { email_confirm: true }
-        );
-        
-        if (updateError) {
-          console.warn('Could not auto-confirm email, but user was created:', updateError);
-        }
       }
       
       return { user: data.user, session: data.session, error: null };
