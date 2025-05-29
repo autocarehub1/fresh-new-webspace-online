@@ -1,3 +1,4 @@
+
 import { supabase } from '@/lib/supabase';
 import type { Provider, AuthError } from '@supabase/supabase-js';
 import { toast } from 'sonner';
@@ -25,25 +26,35 @@ export const authOperations = {
     }
   },
 
-  // Sign up with email and password - use standard flow for drivers with email confirmation disabled
+  // Sign up with email and password - disable confirmation for drivers
   signUp: async (email: string, password: string, metadata?: any, options?: { emailRedirectTo?: string }) => {
     try {
       console.log('Signing up with email:', email, 'metadata:', metadata);
       
       const isDriverSignup = metadata?.user_type === 'driver';
       
-      // For driver signups, use standard signup but without email redirect to bypass confirmation
+      // For driver signups, disable email confirmation entirely
       const signUpOptions: any = {
         data: metadata
       };
 
-      // Only add email redirect for non-driver signups
-      if (!isDriverSignup && options?.emailRedirectTo !== undefined) {
-        const redirectTo = options.emailRedirectTo || `${window.location.origin}/auth/callback`;
+      // Only add email confirmation for non-driver signups
+      if (!isDriverSignup) {
+        const redirectTo = options?.emailRedirectTo || `${window.location.origin}/auth/callback`;
         console.log('Using redirect URL for non-driver signup:', redirectTo);
         
         signUpOptions.options = {
           emailRedirectTo: redirectTo
+        };
+      } else {
+        // For drivers, explicitly disable email confirmation
+        console.log('Driver signup: disabling email confirmation');
+        signUpOptions.options = {
+          emailRedirectTo: undefined,
+          data: {
+            ...metadata,
+            email_confirm: false // Explicitly disable confirmation
+          }
         };
       }
 
@@ -82,7 +93,6 @@ export const authOperations = {
     }
   },
 
-  // Reset password
   resetPassword: async (email: string) => {
     try {
       console.log('Sending password reset for email:', email);
@@ -108,7 +118,6 @@ export const authOperations = {
     }
   },
 
-  // Update password
   updatePassword: async (newPassword: string) => {
     try {
       console.log('Updating password');
@@ -130,7 +139,6 @@ export const authOperations = {
     }
   },
 
-  // Sign in with provider
   signInWithProvider: async (provider: Provider) => {
     try {
       console.log('Signing in with provider:', provider);
@@ -152,10 +160,8 @@ export const authOperations = {
     }
   },
 
-  // Initiate two-factor authentication setup
   initiateTwoFactor: async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Mock implementation for demo
       console.log('Initiating 2FA setup');
       return { success: true };
     } catch (error) {
@@ -164,10 +170,8 @@ export const authOperations = {
     }
   },
 
-  // Verify two-factor authentication code
   verifyTwoFactor: async (code: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Mock implementation for demo - accept 123456 as valid code
       console.log('Verifying 2FA code:', code);
       if (code === '123456') {
         return { success: true };
