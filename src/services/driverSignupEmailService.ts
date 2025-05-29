@@ -1,5 +1,5 @@
 
-import { BrevoEmailService } from './brevoEmailService';
+import { EmailService } from './emailService';
 import { toast } from 'sonner';
 
 export const sendDriverSignupWelcomeEmail = async (
@@ -8,7 +8,7 @@ export const sendDriverSignupWelcomeEmail = async (
   userId: string
 ): Promise<boolean> => {
   try {
-    console.log('Attempting to send welcome email via Brevo to:', email);
+    console.log('Enhanced driver signup email service - sending to:', email);
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,22 +18,22 @@ export const sendDriverSignupWelcomeEmail = async (
       return false;
     }
     
-    const success = await BrevoEmailService.sendDriverSignupWelcomeEmail(
+    const result = await EmailService.sendDriverWelcomeEmail(
       email, 
       driverName, 
       userId
     );
 
-    if (success) {
-      console.log('Welcome email sent successfully via Brevo');
+    if (result.success) {
+      console.log('Enhanced welcome email sent successfully');
       return true;
     } else {
-      console.log('Brevo email service returned false - check API configuration');
+      console.log('Enhanced email service failed:', result.error);
       toast.error('Email service configuration issue. Please contact support.');
       return false;
     }
   } catch (error: any) {
-    console.error('Brevo email sending failed:', error);
+    console.error('Enhanced email sending failed:', error);
     
     // Provide specific error messages based on the error type
     if (error.message?.includes('rate limit')) {
@@ -50,21 +50,21 @@ export const sendDriverSignupWelcomeEmail = async (
   }
 };
 
-// Test function for email service
-export const testDriverEmailService = async (): Promise<boolean> => {
+// Enhanced test function with detailed diagnostics
+export const testDriverEmailService = async (): Promise<{ success: boolean; details?: any; error?: string }> => {
   try {
-    console.log('Testing driver email service...');
-    const result = await BrevoEmailService.testConnection();
+    console.log('Testing enhanced driver email service...');
+    const result = await EmailService.testEmailSystem();
     
     if (result.success) {
-      console.log('Driver email service test passed');
-      return true;
+      console.log('Enhanced driver email service test passed');
+      return { success: true, details: result.details };
     } else {
-      console.error('Driver email service test failed:', result.error);
-      return false;
+      console.error('Enhanced driver email service test failed:', result.error);
+      return { success: false, error: result.error };
     }
-  } catch (error) {
-    console.error('Driver email service test error:', error);
-    return false;
+  } catch (error: any) {
+    console.error('Enhanced driver email service test error:', error);
+    return { success: false, error: error.message };
   }
 };
