@@ -1,7 +1,7 @@
 
 import { toast } from 'sonner';
 import { DeliveryRequest } from '@/types/delivery';
-import { BrevoEmailService } from '@/services/brevoEmailService';
+import { EmailService } from '@/services/emailService';
 
 export const useNotificationEmail = () => {
   const sendStatusNotification = async (request: DeliveryRequest, status: string, status_note?: string) => {
@@ -9,7 +9,7 @@ export const useNotificationEmail = () => {
       const email = (request as any).email || "catalystlogistics2025@gmail.com";
       if (!email) return;
       
-      console.log("Sending status notification email via Brevo to:", email, "status:", status);
+      console.log("Sending status notification email via Gmail to:", email, "status:", status);
       
       const deliveryData = {
         trackingId: request.trackingId,
@@ -20,21 +20,21 @@ export const useNotificationEmail = () => {
       };
       
       try {
-        const success = await BrevoEmailService.sendDeliveryStatusNotification(
+        const result = await EmailService.sendDeliveryNotification(
           email,
           status,
           deliveryData
         );
         
-        if (success) {
-          console.log('Status notification sent successfully via Brevo');
-          toast.success("Status notification email sent via Brevo");
+        if (result.success) {
+          console.log('Status notification sent successfully via Gmail');
+          toast.success("Status notification email sent via Gmail");
         } else {
-          console.log('Brevo direct call failed, notification logged');
+          console.log('Gmail email failed, notification logged');
           toast.success("Status notification processed");
         }
-      } catch (brevoError) {
-        console.error('Brevo email failed:', brevoError);
+      } catch (emailError) {
+        console.error('Gmail email failed:', emailError);
         toast.success("Status notification processed (fallback)");
       }
     } catch (err) {
