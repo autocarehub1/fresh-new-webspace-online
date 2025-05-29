@@ -55,18 +55,18 @@ export const useDriverSignup = () => {
           return;
         }
 
-        // For email confirmation errors, proceed anyway since we use Brevo
+        // For email confirmation errors, proceed anyway since we use Gmail
         if (error.message?.includes('Error sending confirmation email')) {
-          console.log('Supabase email confirmation failed, but proceeding with Brevo email...');
-          // Continue to try sending Brevo email
+          console.log('Supabase email confirmation failed, but proceeding with Gmail email...');
+          // Continue to try sending Gmail email
         } else {
           toast.error(error.message || 'Failed to create account. Please try again.');
           return;
         }
       }
 
-      // Send welcome email using Brevo regardless of Supabase email status
-      console.log('Sending welcome email via Brevo...');
+      // Send welcome email using Gmail regardless of Supabase email status
+      console.log('Sending welcome email via Gmail...');
       
       try {
         const emailSent = await sendDriverSignupWelcomeEmail(
@@ -81,7 +81,7 @@ export const useDriverSignup = () => {
           toast.success('Account created successfully! You can now sign in to the driver portal.');
         }
       } catch (emailError) {
-        console.error('Brevo email error:', emailError);
+        console.error('Gmail email error:', emailError);
         toast.success('Account created successfully! You can now sign in to the driver portal.');
       }
 

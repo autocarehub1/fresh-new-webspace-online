@@ -8,7 +8,7 @@ export const sendDriverSignupWelcomeEmail = async (
   userId: string
 ): Promise<boolean> => {
   try {
-    console.log('Enhanced driver signup email service - sending to:', email);
+    console.log('Driver signup email service - sending to:', email);
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,15 +25,15 @@ export const sendDriverSignupWelcomeEmail = async (
     );
 
     if (result.success) {
-      console.log('Enhanced welcome email sent successfully');
+      console.log('Welcome email sent successfully via Gmail');
       return true;
     } else {
-      console.log('Enhanced email service failed:', result.error);
+      console.log('Gmail email service failed:', result.error);
       toast.error('Email service configuration issue. Please contact support.');
       return false;
     }
   } catch (error: any) {
-    console.error('Enhanced email sending failed:', error);
+    console.error('Email sending failed:', error);
     
     // Provide specific error messages based on the error type
     if (error.message?.includes('rate limit')) {
@@ -50,21 +50,21 @@ export const sendDriverSignupWelcomeEmail = async (
   }
 };
 
-// Enhanced test function with detailed diagnostics
+// Test function with Gmail diagnostics
 export const testDriverEmailService = async (): Promise<{ success: boolean; details?: any; error?: string }> => {
   try {
-    console.log('Testing enhanced driver email service...');
+    console.log('Testing Gmail driver email service...');
     const result = await EmailService.testEmailSystem();
     
     if (result.success) {
-      console.log('Enhanced driver email service test passed');
+      console.log('Gmail driver email service test passed');
       return { success: true, details: result.details };
     } else {
-      console.error('Enhanced driver email service test failed:', result.error);
+      console.error('Gmail driver email service test failed:', result.error);
       return { success: false, error: result.error };
     }
   } catch (error: any) {
-    console.error('Enhanced driver email service test error:', error);
+    console.error('Gmail driver email service test error:', error);
     return { success: false, error: error.message };
   }
 };

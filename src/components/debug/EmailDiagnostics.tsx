@@ -7,32 +7,23 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { BrevoEmailService } from '@/services/brevoEmailService';
+import { EmailService } from '@/services/emailService';
 import { CheckCircle, XCircle, Mail, AlertTriangle, Info, Send } from 'lucide-react';
 
 const EmailDiagnostics = () => {
   const [testEmail, setTestEmail] = useState('');
   const [customSubject, setCustomSubject] = useState('Test Email from Catalyst Network');
-  const [customMessage, setCustomMessage] = useState('This is a test email to verify our email system is working correctly.');
+  const [customMessage, setCustomMessage] = useState('This is a test email to verify our Gmail SMTP system is working correctly.');
   const [emailType, setEmailType] = useState('welcome');
   const [testResults, setTestResults] = useState<any>(null);
-  const [accountInfo, setAccountInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const runConnectionTest = async () => {
     setLoading(true);
     try {
-      console.log('Running enhanced Brevo connection test...');
-      const result = await BrevoEmailService.testConnection();
+      console.log('Running Gmail SMTP connection test...');
+      const result = await EmailService.testEmailSystem();
       setTestResults(result);
-      
-      if (result.success) {
-        // Also get account info
-        const accountResult = await BrevoEmailService.getAccountInfo();
-        if (accountResult.success) {
-          setAccountInfo(accountResult.data);
-        }
-      }
     } catch (error: any) {
       setTestResults({ success: false, error: error.message });
     } finally {
@@ -47,16 +38,16 @@ const EmailDiagnostics = () => {
     try {
       console.log('Sending test email to:', testEmail, 'Type:', emailType);
       
-      let success = false;
+      let result;
       
       if (emailType === 'welcome') {
-        success = await BrevoEmailService.sendDriverSignupWelcomeEmail(
+        result = await EmailService.sendDriverWelcomeEmail(
           testEmail,
           'Test Driver',
           'test-user-id'
         );
       } else if (emailType === 'delivery') {
-        success = await BrevoEmailService.sendDeliveryStatusNotification(
+        result = await EmailService.sendDeliveryNotification(
           testEmail,
           'in_transit',
           {
@@ -67,20 +58,19 @@ const EmailDiagnostics = () => {
           }
         );
       } else if (emailType === 'custom') {
-        success = await BrevoEmailService.sendCustomEmail(
-          [{ email: testEmail, name: 'Test User' }],
+        result = await EmailService.sendCustomEmail(
+          [testEmail],
           customSubject,
-          `<p>${customMessage}</p>`,
           customMessage,
-          undefined,
-          ['test', 'custom']
+          false
         );
       }
       
       setTestResults({ 
-        success, 
-        message: success ? `${emailType} email sent successfully!` : `Failed to send ${emailType} email`,
-        type: emailType
+        success: result?.success || false, 
+        message: result?.success ? `${emailType} email sent successfully via Gmail!` : `Failed to send ${emailType} email`,
+        type: emailType,
+        error: result?.error
       });
     } catch (error: any) {
       setTestResults({ success: false, error: error.message });
@@ -95,42 +85,23 @@ const EmailDiagnostics = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Enhanced Email System Diagnostics
+            Gmail SMTP Email System Diagnostics
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Connection Test */}
           <div className="space-y-2">
-            <Label>Brevo API Connection Test</Label>
+            <Label>Gmail SMTP Connection Test</Label>
             <Button onClick={runConnectionTest} disabled={loading}>
-              {loading ? 'Testing...' : 'Test Connection'}
+              {loading ? 'Testing...' : 'Test Gmail Connection'}
             </Button>
           </div>
-
-          {/* Account Information */}
-          {accountInfo && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                Account Information
-              </Label>
-              <div className="bg-blue-50 p-3 rounded-md text-sm">
-                <div><strong>Company:</strong> {accountInfo.companyName || 'Not set'}</div>
-                {accountInfo.plan && accountInfo.plan[0] && (
-                  <>
-                    <div><strong>Plan:</strong> {accountInfo.plan[0].type}</div>
-                    <div><strong>Credits Remaining:</strong> {accountInfo.plan[0].creditsRemaining || 'Unlimited'}</div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Email Testing Section */}
           <div className="space-y-4 border-t pt-4">
             <Label className="flex items-center gap-2">
               <Send className="h-4 w-4" />
-              Send Test Email
+              Send Test Email via Gmail
             </Label>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -208,9 +179,9 @@ const EmailDiagnostics = () => {
                       <div>{testResults.message || 'Operation completed successfully!'}</div>
                       {testResults.details && (
                         <div className="mt-2 text-xs">
-                          <div>Account: {testResults.details.accountName}</div>
-                          <div>Plan: {testResults.details.plan}</div>
-                          <div>Credits: {testResults.details.emailsRemaining}</div>
+                          <div>Service: {testResults.details.service}</div>
+                          <div>Endpoint: {testResults.details.endpoint}</div>
+                          <div>Timestamp: {testResults.details.timestamp}</div>
                         </div>
                       )}
                     </div>
@@ -226,22 +197,20 @@ const EmailDiagnostics = () => {
           <div className="pt-4 border-t">
             <h4 className="font-medium mb-2 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Environment Check
+              Gmail Configuration Status
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>Brevo API Key:</span>
-                <span className={import.meta.env.VITE_BREVO_API_KEY ? 'text-green-600' : 'text-red-600'}>
-                  {import.meta.env.VITE_BREVO_API_KEY ? 'Configured' : 'Missing'}
-                </span>
+                <span>Gmail Email:</span>
+                <span className="text-green-600">catnetlogistics@gmail.com</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Email Service:</span>
+                <span className="text-green-600">Gmail SMTP via Supabase</span>
               </div>
               <div className="flex justify-between">
                 <span>Current Environment:</span>
                 <span>{import.meta.env.MODE}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>API Key Length:</span>
-                <span>{import.meta.env.VITE_BREVO_API_KEY?.length || 0} characters</span>
               </div>
             </div>
           </div>

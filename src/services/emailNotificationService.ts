@@ -1,7 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { BrevoEmailService } from './brevoEmailService';
+import { EmailService } from './emailService';
 
 export class EmailNotificationService {
   
@@ -13,18 +13,18 @@ export class EmailNotificationService {
     additionalData?: any
   ) {
     try {
-      // Use Brevo service directly for better rate limit handling
-      const success = await BrevoEmailService.sendDeliveryStatusNotification(
+      // Use Gmail service directly
+      const result = await EmailService.sendDeliveryNotification(
         recipientEmail,
         status,
         { trackingId: deliveryId, ...additionalData }
       );
 
-      if (success) {
-        console.log('Email notification sent via Brevo:', deliveryId);
+      if (result.success) {
+        console.log('Email notification sent via Gmail:', deliveryId);
         return { success: true };
       } else {
-        // Fallback to Supabase function if Brevo direct call fails
+        // Fallback to existing Supabase function if Gmail fails
         const { data, error } = await supabase.functions.invoke('send-delivery-notification', {
           body: {
             deliveryId,
@@ -52,14 +52,14 @@ export class EmailNotificationService {
     customerEmail: string
   ) {
     try {
-      // Use Brevo service for consistent email handling
-      const success = await BrevoEmailService.sendDeliveryStatusNotification(
+      // Use Gmail service for consistent email handling
+      const result = await EmailService.sendDeliveryNotification(
         customerEmail,
         'driver_assigned',
         { trackingId: deliveryId, assigned_driver: driverId }
       );
 
-      if (!success) {
+      if (!result.success) {
         // Fallback to Supabase function
         const { data, error } = await supabase.functions.invoke('send-driver-assignment', {
           body: {
