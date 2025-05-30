@@ -1,217 +1,258 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { EmailService } from '@/services/emailService';
-import { CheckCircle, XCircle, Mail, AlertTriangle, Info, Send } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { Mail, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
-const EmailDiagnostics = () => {
+const EmailDiagnostics: React.FC = () => {
   const [testEmail, setTestEmail] = useState('');
-  const [customSubject, setCustomSubject] = useState('Test Email from Catalyst Network');
-  const [customMessage, setCustomMessage] = useState('This is a test email to verify our Gmail SMTP system is working correctly.');
-  const [emailType, setEmailType] = useState('welcome');
+  const [isLoading, setIsLoading] = useState(false);
   const [testResults, setTestResults] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
 
-  const runConnectionTest = async () => {
-    setLoading(true);
+  const testGmailFunction = async () => {
+    if (!testEmail) {
+      toast.error('Please enter a test email address');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      console.log('Running Gmail SMTP connection test...');
-      const result = await EmailService.testEmailSystem();
-      setTestResults(result);
+      console.log('Testing Gmail function...');
+      
+      const { data, error } = await supabase.functions.invoke('send-gmail-email', {
+        body: {
+          to: [{ email: testEmail, name: 'Test User' }],
+          subject: 'Test Email from Catalyst Network Logistics',
+          htmlContent: '<h1>Test Email</h1><p>This is a test email to verify your Gmail configuration is working.</p>',
+          textContent: 'Test Email - This is a test email to verify your Gmail configuration is working.',
+          type: 'test'
+        }
+      });
+
+      if (error) {
+        console.error('Gmail function error:', error);
+        setTestResults({ success: false, error: error.message, function: 'send-gmail-email' });
+        toast.error(`Gmail test failed: ${error.message}`);
+      } else {
+        console.log('Gmail function success:', data);
+        setTestResults({ success: true, data, function: 'send-gmail-email' });
+        toast.success('Gmail test email sent successfully!');
+      }
     } catch (error: any) {
-      setTestResults({ success: false, error: error.message });
+      console.error('Gmail function test error:', error);
+      setTestResults({ success: false, error: error.message, function: 'send-gmail-email' });
+      toast.error(`Test failed: ${error.message}`);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const sendTestEmail = async () => {
-    if (!testEmail) return;
-    
-    setLoading(true);
+  const testConfirmationFunction = async () => {
+    if (!testEmail) {
+      toast.error('Please enter a test email address');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      console.log('Sending test email to:', testEmail, 'Type:', emailType);
+      console.log('Testing confirmation email function...');
       
-      let result;
-      
-      if (emailType === 'welcome') {
-        result = await EmailService.sendDriverWelcomeEmail(
-          testEmail,
-          'Test Driver',
-          'test-user-id'
-        );
-      } else if (emailType === 'delivery') {
-        result = await EmailService.sendDeliveryNotification(
-          testEmail,
-          'in_transit',
-          {
-            trackingId: 'TEST-' + Date.now(),
-            pickup_location: '123 Test Street, Test City',
-            delivery_location: '456 Demo Avenue, Demo City',
-            assigned_driver: 'John Doe'
+      const { data, error } = await supabase.functions.invoke('send-delivery-emails', {
+        body: {
+          type: 'confirmation',
+          requestData: {
+            requestId: `TEST-${Date.now()}`,
+            trackingId: `TRK-TEST-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+            customerName: 'Test Customer',
+            customerEmail: testEmail,
+            pickupLocation: '123 Test Pickup St, Test City, TC 12345',
+            deliveryLocation: '456 Test Delivery Ave, Test Town, TT 67890',
+            serviceType: 'Medical Delivery Test',
+            priority: 'normal',
+            specialInstructions: 'This is a test email - please ignore',
+            estimatedDelivery: new Date(Date.now() + 2 * 60 * 60 * 1000).toLocaleString()
           }
-        );
-      } else if (emailType === 'custom') {
-        result = await EmailService.sendCustomEmail(
-          [testEmail],
-          customSubject,
-          customMessage,
-          false
-        );
-      }
-      
-      setTestResults({ 
-        success: result?.success || false, 
-        message: result?.success ? `${emailType} email sent successfully via Gmail!` : `Failed to send ${emailType} email`,
-        type: emailType,
-        error: result?.error
+        }
       });
+
+      if (error) {
+        console.error('Confirmation function error:', error);
+        setTestResults({ success: false, error: error.message, function: 'send-delivery-emails' });
+        toast.error(`Confirmation test failed: ${error.message}`);
+      } else {
+        console.log('Confirmation function success:', data);
+        setTestResults({ success: true, data, function: 'send-delivery-emails' });
+        toast.success('Confirmation test email sent successfully!');
+      }
     } catch (error: any) {
-      setTestResults({ success: false, error: error.message });
+      console.error('Confirmation function test error:', error);
+      setTestResults({ success: false, error: error.message, function: 'send-delivery-emails' });
+      toast.error(`Test failed: ${error.message}`);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  const testCompletionFunction = async () => {
+    if (!testEmail) {
+      toast.error('Please enter a test email address');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('Testing completion email function...');
+      
+      const { data, error } = await supabase.functions.invoke('send-delivery-emails', {
+        body: {
+          type: 'completion',
+          completionData: {
+            requestId: `TEST-${Date.now()}`,
+            trackingId: `TRK-TEST-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+            customerName: 'Test Customer',
+            customerEmail: testEmail,
+            pickupLocation: '123 Test Pickup St, Test City, TC 12345',
+            deliveryLocation: '456 Test Delivery Ave, Test Town, TT 67890',
+            completedAt: new Date().toISOString(),
+            driverName: 'Test Driver',
+            deliveryPhotoUrl: 'https://via.placeholder.com/400x300.png?text=Test+Delivery+Photo'
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Completion function error:', error);
+        setTestResults({ success: false, error: error.message, function: 'send-delivery-emails' });
+        toast.error(`Completion test failed: ${error.message}`);
+      } else {
+        console.log('Completion function success:', data);
+        setTestResults({ success: true, data, function: 'send-delivery-emails' });
+        toast.success('Completion test email sent successfully!');
+      }
+    } catch (error: any) {
+      console.error('Completion function test error:', error);
+      setTestResults({ success: false, error: error.message, function: 'send-delivery-emails' });
+      toast.error(`Test failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
-            Gmail SMTP Email System Diagnostics
+            Email Functions Test Panel
           </CardTitle>
+          <CardDescription>
+            Test your deployed Supabase Edge Functions for email delivery
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Connection Test */}
           <div className="space-y-2">
-            <Label>Gmail SMTP Connection Test</Label>
-            <Button onClick={runConnectionTest} disabled={loading}>
-              {loading ? 'Testing...' : 'Test Gmail Connection'}
-            </Button>
+            <Label htmlFor="testEmail">Test Email Address</Label>
+            <Input
+              id="testEmail"
+              type="email"
+              placeholder="your-email@example.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+            />
           </div>
 
-          {/* Email Testing Section */}
-          <div className="space-y-4 border-t pt-4">
-            <Label className="flex items-center gap-2">
-              <Send className="h-4 w-4" />
-              Send Test Email via Gmail
-            </Label>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="testEmail">Recipient Email</Label>
-                <Input
-                  id="testEmail"
-                  type="email"
-                  placeholder="Enter test email address"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="emailType">Email Type</Label>
-                <Select value={emailType} onValueChange={setEmailType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select email type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="welcome">Driver Welcome Email</SelectItem>
-                    <SelectItem value="delivery">Delivery Status Update</SelectItem>
-                    <SelectItem value="custom">Custom Email</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {emailType === 'custom' && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customSubject">Subject</Label>
-                  <Input
-                    id="customSubject"
-                    value={customSubject}
-                    onChange={(e) => setCustomSubject(e.target.value)}
-                    placeholder="Enter email subject"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customMessage">Message</Label>
-                  <Textarea
-                    id="customMessage"
-                    value={customMessage}
-                    onChange={(e) => setCustomMessage(e.target.value)}
-                    placeholder="Enter email message"
-                    rows={4}
-                  />
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              onClick={testGmailFunction}
+              disabled={isLoading || !testEmail}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Test Gmail Function
+            </Button>
 
             <Button 
-              onClick={sendTestEmail} 
-              disabled={loading || !testEmail}
-              className="w-full md:w-auto"
+              onClick={testConfirmationFunction}
+              disabled={isLoading || !testEmail}
+              variant="outline"
+              className="flex items-center gap-2"
             >
-              {loading ? 'Sending...' : `Send ${emailType === 'welcome' ? 'Welcome' : emailType === 'delivery' ? 'Delivery Status' : 'Custom'} Email`}
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              Test Confirmation Email
+            </Button>
+
+            <Button 
+              onClick={testCompletionFunction}
+              disabled={isLoading || !testEmail}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+              Test Completion Email
             </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Results */}
-          {testResults && (
-            <Alert className={testResults.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}>
-              <div className="flex items-center gap-2">
-                {testResults.success ? (
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-red-600" />
-                )}
-                <AlertDescription>
-                  {testResults.success ? (
-                    <div>
-                      <div>{testResults.message || 'Operation completed successfully!'}</div>
-                      {testResults.details && (
-                        <div className="mt-2 text-xs">
-                          <div>Service: {testResults.details.service}</div>
-                          <div>Endpoint: {testResults.details.endpoint}</div>
-                          <div>Timestamp: {testResults.details.timestamp}</div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    `Error: ${testResults.error || 'Unknown error occurred'}`
-                  )}
-                </AlertDescription>
+      {testResults && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span>Function: {testResults.function}</span>
+                <Badge variant={testResults.success ? "default" : "destructive"} className="flex items-center gap-1">
+                  {testResults.success ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                  {testResults.success ? "SUCCESS" : "FAILED"}
+                </Badge>
               </div>
-            </Alert>
-          )}
+              
+              {testResults.error && (
+                <Alert variant="destructive">
+                  <XCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Error:</strong> {testResults.error}
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {testResults.success && testResults.data && (
+                <Alert>
+                  <CheckCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Email sent successfully! Message ID: {testResults.data.messageId || 'Generated'}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Environment Check */}
-          <div className="pt-4 border-t">
-            <h4 className="font-medium mb-2 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Gmail Configuration Status
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Gmail Email:</span>
-                <span className="text-green-600">catnetlogistics@gmail.com</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Email Service:</span>
-                <span className="text-green-600">Gmail SMTP via Supabase</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Current Environment:</span>
-                <span>{import.meta.env.MODE}</span>
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Common Issues & Solutions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm">
+            <div>
+              <strong>Gmail credentials not configured:</strong> Make sure you've set <code>GMAIL_EMAIL</code> and <code>GMAIL_PASSWORD</code> in your Supabase Edge Function secrets.
+            </div>
+            <div>
+              <strong>Gmail password issues:</strong> Use an App Password, not your regular Gmail password. Enable 2FA first, then generate an App Password.
+            </div>
+            <div>
+              <strong>Function not found:</strong> Ensure the functions are deployed: <code>supabase functions deploy send-gmail-email</code> and <code>supabase functions deploy send-delivery-emails</code>
             </div>
           </div>
         </CardContent>
