@@ -1,4 +1,3 @@
-
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { EmailTemplateService, RequestEmailData, DeliveryCompletionEmailData } from './emailTemplateService';
@@ -58,61 +57,122 @@ export class EmailService {
     }
   }
 
-  // Send request confirmation email
+  // Send request confirmation email using Supabase function
   static async sendRequestConfirmationEmail(requestData: RequestEmailData): Promise<EmailResult> {
     try {
-      console.log('EmailService: Sending request confirmation email to:', requestData.customerEmail);
+      console.log('EmailService: Sending request confirmation email via Supabase function to:', requestData.customerEmail);
       
-      const { subject, htmlContent, textContent } = EmailTemplateService.generateRequestConfirmationEmail(requestData);
+      const { data, error } = await supabase.functions.invoke('send-delivery-emails', {
+        body: {
+          type: 'confirmation',
+          requestData: {
+            requestId: requestData.requestId,
+            trackingId: requestData.trackingId,
+            customerName: requestData.customerName,
+            customerEmail: requestData.customerEmail,
+            pickupLocation: requestData.pickupLocation,
+            deliveryLocation: requestData.deliveryLocation,
+            serviceType: requestData.serviceType,
+            priority: requestData.priority,
+            specialInstructions: requestData.specialInstructions,
+            estimatedDelivery: requestData.estimatedDelivery
+          }
+        }
+      });
 
-      const result = await this.sendViaGmail(
-        [{ email: requestData.customerEmail, name: requestData.customerName }],
-        subject,
-        htmlContent,
-        textContent,
-        undefined,
-        'request-confirmation'
-      );
-      
-      if (result.success) {
-        toast.success('Request confirmation email sent successfully!');
-        return { success: true };
-      } else {
-        toast.error('Failed to send confirmation email');
-        return { success: false, error: result.error };
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
       }
+
+      console.log('Confirmation email sent successfully via Supabase function:', data);
+      toast.success('Request confirmation email sent successfully!');
+      return { success: true, messageId: data?.messageId };
     } catch (error: any) {
       console.error('EmailService: Request confirmation email failed:', error);
+      
+      // Fallback to direct Gmail method
+      try {
+        console.log('Attempting fallback to direct Gmail method...');
+        const { subject, htmlContent, textContent } = EmailTemplateService.generateRequestConfirmationEmail(requestData);
+        
+        const fallbackResult = await this.sendViaGmail(
+          [{ email: requestData.customerEmail, name: requestData.customerName }],
+          subject,
+          htmlContent,
+          textContent,
+          undefined,
+          'request-confirmation'
+        );
+        
+        if (fallbackResult.success) {
+          toast.success('Request confirmation email sent successfully!');
+          return { success: true };
+        }
+      } catch (fallbackError) {
+        console.error('Fallback method also failed:', fallbackError);
+      }
+      
       toast.error('Failed to send confirmation email');
       return { success: false, error: error.message };
     }
   }
 
-  // Send delivery completion email with photo
+  // Send delivery completion email with photo using Supabase function
   static async sendDeliveryCompletionEmail(deliveryData: DeliveryCompletionEmailData): Promise<EmailResult> {
     try {
-      console.log('EmailService: Sending delivery completion email to:', deliveryData.customerEmail);
+      console.log('EmailService: Sending delivery completion email via Supabase function to:', deliveryData.customerEmail);
       
-      const { subject, htmlContent, textContent } = EmailTemplateService.generateDeliveryCompletionEmail(deliveryData);
+      const { data, error } = await supabase.functions.invoke('send-delivery-emails', {
+        body: {
+          type: 'completion',
+          completionData: {
+            requestId: deliveryData.requestId,
+            trackingId: deliveryData.trackingId,
+            customerName: deliveryData.customerName,
+            customerEmail: deliveryData.customerEmail,
+            pickupLocation: deliveryData.pickupLocation,
+            deliveryLocation: deliveryData.deliveryLocation,
+            completedAt: deliveryData.completedAt,
+            deliveryPhotoUrl: deliveryData.deliveryPhotoUrl,
+            driverName: deliveryData.driverName
+          }
+        }
+      });
 
-      const result = await this.sendViaGmail(
-        [{ email: deliveryData.customerEmail, name: deliveryData.customerName }],
-        subject,
-        htmlContent,
-        textContent,
-        undefined,
-        'delivery-completion'
-      );
-      
-      if (result.success) {
-        toast.success('Delivery completion email sent successfully!');
-        return { success: true };
-      } else {
-        toast.error('Failed to send delivery completion email');
-        return { success: false, error: result.error };
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
       }
+
+      console.log('Completion email sent successfully via Supabase function:', data);
+      toast.success('Delivery completion email sent successfully!');
+      return { success: true, messageId: data?.messageId };
     } catch (error: any) {
       console.error('EmailService: Delivery completion email failed:', error);
+      
+      // Fallback to direct Gmail method
+      try {
+        console.log('Attempting fallback to direct Gmail method...');
+        const { subject, htmlContent, textContent } = EmailTemplateService.generateDeliveryCompletionEmail(deliveryData);
+        
+        const fallbackResult = await this.sendViaGmail(
+          [{ email: deliveryData.customerEmail, name: deliveryData.customerName }],
+          subject,
+          htmlContent,
+          textContent,
+          undefined,
+          'delivery-completion'
+        );
+        
+        if (fallbackResult.success) {
+          toast.success('Delivery completion email sent successfully!');
+          return { success: true };
+        }
+      } catch (fallbackError) {
+        console.error('Fallback method also failed:', fallbackError);
+      }
+      
       toast.error('Failed to send delivery completion email');
       return { success: false, error: error.message };
     }

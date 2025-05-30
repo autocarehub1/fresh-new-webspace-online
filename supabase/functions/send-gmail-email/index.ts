@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,29 +53,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending email via Gmail SMTP");
 
-    // Create the email message for Gmail SMTP
-    const emailMessage = {
-      from: `${sender.name} <${sender.email}>`,
-      to: emailRequest.to.map(recipient => 
-        recipient.name ? `${recipient.name} <${recipient.email}>` : recipient.email
-      ).join(', '),
-      subject: emailRequest.subject,
-      html: emailRequest.htmlContent,
-      text: textContent
-    };
+    // Create SMTP client
+    const client = new SmtpClient();
 
-    // Use Gmail SMTP via nodemailer-like approach
-    const smtpEndpoint = "https://api.emailjs.com/api/v1.0/email/send";
-    
-    // For now, we'll simulate success since direct SMTP in Deno requires additional setup
-    // In production, you would use a proper SMTP library or service
-    console.log("Email would be sent with message:", emailMessage);
+    // Connect to Gmail SMTP
+    await client.connectTLS({
+      hostname: "smtp.gmail.com",
+      port: 587,
+      username: gmailEmail,
+      password: gmailPassword,
+    });
 
-    // Simulate successful email sending
+    // Send email to each recipient
+    for (const recipient of emailRequest.to) {
+      await client.send({
+        from: sender.email,
+        to: recipient.email,
+        subject: emailRequest.subject,
+        content: textContent,
+        html: emailRequest.htmlContent,
+      });
+      console.log(`Email sent to: ${recipient.email}`);
+    }
+
+    // Close SMTP connection
+    await client.close();
+
     const responseData = {
       messageId: `gmail-${Date.now()}`,
       status: "sent",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      recipients: emailRequest.to.length
     };
 
     console.log("Email sent successfully via Gmail:", responseData);
