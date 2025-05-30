@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Calendar, Clock, Package, MapPin, User, Phone, Mail, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { EmailService } from '@/services/emailService';
+import { RequestEmailData } from '@/services/emailTemplateService';
 
 const serviceCategories = {
   medical: [
@@ -63,6 +65,7 @@ const RequestPickup = () => {
 
       // Generate unique request ID
       const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const trackingId = `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
       // Map service types to package types
       const packageTypeMapping: Record<string, string> = {
@@ -86,15 +89,24 @@ const RequestPickup = () => {
       const urgentServices = ['urgent', 'specimen', 'pharmaceutical'];
       const priority = urgentServices.includes(formData.serviceType) ? 'urgent' : 'normal';
 
-      // Create delivery request payload with only fields that exist in the database
+      // Calculate estimated delivery time
+      const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
+      const estimatedDelivery = new Date(pickupDateTime.getTime() + (priority === 'urgent' ? 2 : 4) * 60 * 60 * 1000);
+
+      // Create delivery request payload
       const deliveryRequest = {
         id: requestId,
-        tracking_id: `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        tracking_id: trackingId,
         pickup_location: formData.pickupAddress,
         delivery_location: formData.deliveryAddress,
         package_type: packageTypeMapping[formData.serviceType] || 'medical_supplies',
         priority: priority,
         status: 'pending',
+        estimated_delivery: estimatedDelivery.toISOString(),
+        contact_email: formData.contactEmail,
+        contact_name: formData.contactName,
+        contact_phone: formData.contactPhone,
+        special_instructions: formData.specialInstructions,
         created_at: new Date().toISOString()
       };
 
@@ -114,13 +126,36 @@ const RequestPickup = () => {
 
       console.log('Request created successfully:', data);
 
+      // Send confirmation email
+      try {
+        const emailData: RequestEmailData = {
+          requestId,
+          trackingId,
+          customerName: formData.contactName,
+          customerEmail: formData.contactEmail,
+          pickupLocation: formData.pickupAddress,
+          deliveryLocation: formData.deliveryAddress,
+          serviceType: serviceCategories[formData.serviceCategory as keyof typeof serviceCategories]
+            .find(s => s.value === formData.serviceType)?.label || formData.serviceType,
+          priority,
+          specialInstructions: formData.specialInstructions,
+          estimatedDelivery: estimatedDelivery.toLocaleString()
+        };
+
+        await EmailService.sendRequestConfirmationEmail(emailData);
+        console.log('Confirmation email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Continue with success message even if email fails
+      }
+
       toast({
         title: "Request Submitted Successfully",
-        description: `Your delivery request has been created with ID: ${requestId}. We'll contact you shortly to confirm details.`,
+        description: `Your delivery request has been created with ID: ${requestId}. A confirmation email has been sent to ${formData.contactEmail}.`,
       });
 
       // Navigate to tracking page
-      navigate(`/tracking?id=${requestId}`);
+      navigate(`/tracking?id=${trackingId}`);
 
     } catch (error: any) {
       console.error('Error submitting request:', error);

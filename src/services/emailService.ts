@@ -1,6 +1,7 @@
 
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { EmailTemplateService, RequestEmailData, DeliveryCompletionEmailData } from './emailTemplateService';
 
 export interface EmailResult {
   success: boolean;
@@ -53,6 +54,66 @@ export class EmailService {
       return { success: true, messageId: data?.messageId };
     } catch (error: any) {
       console.error('Gmail email service error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Send request confirmation email
+  static async sendRequestConfirmationEmail(requestData: RequestEmailData): Promise<EmailResult> {
+    try {
+      console.log('EmailService: Sending request confirmation email to:', requestData.customerEmail);
+      
+      const { subject, htmlContent, textContent } = EmailTemplateService.generateRequestConfirmationEmail(requestData);
+
+      const result = await this.sendViaGmail(
+        [{ email: requestData.customerEmail, name: requestData.customerName }],
+        subject,
+        htmlContent,
+        textContent,
+        undefined,
+        'request-confirmation'
+      );
+      
+      if (result.success) {
+        toast.success('Request confirmation email sent successfully!');
+        return { success: true };
+      } else {
+        toast.error('Failed to send confirmation email');
+        return { success: false, error: result.error };
+      }
+    } catch (error: any) {
+      console.error('EmailService: Request confirmation email failed:', error);
+      toast.error('Failed to send confirmation email');
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Send delivery completion email with photo
+  static async sendDeliveryCompletionEmail(deliveryData: DeliveryCompletionEmailData): Promise<EmailResult> {
+    try {
+      console.log('EmailService: Sending delivery completion email to:', deliveryData.customerEmail);
+      
+      const { subject, htmlContent, textContent } = EmailTemplateService.generateDeliveryCompletionEmail(deliveryData);
+
+      const result = await this.sendViaGmail(
+        [{ email: deliveryData.customerEmail, name: deliveryData.customerName }],
+        subject,
+        htmlContent,
+        textContent,
+        undefined,
+        'delivery-completion'
+      );
+      
+      if (result.success) {
+        toast.success('Delivery completion email sent successfully!');
+        return { success: true };
+      } else {
+        toast.error('Failed to send delivery completion email');
+        return { success: false, error: result.error };
+      }
+    } catch (error: any) {
+      console.error('EmailService: Delivery completion email failed:', error);
+      toast.error('Failed to send delivery completion email');
       return { success: false, error: error.message };
     }
   }
@@ -260,68 +321,6 @@ Catalyst Network Logistics Team
     } catch (error: any) {
       console.error('EmailService: Custom email failed:', error);
       toast.error('Failed to send email');
-      return { success: false, error: error.message };
-    }
-  }
-
-  // Email templates
-  static async sendPasswordResetEmail(
-    email: string,
-    resetToken: string
-  ): Promise<EmailResult> {
-    const resetUrl = `${window.location.origin}/reset-password?token=${resetToken}`;
-    
-    const htmlContent = `
-      <h2>Password Reset Request</h2>
-      <p>You requested a password reset for your Catalyst Network Logistics account.</p>
-      <p>Click the link below to reset your password:</p>
-      <p><a href="${resetUrl}" style="background: #0A2463; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
-      <p>This link will expire in 24 hours.</p>
-      <p>If you didn't request this reset, please ignore this email.</p>
-    `;
-    
-    try {
-      const result = await this.sendViaGmail(
-        [{ email }],
-        'Password Reset - Catalyst Network Logistics',
-        htmlContent,
-        undefined,
-        undefined,
-        'password-reset'
-      );
-      
-      return result;
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  static async sendAccountVerificationEmail(
-    email: string,
-    verificationToken: string
-  ): Promise<EmailResult> {
-    const verificationUrl = `${window.location.origin}/verify-email?token=${verificationToken}`;
-    
-    const htmlContent = `
-      <h2>Verify Your Email Address</h2>
-      <p>Thank you for signing up with Catalyst Network Logistics!</p>
-      <p>Please click the link below to verify your email address:</p>
-      <p><a href="${verificationUrl}" style="background: #0A2463; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a></p>
-      <p>If you didn't create this account, please ignore this email.</p>
-    `;
-    
-    try {
-      const result = await this.sendViaGmail(
-        [{ email }],
-        'Verify Your Email - Catalyst Network Logistics',
-        htmlContent,
-        undefined,
-        undefined,
-        'email-verification'
-      );
-      
-      return result;
-    } catch (error: any) {
       return { success: false, error: error.message };
     }
   }
