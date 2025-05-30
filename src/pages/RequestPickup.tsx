@@ -93,7 +93,7 @@ const RequestPickup = () => {
       const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
       const estimatedDelivery = new Date(pickupDateTime.getTime() + (priority === 'urgent' ? 2 : 4) * 60 * 60 * 1000);
 
-      // Create delivery request payload
+      // Create delivery request payload with correct column names
       const deliveryRequest = {
         id: requestId,
         tracking_id: trackingId,
@@ -103,10 +103,8 @@ const RequestPickup = () => {
         priority: priority,
         status: 'pending',
         estimated_delivery: estimatedDelivery.toISOString(),
-        contact_email: formData.contactEmail,
-        contact_name: formData.contactName,
-        contact_phone: formData.contactPhone,
-        special_instructions: formData.specialInstructions,
+        // Use the correct column names that exist in the database
+        email: formData.contactEmail,
         created_at: new Date().toISOString()
       };
 
