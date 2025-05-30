@@ -1,294 +1,186 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { toast } from "sonner"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { z } from "zod"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { PlusCircle, CheckCircle, AlertTriangle } from "lucide-react"
-import { useMutation } from "@tanstack/react-query"
-import { createRequest } from "@/lib/request-actions"
-import { useAuth } from "@/lib/auth"
-import { useNavigate } from "react-router-dom"
-import { DeliveryRequest } from '@/types/delivery';
 
-const quickServices = [
-  {
-    id: "qs-1",
-    name: "Medical Supplies - Hospital A to Hospital B",
-    pickup: "Hospital A, 123 Main St",
-    delivery: "Hospital B, 456 Elm St",
-    type: "medical_supplies",
-    priority: "urgent",
-  },
-  {
-    id: "qs-2",
-    name: "Lab Samples - Clinic X to Lab Y",
-    pickup: "Clinic X, 789 Oak St",
-    delivery: "Lab Y, 101 Pine St",
-    type: "lab_samples",
-    priority: "normal",
-  },
-  {
-    id: "qs-3",
-    name: "Medication - Pharmacy P to Patient Q",
-    pickup: "Pharmacy P, 1122 Willow St",
-    delivery: "Patient Q, 3344 Maple St",
-    type: "medication",
-    priority: "urgent",
-  },
-]
+import { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { EmailService } from '@/services/emailService';
+import { RequestEmailData } from '@/services/emailTemplateService';
+import ServiceSelection from './ServiceSelection';
+import AddressFields from './AddressFields';
+import DateTimeFields from './DateTimeFields';
+import ContactFields from './ContactFields';
+import InstructionsField from './InstructionsField';
+import { serviceCategories, packageTypeMapping, urgentServices } from './serviceCategories';
 
-const formSchema = z.object({
-  pickupLocation: z.string().min(2, {
-    message: "Pickup location must be at least 2 characters.",
-  }),
-  deliveryLocation: z.string().min(2, {
-    message: "Delivery location must be at least 2 characters.",
-  }),
-  priority: z.enum(["normal", "urgent"], {
-    required_error: "Please select a priority level.",
-  }),
-  packageType: z.string({
-    required_error: "Please select a package type.",
-  }),
-})
-
-const RequestPickupForm: React.FC = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [trackingId, setTrackingId] = useState(
-    "TRK-" + Math.random().toString(36).substring(2, 10).toUpperCase()
-  )
-  const [selectedQuickService, setSelectedQuickService] = useState(null)
-  const { user } = useAuth()
-  const navigate = useNavigate()
-
-  const [pickupLocation, setPickupLocation] = useState("")
-  const [deliveryLocation, setDeliveryLocation] = useState("")
-  const [priority, setPriority] = useState("normal")
-  const [packageType, setPackageType] = useState("")
-  const [email, setEmail] = useState(user?.email || "")
-
-  useEffect(() => {
-    if (user?.email) {
-      setEmail(user.email)
-    }
-  }, [user])
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      pickupLocation: "",
-      deliveryLocation: "",
-      priority: "normal",
-      packageType: "",
-    },
-  })
+const RequestPickupForm = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    serviceCategory: searchParams.get('category') || 'medical',
+    serviceType: searchParams.get('service') || '',
+    pickupAddress: '',
+    deliveryAddress: '',
+    pickupDate: '',
+    pickupTime: '',
+    contactName: '',
+    contactPhone: '',
+    contactEmail: '',
+    specialInstructions: ''
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!pickupLocation || !deliveryLocation || !priority || !packageType || !email) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    
     setIsSubmitting(true);
-    
+
     try {
-      const deliveryRequest: DeliveryRequest = {
-        id: trackingId,
-        trackingId,
-        status: 'pending' as const,
-        pickup_location: pickupLocation,
-        delivery_location: deliveryLocation,
-        priority: priority as 'normal' | 'urgent',
-        packageType,
-        email,
+      console.log('Form submitted:', formData);
+
+      // Generate unique request ID
+      const requestId = `REQ-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const trackingId = `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      // Determine priority based on service type
+      const priority = urgentServices.includes(formData.serviceType) ? 'urgent' : 'normal';
+
+      // Calculate estimated delivery time
+      const pickupDateTime = new Date(`${formData.pickupDate}T${formData.pickupTime}`);
+      const estimatedDelivery = new Date(pickupDateTime.getTime() + (priority === 'urgent' ? 2 : 4) * 60 * 60 * 1000);
+
+      // Create delivery request payload with correct column names
+      const deliveryRequest = {
+        id: requestId,
+        tracking_id: trackingId,
+        pickup_location: formData.pickupAddress,
+        delivery_location: formData.deliveryAddress,
+        package_type: packageTypeMapping[formData.serviceType] || 'medical_supplies',
+        priority: priority,
+        status: 'pending',
+        estimated_delivery: estimatedDelivery.toISOString(),
+        // Use the correct column names that exist in the database
+        email: formData.contactEmail,
         created_at: new Date().toISOString()
       };
-      
-      // const response = await createRequest(deliveryRequest)
-      toast.success("Your request has been submitted.");
-      navigate("/tracking?id=" + trackingId)
-    } catch (error) {
-      toast.error("There was a problem with your request.");
+
+      console.log('Creating delivery request:', deliveryRequest);
+
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('delivery_requests')
+        .insert(deliveryRequest)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Failed to create request: ${error.message}`);
+      }
+
+      console.log('Request created successfully:', data);
+
+      // Send confirmation email
+      try {
+        const emailData: RequestEmailData = {
+          requestId,
+          trackingId,
+          customerName: formData.contactName,
+          customerEmail: formData.contactEmail,
+          pickupLocation: formData.pickupAddress,
+          deliveryLocation: formData.deliveryAddress,
+          serviceType: serviceCategories[formData.serviceCategory as keyof typeof serviceCategories]
+            .find(s => s.value === formData.serviceType)?.label || formData.serviceType,
+          priority,
+          specialInstructions: formData.specialInstructions,
+          estimatedDelivery: estimatedDelivery.toLocaleString()
+        };
+
+        await EmailService.sendRequestConfirmationEmail(emailData);
+        console.log('Confirmation email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+        // Continue with success message even if email fails
+      }
+
+      toast({
+        title: "Request Submitted Successfully",
+        description: `Your delivery request has been created with ID: ${requestId}. A confirmation email has been sent to ${formData.contactEmail}.`,
+      });
+
+      // Navigate to tracking page
+      navigate(`/tracking?id=${trackingId}`);
+
+    } catch (error: any) {
+      console.error('Error submitting request:', error);
+      toast({
+        title: "Error",
+        description: error.message || "There was an error submitting your request. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleQuickSubmit = async () => {
-    if (!selectedQuickService) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      const deliveryRequest: DeliveryRequest = {
-        id: trackingId,
-        trackingId,
-        status: 'pending' as const,
-        pickup_location: selectedQuickService.pickup,
-        delivery_location: selectedQuickService.delivery,
-        priority: selectedQuickService.priority as 'normal' | 'urgent',
-        packageType: selectedQuickService.type,
-        email: email || '',
-        created_at: new Date().toISOString()
-      };
-      
-      // const response = await createRequest(deliveryRequest)
-      toast.success("Your request has been submitted.");
-      navigate("/tracking?id=" + trackingId)
-    } catch (error) {
-      toast.error("There was a problem with your request.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="w-full md:w-1/2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Services</CardTitle>
-            <CardDescription>Select a pre-defined service</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {quickServices.map((service) => (
-              <Button
-                key={service.id}
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => {
-                  setSelectedQuickService(service)
-                  setPickupLocation(service.pickup)
-                  setDeliveryLocation(service.delivery)
-                  setPackageType(service.type)
-                  setPriority(service.priority)
-                }}
-              >
-                {service.name}
-              </Button>
-            ))}
-            {selectedQuickService && (
-              <div className="mt-4">
-                <Button
-                  onClick={handleQuickSubmit}
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  {isSubmitting ? "Submitting..." : "Submit Quick Request"}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-8">
+      <ServiceSelection
+        serviceCategory={formData.serviceCategory}
+        serviceType={formData.serviceType}
+        onServiceCategoryChange={(value) => handleSelectChange('serviceCategory', value)}
+        onServiceTypeChange={(value) => handleSelectChange('serviceType', value)}
+      />
 
-      <div className="w-full md:w-1/2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Request</CardTitle>
-            <CardDescription>Define your own pickup and delivery</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="pickup">Pickup Location</Label>
-                  <Input
-                    id="pickup"
-                    placeholder="Enter pickup location"
-                    value={pickupLocation}
-                    onChange={(e) => setPickupLocation(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="delivery">Delivery Location</Label>
-                  <Input
-                    id="delivery"
-                    placeholder="Enter delivery location"
-                    value={deliveryLocation}
-                    onChange={(e) => setDeliveryLocation(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="packageType">Package Type</Label>
-                  <Select
-                    onValueChange={(value) => setPackageType(value)}
-                    defaultValue={packageType}
-                  >
-                    <SelectTrigger id="packageType">
-                      <SelectValue placeholder="Select package type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="medical_supplies">
-                        Medical Supplies
-                      </SelectItem>
-                      <SelectItem value="lab_samples">Lab Samples</SelectItem>
-                      <SelectItem value="medication">Medication</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Priority</Label>
-                  <RadioGroup
-                    defaultValue={priority}
-                    className="flex flex-col space-y-1"
-                    onValueChange={(value) => setPriority(value)}
-                  >
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="normal" id="r1" />
-                      </FormControl>
-                      <FormLabel htmlFor="r1">Normal</FormLabel>
-                    </FormItem>
-                    <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="urgent" id="r2" />
-                      </FormControl>
-                      <FormLabel htmlFor="r2">Urgent</FormLabel>
-                    </FormItem>
-                  </RadioGroup>
-                </div>
-                <Button disabled={isSubmitting} className="w-full">
-                  {isSubmitting ? "Submitting..." : "Submit Request"}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
+      <AddressFields
+        pickupAddress={formData.pickupAddress}
+        deliveryAddress={formData.deliveryAddress}
+        onPickupAddressChange={handleChange}
+        onDeliveryAddressChange={handleChange}
+      />
 
-export default RequestPickupForm
+      <DateTimeFields
+        pickupDate={formData.pickupDate}
+        pickupTime={formData.pickupTime}
+        onPickupDateChange={handleChange}
+        onPickupTimeChange={handleChange}
+      />
+
+      <ContactFields
+        contactName={formData.contactName}
+        contactPhone={formData.contactPhone}
+        contactEmail={formData.contactEmail}
+        onContactNameChange={handleChange}
+        onContactPhoneChange={handleChange}
+        onContactEmailChange={handleChange}
+      />
+
+      <InstructionsField
+        specialInstructions={formData.specialInstructions}
+        onSpecialInstructionsChange={handleChange}
+      />
+
+      <div className="flex justify-center">
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full md:w-auto"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Submitting...' : 'Request Pickup'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+export default RequestPickupForm;
